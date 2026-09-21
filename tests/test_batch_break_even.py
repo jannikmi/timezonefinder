@@ -25,6 +25,7 @@ from scripts.measure_batch_break_even import (
     PreparedBatch,
     _scalar_caller,
     break_even,
+    build_report,
     comparison_of,
     control_spread,
     ladder_for,
@@ -56,6 +57,22 @@ def test_scalar_caller_matches_the_selected_result_representation():
     finder = Finder()
     assert _scalar_caller(finder, "names")(batch) == ["name:1.0,2.0"]  # type: ignore[arg-type]
     assert _scalar_caller(finder, "ids")(batch) == [3]  # type: ignore[arg-type]
+
+
+def test_only_name_reports_stamp_the_name_gather_threshold():
+    """An id report has no name-conversion implementation switch to annotate."""
+    common = {
+        "sweeps": [],
+        "in_memory": False,
+        "rounds": 3,
+        "points_per_round_target": 100,
+        "seed": 0,
+        "custom_points": True,
+    }
+    names_info = build_report(api="names", **common)["machine_info"]["timezonefinder"]
+    ids_info = build_report(api="ids", **common)["machine_info"]["timezonefinder"]
+    assert names_info["names_gather_min_batch"] == NAMES_GATHER_MIN_BATCH
+    assert "names_gather_min_batch" not in ids_info
 
 
 def _rung(
@@ -502,6 +519,15 @@ def _fake_run() -> dict:
     }
 
 
+def _fake_id_run() -> dict:
+    run = _fake_run()
+    info = run["machine_info"]["timezonefinder"]
+    info["scalar_api"] = "timezone_id_at"
+    info["batch_api"] = "timezone_ids_at"
+    info.pop("names_gather_min_batch")
+    return run
+
+
 def test_chart_is_byte_identical_across_renders(tmp_path: Path):
     """The one property a committed generated file must have.
 
@@ -573,6 +599,21 @@ def test_renderer_writes_the_page_and_the_chart_together(tmp_path: Path):
     assert "C extension (clang)" in text
     assert "timezone_ids_at()`` against a ``timezone_id_at()`` loop" in text
     assert text.endswith("\n") and not text.endswith("\n\n")
+
+
+def test_id_renderer_omits_the_name_gather_regime(tmp_path: Path):
+    """Neither ID candidate converts names, so its report must not claim that step."""
+    _require_seaborn()
+    from scripts.render_benchmark_reports import render_batch_break_even
+
+    page, chart = tmp_path / "page.rst", tmp_path / "sweep.svg"
+    render_batch_break_even(_fake_id_run(), page, chart)
+
+    text = page.read_text(encoding="utf-8")
+    markup = chart.read_text(encoding="utf-8")
+    assert "This page measures id-returning lookups" in text
+    assert "ZoneNames.names_of" not in text
+    assert "names gather" not in markup
 
 
 def test_renderer_refuses_a_ladder_that_is_not_ascending(tmp_path: Path):

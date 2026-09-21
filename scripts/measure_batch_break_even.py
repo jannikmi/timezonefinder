@@ -690,11 +690,15 @@ def build_report(
         "points_per_round_target": points_per_round_target,
         "rounds": rounds,
         "seed": seed,
-        "names_gather_min_batch": NAMES_GATHER_MIN_BATCH,
         "saturation_tolerance": DEFAULT_SATURATION_TOLERANCE,
         "control_spread_threshold": CONTROL_SPREAD_THRESHOLD,
         "control_spread_min_batch_size": CONTROL_MIN_BATCH_SIZE,
     }
+    if api == "names":
+        # Only the name-returning batch crosses this implementation threshold. Stamping
+        # it on an id run would make the renderer annotate a regime switch that neither
+        # candidate in that comparison has.
+        timezonefinder_info["names_gather_min_batch"] = NAMES_GATHER_MIN_BATCH
     if not custom_points:
         # only meaningful for the committed fixtures; a caller's own CSV has no
         # fixture version, and stamping a stale one would be worse than stamping none
