@@ -295,9 +295,18 @@ jobs:
           UV_NO_SYNC: "1"
         run: |
           set -euo pipefail
-          uv run python -m scripts.assert_acceleration_path \
-            --expect "$(make -s print-benchmark-acceleration-path)" \
-            --expect-interpreted "$(make -s print-benchmark-interpreted-path)"
+          # This step runs *this* workflow against the merge base's code, which is an
+          # older tree: a flag or make target added by the pull request under test does
+          # not exist there yet. So the interpreted-path half is passed only when the
+          # base checkout offers it, and its absence is not a gap - a base predating it
+          # binds numba whenever numba is importable, so `--expect clang` still fails
+          # on a numba environment there, which is the assertion this adds back for
+          # trees where the C extension outranks numba.
+          assertion=(--expect "$(make -s print-benchmark-acceleration-path)")
+          if interpreted=$(make -s print-benchmark-interpreted-path 2>/dev/null); then
+            assertion+=(--expect-interpreted "$interpreted")
+          fi
+          uv run python -m scripts.assert_acceleration_path "${assertion[@]}"
 
       # The base is measured twice, once before and once after the head, so
       # the head sits at the midpoint of the two: a runner that drifts over
