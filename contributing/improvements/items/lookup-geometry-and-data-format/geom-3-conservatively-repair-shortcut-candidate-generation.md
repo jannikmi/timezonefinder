@@ -2,7 +2,7 @@
 
 ## Reopening condition
 
-Parked at the maintainer's request on 2026-09-10 after 21,561,744 adversarial probes found no packaged candidate omissions. `update_data.sh` now guards newly compiled datasets once, before release preparation; fast pytest tests verify pipeline ordering and refusal. Reopen for a reproducible missing-candidate counterexample or a proposed optimization that needs certified cell coverage. The current exclusion proof gaps remain; these sampled guards can miss an unsampled defect, and their passing does not unblock PERF-7. A speculative L-sized repair with storage/query costs is not justified by the present evidence.
+Parked at the maintainer's request on 2026-09-10 after 21,561,744 adversarial probes found no packaged candidate omissions. `update_data.sh` now guards newly compiled datasets once, before release preparation; fast pytest tests verify pipeline ordering and refusal. Reopen for a reproducible missing-candidate counterexample or a proposed optimization that needs certified cell coverage. The current exclusion proof gaps remain; these sampled guards can miss an unsampled defect, and their passing does not certify full-cell coverage, which anything answering a cell without geometry would need. A speculative L-sized repair with storage/query costs is not justified by the present evidence.
 
 ## Work if reopened
 
@@ -12,7 +12,7 @@ Use `scripts/audit_shortcut_candidates.py` to establish production witnesses and
 
 Deliver the enclosure/propagation proof and regression witnesses together with regenerated shortcuts. Compare candidate sets, compiled bytes, lookup answers, converter cost and query cost on both pure-Python and accelerated paths. The cost side is increased candidate storage and lookup work; preserve mapped mode and existing API semantics. A repair requiring a new dependency remains subject to the improvement-pass dependency boundary.
 
-PERF-7 stays blocked: replacing a whole cell with an unconditional zone requires the opposite proof, that every assigned point is covered. Merely retaining uncertain exterior candidates does not establish it.
+Full-cell coverage is a different proof: replacing a whole cell with an unconditional zone, as the withdrawn PERF-7 proposed, requires the opposite claim, that every assigned point is covered. Merely retaining uncertain exterior candidates does not establish it.
 
 - **Size:** L — numerical enclosure, propagation and regeneration form one correctness boundary.
 - **Status:** parked — one-time validation guards future datasets; reopen for a counterexample or a proposed optimization requiring certified cell coverage.

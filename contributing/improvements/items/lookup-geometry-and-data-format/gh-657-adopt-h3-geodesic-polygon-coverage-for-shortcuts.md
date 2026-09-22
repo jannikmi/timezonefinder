@@ -4,7 +4,7 @@
 
 ## Why it belongs in the register
 
-GEOM-3 establishes a conservative repair for exclusions in `scripts/hex_utils.py`. The preferred long-term cell authority is H3 itself, but its geodesic modes also reinterpret source polygon edges. The [isolated evaluation](../../decisions/shortcut-candidate-audit-and-geometry-authority.md#upstream-authority-evaluation) demonstrates that direct adoption excludes valid planar-source points. Establish a conservative treatment of the original source geometry before using geodesic `OVERLAPPING` for candidate exclusion or `FULL` for PERF-7.
+GEOM-3 establishes a conservative repair for exclusions in `scripts/hex_utils.py`. The preferred long-term cell authority is H3 itself, but its geodesic modes also reinterpret source polygon edges. The [isolated evaluation](../../decisions/shortcut-candidate-audit-and-geometry-authority.md#upstream-authority-evaluation) demonstrates that direct adoption excludes valid planar-source points. Establish a conservative treatment of the original source geometry before using geodesic `OVERLAPPING` for candidate exclusion or `FULL` for any full-coverage optimization such as the withdrawn PERF-7.
 
 Released H3 4.5.0 exposes experimental modes with those names, but their implementation remains planar. [uber/h3#1178](https://github.com/uber/h3/pull/1178) replaces the closed, unmerged #1052 with distinct great-circle containment and intersection paths; [uber/h3#775](https://github.com/uber/h3/issues/775) is the originating containment-mode request. Do not treat the released mode names or an unmerged upstream branch as the dependency being available.
 

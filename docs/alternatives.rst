@@ -13,24 +13,61 @@ under, not the goal: the H3 spatial
 index, the integer coordinate representation and the optional acceleration backends exist to make
 full-resolution geometry affordable, not to shave the last microsecond off a lookup.
 
-`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade, deliberately and well. It
-ships simplified polygons, which makes it smaller and faster per query, at the cost of accuracy near
-the borders those polygons describe. Its maintainer also publishes an experimental full-precision
-variant - ``+full`` wheels served from the project's own package index rather than PyPI - that
-embeds the unsimplified dataset behind the same API. Everything measured on this page is the PyPI
-build. The two are now measured against each other under one harness - same query points, same
-process, same machine - in :doc:`benchmark_results_comparison`.
+`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade in its PyPI build,
+deliberately and well. It ships simplified polygons, which makes it smaller and faster per query,
+at the cost of accuracy near the borders those polygons describe. Its maintainer also publishes an
+experimental full-precision variant - ``+full`` wheels served from the project's own package index
+rather than PyPI - that embeds the unsimplified dataset behind the same *tzfpy* API. That variant
+removes the cleanest distinction this page used to make: unsimplified geometry is no longer unique
+to ``timezonefinder``. Everything measured on this page is the simplified PyPI build. The two PyPI
+packages are measured under one harness - same query points, same process, same machine - in
+:doc:`benchmark_results_comparison`.
 
 **If your query points are rarely near a timezone border - coarse geofencing, analytics
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
-metres of a boundary costs nothing - choose ``tzfpy``.** It is a good package, it will serve you
-better, and its maintainer is a contributor to this one (see :doc:`5_contributing`). If a wrong answer at
-a border is a bug rather than a rounding error, that is what this package is for.
+metres of a boundary costs nothing - choose the PyPI build of ``tzfpy``.** Its maintainer is a
+contributor to this project (see :doc:`5_contributing`).
+If border accuracy matters and an experimental wheel from a separate package index is acceptable,
+evaluate ``tzfpy +full`` too; this page has no measurement that entitles ``timezonefinder`` to win
+that comparison.
+
+What remains distinct
+---------------------
+
+The full-precision variant is a serious alternative, not a footnote to explain away. For the narrow
+job "return one timezone name for this coordinate", it may eventually make ``timezonefinder`` the
+worse choice: it promises the same source geometry through an implementation whose simplified
+build is substantially faster here. This project has not measured the full build, so it cannot
+carry that result across by assumption. Neither the age of this project nor its installed base is a
+technical reason for a new user to pick it.
+
+``timezonefinder`` still serves a different contract today:
+
+- Unsimplified geometry is its supported default on PyPI, not an experimental variant requiring a
+  separate index and a local-version wheel.
+- Its data is a separately versioned PyPI distribution. Applications can update or pin the boundary
+  release independently of the lookup code instead of receiving data only inside a native-extension
+  release.
+- Its public API covers NumPy batch lookup, integer zone-ID results, land-only lookup that can
+  distinguish land zones from the ``Etc/GMT`` ocean zones, distinct fast/certain/all-match query
+  semantics, geometry as coordinate arrays, and ``zoneinfo``/UTC-offset/localisation helpers.
+  ``tzfpy +full`` keeps the smaller ``tzfpy`` API; "same API" does not mean the two projects are
+  drop-in replacements.
+- The full geometry can remain memory-mapped and reclaimable under pressure. The optional point-in-
+  polygon accelerators improve speed, but the lookup stays correct without them and building this
+  package itself does not require a Rust toolchain.
+
+Those are reasons for this package to continue, not a permanent entitlement to be preferred. If
+``tzfpy +full`` becomes an ordinary PyPI release, proves equivalent border behaviour under the same
+harness, and covers the API and deployment constraints an application needs, then full precision by
+itself is no reason to choose ``timezonefinder``. Continued coexistence has to be earned on the
+remaining differences above.
 
 Alternative python packages
 ---------------------------
 
-- `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - less accurate, more lightweight, faster per lookup
+- `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - its PyPI build is less accurate, more lightweight
+  and faster per lookup; its experimental ``+full`` build does not simplify the geometry
 - `pytzwhere <https://pypi.python.org/pypi/tzwhere>`__ - not maintained
 
 
@@ -68,19 +105,21 @@ difference is in what they do with that dataset's geometry.
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
      - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - Faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most (:doc:`benchmark_results_comparison`)
+     - The simplified PyPI build is faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; the ``+full`` build is not measured here (:doc:`benchmark_results_comparison`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
    * - Distribution Size
      - Tens of MB per wheel, nearly all of it the packaged boundary data (:doc:`data_report` lists the installed binary sizes)
-     - A few MB per wheel
+     - A few MB per wheel for the simplified PyPI build; the ``+full`` wheel is larger
    * - Build & Platform Coverage
      - Builds without a Rust toolchain; the C extension is optional and its absence only costs speed
      - Requires Rust to build wheels on platforms or Python versions without a prebuilt one
    * - Additional Features
-     - ``get_geometry()`` returns the timezone shapes
-     - Returns GeoJSON representations of the shapes and the timezone's indexes
+     - Batch and integer-ID lookup, land-only and certainty variants, coordinate-array geometry,
+       and time conversion helpers
+     - Returns every matching zone and GeoJSON representations of the shapes and the timezone's
+       indexes
    * - Maintainership
      - Single repository
      - Downstream of several repositories (tzf, tzf-rel, tzf-rs) across Go, Rust and Python
@@ -374,32 +413,35 @@ result there.
 When to choose which package
 ----------------------------
 
-Only the criteria on which the two actually differ. On dataset coverage and access to the geometry
-they are equivalent, so neither is a reason to pick one - and measuring them together removed
-startup from this list as well, since the two reach a first answer in about the same time
-(:doc:`benchmark_results_comparison`).
+Only criteria that currently differ are listed. Dataset coverage and access to geometry exist in
+both projects, so neither is a reason to pick one. Measuring the PyPI builds together also removed
+startup from this list: they reach a first answer in about the same time
+(:doc:`benchmark_results_comparison`). The ``+full`` rows below describe its distribution contract;
+its performance and memory have not been measured by this project's harness.
 
 .. list-table::
    :header-rows: 1
-   :widths: 60 40
+   :widths: 58 42
 
    * - Use Case
      - Recommended Package
-   * - Accuracy near timezone borders
+   * - Full precision as a supported dependency from PyPI
      - ``timezonefinder``
-   * - Compatibility with varied Python environments and platforms
+   * - Full precision when an experimental, separately indexed wheel is acceptable
+     - Also evaluate ``tzfpy +full``; no winner is measured here
+   * - NumPy batch and integer-ID APIs, land-only lookup, or built-in time conversion
      - ``timezonefinder``
-   * - Maintainability and ease of contribution
+   * - Boundary data versioned independently of lookup code
+     - ``timezonefinder``
+   * - Source builds where a Rust toolchain is unavailable
      - ``timezonefinder``
    * - Lookup throughput
-     - ``tzfpy``
+     - ``tzfpy`` PyPI build (``+full`` not measured here)
    * - Minimal distribution size
-     - ``tzfpy``
+     - ``tzfpy`` PyPI build
 
-The first row is about the simplified polygons ``tzfpy`` ships on PyPI. Its experimental ``+full``
-wheels carry the unsimplified dataset and are not measured on this page.
-
-Both packages will likely coexist, because these are genuinely different products.
+Existing applications also have a legitimate compatibility reason to stay with either package,
+but ecosystem inertia is a maintenance obligation, not a claim of technical superiority.
 
 
 Comparison to pytzwhere

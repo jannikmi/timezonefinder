@@ -1,0 +1,1 @@
+The committed ``tzfpy`` agreement chart is rendered with the same deterministic Matplotlib SVG conventions as the other report charts, while remaining byte-for-byte reproducible from its stored measurement.

@@ -125,8 +125,8 @@ compare = [
 ]
 # Drawing the committed report charts. Deliberately its own group, and
 # deliberately not part of `test` or of $(BENCHMARK_ENV) in the Makefile: this is a
-# *rendering* dependency, reached only from scripts/batch_break_even_chart.py, and a
-# measured environment must not carry it. Installed-but-unimported packages cost no
+# *rendering* dependency, reached only when the committed report charts are drawn, and
+# a measured environment must not carry it. Installed-but-unimported packages cost no
 # resident memory, but `make memory` records `memory::import::rss` in subprocesses of
 # the measurement environment, so the separation is worth holding structurally rather
 # than by care - the same reasoning that keeps `compare` and `numba` out of `test`.
