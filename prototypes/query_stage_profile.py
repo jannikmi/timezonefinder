@@ -47,12 +47,13 @@ the report leads with the one that measures the *real* function untouched.
   lines; never a share-of-total.
 
 Both backends must be measured. ``timezonefinder/utils.py`` binds the point-in-polygon
-implementation at *import* time and numba wins whenever it is importable, so::
+implementation at *import* time and the C extension wins wherever it loaded, so::
 
-    # numba (what a dev checkout runs)
+    # a dev checkout: the clang kernel, in a process that also holds numba
     PYTHONPATH=. uv run python prototypes/query_stage_profile.py
 
-    # clang (what a plain `pip install timezonefinder` runs, and what CI tracks)
+    # a plain `pip install timezonefinder`, which is what CI tracks: the same kernel
+    # in a process with no numba in it at all
     PYTHONPATH=. uv run --isolated --no-group numba --group proto --group test \
         python prototypes/query_stage_profile.py
 

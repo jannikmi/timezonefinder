@@ -101,13 +101,16 @@ The ray-casting inner loop exists in three forms:
 - **clang C extension** - compiled by ``cffi`` at install time if a compiler is available.
 - **Numba JIT** - the Python implementation, compiled when ``utils_numba`` is first imported -
   which constructing a finder triggers, because its signatures are eager - if the optional
-  ``numba`` dependency is installed. Preferred over the C extension when both are present, and
-  the one path that also changes what a process costs before any query - resident memory and the
-  compilation itself; :doc:`benchmark_results_acceleration_paths` measures it.
+  ``numba`` dependency is installed. The fallback for an installation without the extension
+  since the dispatch followed the measurement, and still the one path that changes what a
+  process costs before any query -
+  resident memory and the compilation itself, paid wherever ``numba`` is importable even when the
+  extension is what answers the query; :doc:`benchmark_results_acceleration_paths` measures it.
 - **pure Python** - the same source, uncompiled. Correct, and the slowest of the three by a wide
   margin.
 
-``utils.py`` picks one of them at **import time**, not per call. That has two implications that
+``utils.py`` picks one of them at **import time**, not per call: the C extension wherever it
+loaded, otherwise whichever of the two ``utils_numba`` forms the environment produced. That has two implications that
 surface throughout this documentation:
 
 - The three are entirely separate code paths, so **their timings are not comparable** and must never
@@ -115,8 +118,9 @@ surface throughout this documentation:
   ``pip install timezonefinder`` gives you) and *asserts* the active path rather than assuming it;
   see :doc:`benchmarking_methodology`. Which of the three is fastest is a measurement that has moved
   as the kernels and the data format moved, so it is stated in one regenerated place -
-  :doc:`benchmark_results_acceleration_paths` - and nowhere else. In particular, Numba being
-  *preferred* by the dispatch above says nothing about it being *faster*.
+  :doc:`benchmark_results_acceleration_paths` - and nowhere else. The dispatch above follows that
+  measurement rather than restating it: it is the reason the order was inverted, and a later
+  measurement that reversed it would change the order again.
 - The fallback contract is *correct but slower, never broken*. If the C extension fails to compile
   and Numba is absent, the package still works. Ask which path is live with
   ``TimezoneFinder.using_clang_pip()`` and ``TimezoneFinder.using_numba()``.

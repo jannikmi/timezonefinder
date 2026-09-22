@@ -574,9 +574,10 @@ def test_rendered_system_status_stamps_the_input_provenance():
 @pytest.mark.parametrize(
     "using_numba, using_clang_pip, expected",
     [
-        # utils.py prefers Numba when both are importable, so "both true" is
-        # the Numba path and not an ambiguous state
-        (True, True, "Numba JIT"),
+        # utils.py binds the C extension wherever it loaded, so "both true" is a
+        # clang run in a process that also holds Numba - not an ambiguous state, and
+        # not a Numba run
+        (True, True, "C extension (clang)"),
         (True, False, "Numba JIT"),
         (False, True, "C extension (clang)"),
         (False, False, "pure Python"),
@@ -606,17 +607,39 @@ def test_is_ci_tracked_configuration(using_numba, using_clang_pip, expected):
 
 
 def test_headline_section_warns_when_the_run_is_not_the_ci_tracked_one():
-    # the committed reports are rendered from a developer machine, so this is
-    # the branch that ships: a reader must not compare these tables against the
-    # trend chart, which measures a different implementation
+    # a process holding Numba is not the tracked configuration even though it binds
+    # the same kernel - it imports and compiles `utils_numba` - so this is the branch
+    # that ships from a developer machine, and a reader must not compare these tables
+    # against the trend chart
     reporter = BenchmarkReporter(title="t", output_path="/dev/null")
 
-    add_headline_section(reporter, _FAKE_SYSTEM_INFO | {"using_numba": True}, [])
+    add_headline_section(
+        reporter,
+        _FAKE_SYSTEM_INFO | {"using_numba": True, "using_clang_pip": False},
+        [],
+    )
 
     (banner,) = _texts(reporter)
     assert "Numba JIT" in banner
     assert "not comparable to the trend chart" in banner
     assert ":doc:`benchmarking_methodology`" in banner
+
+
+def test_headline_section_warns_on_a_clang_run_that_also_holds_numba():
+    """The configuration the dispatch change created, and the one that reads as tracked.
+
+    Same kernel as a plain install, but the process imported and compiled
+    ``utils_numba`` as well, so its timings and its footprint describe something else.
+    The banner has to say so, and naming the path from the binding is what keeps the
+    label honest while the warning still fires.
+    """
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    add_headline_section(reporter, _FAKE_SYSTEM_INFO | {"using_numba": True}, [])
+
+    (banner,) = _texts(reporter)
+    assert "C extension (clang)" in banner
+    assert "not comparable to the trend chart" in banner
 
 
 def test_headline_section_says_so_when_the_run_is_the_ci_tracked_one():

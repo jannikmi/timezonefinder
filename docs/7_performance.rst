@@ -82,8 +82,8 @@ To check which implementation is active:
 Numba
 -----
 
-Installing the optional ``numba`` dependency JIT-compiles the same routine, and it **takes precedence
-over the C extension** when both are available:
+Installing the optional ``numba`` dependency JIT-compiles the same routine, as the **fallback for an
+installation that has no C extension**:
 
 .. code-block:: console
 
@@ -92,30 +92,36 @@ over the C extension** when both are available:
 
 .. code-block:: python
 
-    TimezoneFinder.using_numba()  # returns True or False
+    TimezoneFinder.using_numba()  # is Numba compiling this process's helpers?
+    TimezoneFinder.using_clang_pip()  # is the C extension what a lookup runs?
 
 
-**Taking precedence is a dispatch rule, not a speed claim** - and the two have been confused here
-before, in this documentation. Which path is fastest is a measurement, it has changed as the kernels
-and the data format changed, and it is not the same answer for every workload: a query the H3
-shortcut index answers outright never reaches a point-in-polygon test at all, so no choice of kernel
-moves it.
+The C extension wins wherever it loaded, and the JIT kernel runs only where it did not. Numba used
+to take precedence whenever it was importable - an ordering that predates both the extension and the
+packed payload the kernels read today, and that :doc:`benchmark_results_acceleration_paths` has since
+measured backwards: the JIT kernel is slower than the extension on every polygon size and never
+faster on a whole lookup. Where no compiler is available the ordering never mattered, and that is the
+case the extra still serves; there its rival is the pure-Python fallback, which the same page
+measures in orders of magnitude rather than percent.
 
-Read the answer off :doc:`benchmark_results_acceleration_paths`, which measures all three paths
-against each other and is regenerated with the rest of the reports. Do not assume the accelerator you
-installed is the faster one - check the page, for the workload you actually run.
+The two methods above therefore answer different questions: ``using_numba()`` says Numba is
+installed and compiling this process's helper functions, ``using_clang_pip()`` says which kernel a
+lookup actually reaches. On an installation holding both, both are ``True``.
 
-Installing Numba also changes more than the point-in-polygon kernel: ``validate_coordinates`` then
-calls two JIT-compiled scalar helpers rather than two plain comparisons, and every query pays that
-before any geometry. That page measures it.
+**Which path is fastest remains a measurement**, not a property of the dispatch - it has moved as the
+kernels and the data format moved, and it is not one answer for every workload, since a query the H3
+shortcut index answers outright never reaches a point-in-polygon test at all. Read it off
+:doc:`benchmark_results_acceleration_paths`, which is regenerated with the rest of the reports.
 
-**And speed is not the only consequence.** ``numba`` and the LLVM toolchain it brings add more
-resident memory than the whole packaged boundary dataset does, so the footprint
-:doc:`benchmark_results_memory` reports for a mode is no longer what the process holds. The kernels
-are compiled when a finder is first constructed, which is a pause a short-lived or cold-started
-process pays on every start; Numba caches the compiled code beside the installed package, so a
-read-only or ephemeral installation directory means paying the compilation every time. Weigh both
-against a ratio that the measurements have repeatedly found to be around one.
+**And installing it still costs, even now that a lookup does not run it.** ``timezonefinder.utils``
+imports ``utils_numba`` either way, so where Numba is importable it compiles that module's helpers -
+``int2coord`` and the ring converters - when a finder is first constructed. The process therefore
+holds Numba and its LLVM toolchain regardless of the dispatch: more resident memory than the whole
+packaged boundary dataset, so the footprint :doc:`benchmark_results_memory` reports for a mode is no
+longer what the process holds, and a compilation pause a short-lived or cold-started process pays on
+every start. Numba caches the compiled code beside the installed package, so a read-only or ephemeral
+installation directory means paying that every time. On an installation whose C extension built,
+there is nothing on the other side of that trade.
 
 All three implementations compute identical results; they only differ in speed. :doc:`architecture`
 explains why the choice is made once at import time and what follows from that - most importantly

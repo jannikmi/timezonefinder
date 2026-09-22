@@ -13,18 +13,18 @@ Installation
     pip install timezonefinder
 
 
-This builds a C extension for the point-in-polygon test. The optional ``numba`` extra swaps that extension for a JIT-compiled kernel, and takes precedence over it whenever it is installed - which is a dispatch rule and not a promise that it is faster. Check :doc:`benchmark_results_acceleration_paths` for how the three compare on the workload you run before adding it (see also the :ref:`performance chapter <performance>`):
+This builds a C extension for the point-in-polygon test. The optional ``numba`` extra JIT-compiles the same routine for an installation that could not build that extension; where the extension loaded, it is what a lookup runs. :doc:`benchmark_results_acceleration_paths` measures how the three compare (see also the :ref:`performance chapter <performance>`):
 
 .. code-block:: console
 
     pip install timezonefinder[numba]
 
 
-The extra is not free, whichever way the speed comparison comes out: ``numba`` and the LLVM
-toolchain it brings add more resident memory to every process than the whole packaged boundary
-dataset does, and they add a JIT compilation to the first finder a process builds. Weigh those
-against the measured speed difference, because a container memory limit and a cold-start budget
-are what the extra is actually spent against.
+The extra is not free, and on an installation whose extension built it now buys nothing: ``numba``
+and the LLVM toolchain it brings add more resident memory to every process than the whole packaged
+boundary dataset does, and a JIT compilation to the first finder a process builds - which is paid
+for compiling the helper functions even though the C extension is what answers the query. Install
+it where no compiler is available, and leave it out where one is.
 
 
 in case you are using ``pytz``, also require it via its extra to avoid incompatibilities (e.g. due to updated timezone names):

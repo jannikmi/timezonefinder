@@ -3,14 +3,14 @@
 """Assert which point-in-polygon acceleration path is active in this environment.
 
 ``timezonefinder/utils.py`` picks the point-in-polygon implementation **at
-import time**, and there are three outcomes rather than two: the Numba-JIT'd
-Python function when ``numba`` is importable, the CFFI-backed clang C
-extension when it is not but the extension loaded, and the *undecorated*
-Python function when neither is available. These are completely different
-code paths with very different performance, so a benchmark trend chart that
-silently switches between them is worse than no chart at all: the history
-would compare numbers that were never comparable. How far apart they actually
-are is measured rather than asserted here - ``make acceleration-paths`` and
+import time**, and there are three outcomes rather than two: the CFFI-backed
+clang C extension whenever it loaded, the Numba-JIT'd Python function when it
+did not load and ``numba`` is importable, and the *undecorated* Python
+function when neither is available. These are completely different code paths
+with very different performance, so a benchmark trend chart that silently
+switches between them is worse than no chart at all: the history would compare
+numbers that were never comparable. How far apart they actually are is
+measured rather than asserted here - ``make acceleration-paths`` and
 ``docs/benchmark_results_acceleration_paths.rst`` - because it depends on the
 workload and has moved as the kernels have.
 
@@ -19,11 +19,19 @@ asserts the expected path *before* running anything, rather than assuming
 that "we did not install the numba group" is still true after a lockfile or
 dependency change.
 
+``--expect-interpreted`` asserts the *other* half of the environment: which of
+the two ``utils_numba``-sourced kernels this process holds, whatever the
+dispatch bound. Since the C extension wins wherever it loaded, that is the only
+way to state "this is the environment with ``numba`` installed", which is what
+the acceleration-path comparison needs of its second environment - it rebinds
+the kernels itself, so what it requires is that the JIT-compiled one exists
+here at all.
+
 Usage::
 
     uv run python -m scripts.assert_acceleration_path --expect clang
-    uv run python -m scripts.assert_acceleration_path --expect numba
     uv run python -m scripts.assert_acceleration_path --expect python
+    uv run python -m scripts.assert_acceleration_path --expect clang --expect-interpreted numba
 """
 
 import argparse
@@ -98,11 +106,12 @@ def interpreted_path_name() -> AccelerationPath:
 def active_acceleration_path() -> AccelerationPath:
     """Return the acceleration path ``timezonefinder.utils`` actually bound.
 
-    Three answers, not two. ``utils.py`` chooses the C extension only when numba is
-    absent *and* the extension loaded, so the remaining case - neither available - runs
-    the undecorated ``utils_numba`` functions. Reporting that as ``clang`` was wrong in
-    the direction that matters: an install whose extension silently failed to build then
-    looked, in every report it produced, like the configuration a working one runs.
+    Three answers, not two. ``utils.py`` chooses the C extension wherever it loaded, so
+    the other two cases are both "the extension is missing" and differ only in whether
+    ``numba`` is there to compile the fallback. Reporting either as ``clang`` would be
+    wrong in the direction that matters: an install whose extension silently failed to
+    build would then look, in every report it produced, like the configuration a working
+    one runs.
     """
     if utils.inside_polygon_packed is utils_clang.pt_in_poly_clang_packed:
         return "clang"
@@ -144,7 +153,9 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
             f"utils.using_numba={utils.using_numba}. The Numba and pure-Python paths "
             "are the same source decorated or not, so only the environment decides "
             "which one runs: install the `numba` group to get 'numba', omit it to get "
-            "'python'."
+            "'python'. Either way the C extension outranks both where it loaded, so "
+            "neither can be the *active* path in an environment that has it - use "
+            "`--expect-interpreted` to assert which one this environment holds."
         )
     for attribute, table in (
         ("inside_polygon", ACCELERATION_IMPLEMENTATIONS),
@@ -162,6 +173,24 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
             )
 
 
+def check_interpreted_path(expected: AccelerationPath) -> None:
+    """Raise ``RuntimeError`` unless this environment holds ``expected``'s kernel.
+
+    A weaker claim than :func:`check_acceleration_path`, and the only one an
+    environment holding the C extension can make about the other two paths: whether
+    ``utils_numba``'s functions are JIT dispatchers or plain Python here. What asks for
+    it is a comparison that rebinds the kernels itself and needs to know which one it
+    is rebinding to.
+    """
+    interpreted = interpreted_path_name()
+    if interpreted != expected:
+        raise RuntimeError(
+            f"expected this environment to hold the {expected!r} kernel, but it holds "
+            f"{interpreted!r} (utils.using_numba={utils.using_numba}). Install the "
+            "`numba` group to get 'numba', omit it to get 'python'."
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -175,13 +204,28 @@ def main() -> None:
         choices=ACCELERATION_PATHS,
         help="the acceleration path that must be active",
     )
+    parser.add_argument(
+        "--expect-interpreted",
+        choices=sorted(NUMBA_SOURCED_PATHS),
+        help=(
+            "additionally assert which of the two utils_numba-sourced kernels this "
+            "environment holds, whatever the dispatch bound"
+        ),
+    )
     args = parser.parse_args()
     try:
         check_acceleration_path(args.expect)
+        if args.expect_interpreted:
+            check_interpreted_path(args.expect_interpreted)
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
-    print(f"OK: the {args.expect!r} point-in-polygon acceleration path is active")
+    message = f"OK: the {args.expect!r} point-in-polygon acceleration path is active"
+    if args.expect_interpreted:
+        message += (
+            f", over the {args.expect_interpreted!r} kernel this environment holds"
+        )
+    print(message)
 
 
 if __name__ == "__main__":

@@ -29,13 +29,13 @@ on it, remembering that uniformly random points are ~11 % ambiguous and an ambig
 costs ~11x a unique one.
 
 Both backends have to be measured, since ``timezonefinder/utils.py`` binds the
-point-in-polygon implementation at import and numba wins whenever it is importable::
+point-in-polygon implementation at import and the C extension wins wherever it loaded::
 
-    # numba (what a dev checkout runs)
+    # a dev checkout: the clang kernel, in a process that also holds numba
     PYTHONPATH=. uv run python prototypes/shortcut_resolution_query_bench.py \
         tmp/combined-with-oceans.json
 
-    # clang (what a plain `pip install` runs, and what CI tracks - rank on this one)
+    # a plain `pip install`, which is what CI tracks - rank on this one
     PYTHONPATH=. uv run --isolated --no-group numba --group proto --group test \
         python prototypes/shortcut_resolution_query_bench.py tmp/combined-with-oceans.json
 

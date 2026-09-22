@@ -177,10 +177,10 @@ speedtest:
 # group so that the CI-tracked measurement below cannot pick it up.
 BENCHMARK_ENV := --isolated --group test --group compare
 
-# The same environment plus numba, which is the *only* way to reach the JIT path: it is
-# selected by being importable, never by a flag. `compare` is left out because nothing
-# in the acceleration-path comparison measures tzfpy, and the two environments should
-# differ in exactly one thing - whether numba is installed.
+# The same environment plus numba, which is the *only* way to have the JIT kernel at
+# all: it exists by being importable, never by a flag. `compare` is left out because
+# nothing in the acceleration-path comparison measures tzfpy, and the two environments
+# should differ in exactly one thing - whether numba is installed.
 BENCHMARK_ENV_NUMBA := --isolated --group test --group numba
 BENCHMARK_ENV_PLAIN := --isolated --group test
 
@@ -226,22 +226,26 @@ latency:
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
 # All three point-in-polygon paths against each other, which no single environment can
-# measure: numba wins the import-time dispatch whenever it is installed and pure Python
-# is what the same source is without it, so the two pairs are taken in two environments
-# and anchored on clang, the one path both of them hold. Paired inside each process -
-# see scripts/measure_acceleration_paths.py for why a cross-process pair would not be.
+# measure: numba and pure Python are one source decorated or not, so no process holds
+# both, and the two pairs are taken in two environments and anchored on clang, the one
+# path both of them hold. Paired inside each process - see
+# scripts/measure_acceleration_paths.py for why a cross-process pair would not be.
 #
-# The path is asserted per environment for the reason `benchmarks` asserts it: the
-# whole page is about which implementation produced which column, so an environment
-# that quietly bound a different one would mislabel every row rather than fail.
+# Both environments now *bind* clang, which outranks the other two wherever it loaded,
+# so what distinguishes them is which kernel they hold rather than which one they
+# selected: `--expect-interpreted` is the assertion that says so, and the comparison
+# rebinds that kernel itself. Asserting both halves for the reason `benchmarks` asserts
+# the path at all - the whole page is about which implementation produced which column,
+# so an environment that quietly held a different one would mislabel every row rather
+# than fail.
 acceleration-paths:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) --expect-interpreted python
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_PYTHON)
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.assert_acceleration_path \
-		--expect numba
+		--expect $(BENCHMARK_ACCELERATION_PATH) --expect-interpreted numba
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_NUMBA)
 

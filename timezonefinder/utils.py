@@ -124,14 +124,27 @@ inside_polygon_packed: Callable[..., bool]
 packed_buffers: Callable[
     [np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray], tuple
 ]
-# at import time fix which "point-in-polygon" implementation will be used
-if clang_extension_loaded and not using_numba:
-    # use the C implementation only if Numba is not present
+# At import time fix which "point-in-polygon" implementation will be used. The C
+# extension wins wherever it loaded, and Numba is what the same source falls back to
+# when it did not - which is the ordering the measurements support, not a statement
+# about the technologies. Numba used to win whenever it was importable, an ordering which
+# predates both the C extension and the packed payload the kernels now read;
+# `docs/benchmark_results_acceleration_paths.rst` has since measured the JIT kernel
+# slower than the extension on every polygon stratum, and never faster on a whole
+# lookup. The reasoning, and what would reopen it, is recorded in
+# `contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md`.
+#
+# Only this kernel is dispatched. `utils_numba` is imported either way, so where Numba
+# is installed it still compiles the helpers above (`int2coord`, `convert2coords`) and
+# still costs the process that import - `using_numba` therefore keeps reporting what it
+# always did, namely that Numba is compiling helper functions here.
+if clang_extension_loaded:
     inside_polygon = utils_clang.pt_in_poly_clang
     inside_polygon_packed = utils_clang.pt_in_poly_clang_packed
     packed_buffers = utils_clang.packed_buffers_clang
 else:
-    # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
+    # the same source the JIT compiles where Numba is installed, and plain Python where
+    # it is not: `using_numba` is the whole difference between those two cases
     inside_polygon = utils_numba.pt_in_poly_python
     inside_polygon_packed = utils_numba.pt_in_poly_packed
     packed_buffers = utils_numba.packed_buffers_numba

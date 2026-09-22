@@ -1,22 +1,24 @@
 """Drive both point-in-polygon acceleration paths through the *real* lookup stack.
 
 ``timezonefinder/utils.py`` binds ``inside_polygon_packed`` once, at import time, and
-Numba wins whenever it is importable::
+the C extension wins wherever it loaded::
 
-    if clang_extension_loaded and not using_numba:
+    if clang_extension_loaded:
         inside_polygon_packed = utils_clang.pt_in_poly_clang_packed
 
-The recommended local setup installs Numba - ``make install`` / ``uv sync
---all-groups`` pull in the ``numba`` group, and ``uv run`` syncs *inexactly*, so it
-stays for every later invocation. A developer machine therefore binds the Numba
-dispatcher, and the C extension is reached only by the direct-kernel tests in
-``utils_test.py``, which feed it hand-built arrays from ``convert_polygon``.
-Everything about how *real* polygon buffers arrive at the C function - dtypes,
-C-contiguity, read-only memory-mapped views, the lifetime of the ``ffi.from_buffer``
-handles - used to be exercised first in CI's non-numba tox envs, i.e. the
-configuration a plain ``pip install timezonefinder`` produces.
+So the path a test session runs is the one nearly every install runs, and the two
+kernels behind ``utils_numba`` are what no ordinary session reaches: the JIT-compiled
+one needs the ``numba`` group *and* a missing extension, and the interpreted one needs
+both to be absent. Neither combination is a configuration anybody develops in, and
+until the dispatch was inverted the gap was the other way round - the recommended setup installs
+Numba (``make install`` / ``uv sync --all-groups``, and ``uv run`` syncs *inexactly*,
+so it stays), which used to win the dispatch and leave the C extension to the
+direct-kernel tests in ``utils_test.py`` and their hand-built arrays.
 
-These tests close that gap by building a finder with the other path's kernel bound.
+Whichever way the dispatch points, everything about how *real* polygon buffers arrive
+at a kernel - dtypes, C-contiguity, read-only memory-mapped views, the lifetime of the
+``ffi.from_buffer`` handles - is only covered where a finder is built on it. These
+tests close that gap by building a finder with each path's kernel bound in turn.
 The finder has to be built *under* the patch since polygon layout 3: a collection wraps
 its payload for the bound backend once, when it is loaded, so a kernel swapped in
 afterwards would be handed the other backend's buffers. Both implementations therefore
@@ -26,6 +28,7 @@ kernel ever sees.
 """
 
 from collections.abc import Callable
+import importlib
 
 import pytest
 
@@ -41,7 +44,7 @@ from tests.auxiliaries import (
     single_location_test,
 )
 from tests.locations import TEST_LOCATIONS, TEST_LOCATIONS_AT_LAND
-from timezonefinder import TimezoneFinder, utils
+from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 
 # ``utils_test.py::test_clang_extension_loaded`` is the loud guard that the extension
 # is present at all. Skipping here rather than failing keeps that single assertion the
@@ -276,3 +279,50 @@ def test_using_clang_pip_reports_the_bound_implementation(
     )
 
     assert tf.using_clang_pip() is (path == "clang")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "extension_loaded, numba_importable, expected",
+    [
+        # the case the dispatch exists to decide, and the one this file's own header
+        # quotes: both available, and the extension wins
+        (True, True, "clang"),
+        (True, False, "clang"),
+        (False, True, "numba"),
+        (False, False, "python"),
+    ],
+)
+def test_the_extension_outranks_numba_wherever_it_loaded(
+    monkeypatch: pytest.MonkeyPatch,
+    extension_loaded: bool,
+    numba_importable: bool,
+    expected: str,
+) -> None:
+    """The import-time dispatch, over all four environments rather than this one.
+
+    The rule is four lines of module-level code that run once per process, so the
+    environment a test session happens to have decides which branch is exercised -
+    and none of the tests above can see the branch at all, since they rebind the
+    kernel themselves. Re-executing ``utils`` under the two flags is what covers the
+    other three environments from any one of them; the reload in ``finally`` puts the
+    real ones back, and identity is what is asserted, because a flag can agree with a
+    mis-wired binding.
+    """
+    monkeypatch.setattr(utils_clang, "clang_extension_loaded", extension_loaded)
+    monkeypatch.setattr(utils_numba, "using_numba", numba_importable)
+    try:
+        reloaded = importlib.reload(utils)
+
+        assert (
+            reloaded.inside_polygon_packed
+            is PACKED_ACCELERATION_IMPLEMENTATIONS[expected]
+        )
+        assert reloaded.packed_buffers is PACKED_BUFFER_FACTORIES[expected]
+        # `numba` and `python` are one source and share their function objects, so the
+        # identity above cannot tell them apart - only the flag can, and it is what
+        # `TimezoneFinder.using_numba()` keeps reporting either way
+        assert reloaded.using_numba is numba_importable
+    finally:
+        monkeypatch.undo()
+        importlib.reload(utils)

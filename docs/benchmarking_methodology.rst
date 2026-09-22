@@ -199,7 +199,7 @@ ratio (~11 % ambiguous), so a change is weighted by how much real query load it 
 
 ``unique_shortcut-in_memory`` and ``ambiguous_shortcut-in_memory`` are tracked alongside it as
 diagnostics, because the headline alone cannot attribute a change to a code path. On the tracked
-configuration an ambiguous lookup costs ~14x a unique one (~7x with Numba), so ambiguous work takes
+configuration an ambiguous lookup costs ~14x a unique one, so ambiguous work takes
 ~62 % of the wall clock despite being ~11 % of the queries. A win confined to the unique path
 therefore moves the headline by only ~0.38x its true size - enough dilution to sink a small win
 below the noise floor. The
@@ -215,10 +215,11 @@ Only the **no-Numba / clang C extension** path, because that is what a plain
 ``timezonefinder/utils.py`` selects the point-in-polygon implementation **at import time**, so
 Numba and clang are completely different code paths whose numbers must never share a benchmark
 name. The workflow *asserts* the active path (``scripts/assert_acceleration_path.py``) rather than
-assuming it, and so does every ``make`` target that measures - the memory ones included, because
-importing Numba costs resident memory as well as changing the timings. A Numba install sneaking
-into the environment would otherwise silently corrupt the entire trend history rather than fail,
-and locally it is the *normal* state: ``make install`` syncs every dependency group.
+assuming it, and so does every ``make`` target that measures. The extension now outranks
+Numba, so a stray Numba install no longer changes which kernel is timed - but it still has to
+fail the assertion, because importing Numba costs resident memory and leaves the process holding a
+compiler, and the memory targets measure exactly that. Locally it is the *normal* state:
+``make install`` syncs every dependency group.
 
 For the same reason, **local numbers are not comparable to CI numbers** - different CPU, different
 memory bandwidth, different background load, and often a different acceleration path. The
@@ -336,8 +337,8 @@ paths does (Numba and pure Python are one source decorated or not, so no process
 *pair* is still measured inside one process against the implementation both environments hold, and
 the ratio that would have to cross the boundary is not computed at all. The two runs' shared
 baseline is published beside the results as the reader's own comparability check - see
-:doc:`benchmark_results_acceleration_paths`, where it shows that installing Numba moves the
-coordinate validators too, not only the kernel.
+:doc:`benchmark_results_acceleration_paths`, where it shows what a process pays for merely having
+Numba installed, which it pays whether or not a lookup runs the JIT kernel.
 
 All four are held by ``benchmarks/candidate_comparison.py`` rather than re-derived per attempt.
 ``compare_candidates`` takes two named callables that each perform the whole public call for one

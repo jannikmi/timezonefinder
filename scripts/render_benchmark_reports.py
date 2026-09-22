@@ -295,16 +295,19 @@ def get_fixture_provenance(system_info: dict[str, Any]) -> dict[str, Any]:
 def acceleration_path_label(system_info: dict[str, Any]) -> str:
     """Name the point-in-polygon implementation that actually produced the numbers.
 
-    ``timezonefinder/utils.py`` binds the implementation at import time and
-    prefers Numba over the C extension when both are importable, so the two
-    recorded flags are not two independent choices - only one path ran. The
-    "System Status" section prints both flags; this collapses them to the one
-    fact a reader needs above the fold.
+    ``timezonefinder/utils.py`` binds the implementation at import time, the C
+    extension wherever it loaded, so the two recorded flags are not two independent
+    choices - only one path ran, and ``using_clang_pip`` is the one that reports the
+    *binding* rather than what the environment happens to hold. It is therefore read
+    first: a process with Numba installed and the extension built runs the extension,
+    and labelling its numbers "Numba JIT" would name an implementation that did not
+    produce them. The "System Status" section prints both flags; this collapses them
+    to the one fact a reader needs above the fold.
     """
-    if system_info.get("using_numba"):
-        return "Numba JIT"
     if system_info.get("using_clang_pip"):
         return "C extension (clang)"
+    if system_info.get("using_numba"):
+        return "Numba JIT"
     return "pure Python"
 
 
@@ -645,8 +648,11 @@ def add_startup_section(
         "fresh process that imports the package, constructs a default "
         "``TimezoneFinder()`` and answers one query, measured by "
         "``scripts/_startup_probe.py`` and reported as the median of its repetitions. "
-        "Both environments hold the C extension and differ in exactly one thing, so "
-        "the last column is what the extra costs."
+        "Both environments hold the C extension and both *bind* it, so the two "
+        "processes run the same kernel and differ in exactly one thing - whether "
+        "Numba is installed beside it. The last column is therefore what the extra "
+        "costs an installation that already has a working extension, which is what it "
+        "buys nothing for."
     )
 
     reporter.add_section("Resident memory", level=2)
@@ -740,9 +746,11 @@ def render_acceleration_paths(
     reporter.add_text(
         "The three point-in-polygon implementations, measured against each other "
         "rather than across commits. ``timezonefinder/utils.py`` binds one of them at "
-        "import time, so which one a process runs is decided by its environment: Numba "
-        "when it is importable, the C extension when it is not but the extension "
-        "loaded, and the plain Python function when neither is available. See "
+        "import time, so which one a process runs is decided by its environment: the C "
+        "extension wherever it loaded, the Numba-compiled function where it did not "
+        "and ``numba`` is importable, and the plain Python function where neither is "
+        "available. The rows below are therefore measured by rebinding the kernel "
+        "rather than by installing a different environment. See "
         ":doc:`benchmarking_methodology`."
     )
     reporter.add_note(
@@ -826,14 +834,14 @@ def render_acceleration_paths(
         "which is the whole reason this page does not divide one run into the other."
     )
     reporter.add_text(
-        "The second is specific to the Numba run: **installing Numba changes more than "
-        "the point-in-polygon kernel**. ``utils.validate_coordinates`` calls two "
-        "``njit``-compiled scalar helpers when Numba is importable and two plain "
-        "comparisons when it is not, and every query pays that on the way in, before "
-        "any geometry. So a C-extension lookup measured beside Numba is not quite the "
-        "C-extension lookup a plain install runs - and the effect is largest on the "
-        "unique-shortcut rows, where validation is most of the query and no polygon is "
-        "ever tested."
+        "The second is specific to the Numba run: **a process that merely has Numba "
+        "installed is not the process a plain install runs**, even though both bind "
+        "the same C-extension kernel. ``timezonefinder/utils.py`` imports "
+        "``utils_numba`` either way, so where Numba is importable that import compiles "
+        "the helpers a query calls around the geometry (``int2coord`` and the ring "
+        "converters) and leaves the process holding the compiler as well. That is a "
+        "different allocator and a different resident set to be measured in, which the "
+        "section below prices directly."
     )
 
     reporter.write_report()
