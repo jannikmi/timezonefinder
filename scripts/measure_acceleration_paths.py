@@ -37,6 +37,20 @@ order cannot alternate, the two candidates cannot be handed the same draw, and t
 round-level win count is undefined, which leaves only the estimator this repository has
 already been misled by.
 
+What the environment costs before any query
+-------------------------------------------
+
+Speed is not the only consequence of installing the ``numba`` extra, and it is
+the only one a paired comparison can see: both candidates run in one process,
+which has already paid for whatever its environment imports. The import itself,
+the construction and the first answer - resident bytes and wall clock - are
+therefore measured separately, in a fresh subprocess per repetition
+(:mod:`scripts._startup_probe`), and reported as a median because the first
+process in a freshly installed environment compiles what the later ones load
+from numba's on-disk cache. Both environments hold the C extension and differ
+in exactly one thing, so the difference between their two columns is what
+installing the extra costs a deployment before it answers anything.
+
 Both levels, because they answer different questions
 ----------------------------------------------------
 
@@ -55,6 +69,9 @@ Usage::
 
 import argparse
 import json
+import statistics
+import subprocess
+import sys
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -116,6 +133,31 @@ NUMBA_ROUNDS = DEFAULT_ROUNDS
 #: these two within a few percent of each other - then this pair needs the statistical
 #: power the numba pair gets, not less of it.
 PYTHON_ROUNDS = 15
+
+
+#: Fresh processes measured for the startup cost, of which the median is reported.
+#: A footprint has no distribution worth building here, but the median is load-bearing
+#: for a second reason: numba caches its compiled kernels on disk (``cache=True`` in
+#: `timezonefinder/utils_numba.py`), so in a freshly installed environment the first
+#: process compiles and the rest load. Three processes put that one on an end of the
+#: order rather than into the reported number, and the page says the steady state is
+#: what it reports.
+STARTUP_REPETITIONS = 3
+
+STARTUP_PROBE_MODULE = "scripts._startup_probe"
+
+#: The numbers :mod:`scripts._startup_probe` reports per process. Bytes and seconds
+#: are aggregated the same way, so they are listed together; the flags it also reports
+#: are checked rather than aggregated.
+STARTUP_METRICS = (
+    "import_rss",
+    "init_rss",
+    "first_query_rss",
+    "ready_rss",
+    "import_seconds",
+    "init_seconds",
+    "first_query_seconds",
+)
 
 
 def _rounds_for(path: str) -> int:
@@ -229,10 +271,78 @@ def compare_lookups(path: str) -> dict[str, CandidateComparison]:
         challenger_finder.cleanup()
 
 
+def _startup_probe_point() -> tuple[float, float]:
+    """A point the shortcut index cannot answer on its own.
+
+    The probe times the *first* query, and ``numba.njit`` compiles when the kernel is
+    first called rather than when it is imported. A point whose H3 cell holds one
+    zone is answered without any point-in-polygon test, so it would leave the
+    compilation out of the number the reader is deciding against.
+    """
+    lng, lat = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[0]
+    return float(lng), float(lat)
+
+
+def measure_startup(path: str) -> dict[str, Any]:
+    """What this environment costs from a cold process to its first answer.
+
+    One fresh subprocess per repetition on this interpreter - which is the measured
+    environment's, because the probe is spawned from inside it - and the median per
+    metric (see :data:`STARTUP_REPETITIONS` for what the median is doing). Reported
+    per environment rather than per candidate: the import is paid once by the whole
+    process, so it is not something a paired comparison could attribute to either
+    side of one.
+    """
+    lng, lat = _startup_probe_point()
+    samples = []
+    for _ in range(STARTUP_REPETITIONS):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                STARTUP_PROBE_MODULE,
+                "--lng",
+                repr(lng),
+                "--lat",
+                repr(lat),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        samples.append(json.loads(completed.stdout))
+
+    measured_path = "numba" if samples[0]["using_numba"] else path
+    if measured_path != path:
+        # The probe is a second process and could in principle bind a different
+        # backend than the one this run is labelled with - a stray numba on the
+        # interpreter's path would do it. That would put one environment's import
+        # cost in the other's column, which is the whole quantity at stake.
+        raise RuntimeError(
+            f"the startup probe bound the {measured_path} path while this run "
+            f"measures {path}. Both must come from one environment."
+        )
+
+    report: dict[str, Any] = {
+        "repetitions": STARTUP_REPETITIONS,
+        "using_numba": samples[0]["using_numba"],
+        "using_clang_pip": samples[0]["using_clang_pip"],
+    }
+    for metric in STARTUP_METRICS:
+        values = [sample[metric] for sample in samples]
+        # RSS is unavailable on Windows, and the report renders an unavailable
+        # measurement as such rather than as a zero (`scripts/_memory_probe.py`).
+        report[metric] = (
+            None if any(v is None for v in values) else statistics.median(values)
+        )
+    return report
+
+
 def build_report(
     path: str,
     kernels: dict[str, CandidateComparison],
     lookups: dict[str, CandidateComparison],
+    startup: dict[str, Any],
 ) -> dict[str, Any]:
     """Assemble the JSON the renderer composes.
 
@@ -257,6 +367,7 @@ def build_report(
         },
         "kernels": {name: asdict(c) for name, c in kernels.items()},
         "lookups": {name: asdict(c) for name, c in lookups.items()},
+        "startup": startup,
     }
 
 
@@ -287,14 +398,22 @@ def main() -> None:
         )
 
     path = interpreted_path_name()
+    # First, and in its own processes: every later line of this run has imported
+    # numpy, h3, the boundary data and - where the environment has it - numba, and
+    # the startup cost is exactly what a process pays before any of that.
+    startup = measure_startup(path)
     kernels = compare_kernels(path)
     lookups = compare_lookups(path)
 
-    report = build_report(path, kernels, lookups)
+    report = build_report(path, kernels, lookups, startup)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     print(f"\n{path} against {BASELINE_PATH}\n")
+    print("  --- cold process ---")
+    for metric in STARTUP_METRICS:
+        print(f"  {metric}: {startup[metric]}")
+    print()
     for heading, results in (("packed kernel", kernels), ("timezone_at", lookups)):
         print(f"  --- {heading} ---")
         for name, comparison in results.items():
