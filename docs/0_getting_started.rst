@@ -22,10 +22,9 @@ This builds a C extension for the point-in-polygon test. The optional ``numba`` 
 
 The extra is not free, whichever way the speed comparison comes out: ``numba`` and the LLVM
 toolchain it brings add more resident memory to every process than the whole packaged boundary
-dataset does, and they add a JIT compilation to the first finder a process builds. Both are
-measured on the same page, under *What installing Numba costs before any query* - read it beside
-the speed tables, because a container memory limit and a cold-start budget are what the extra is
-actually spent against.
+dataset does, and they add a JIT compilation to the first finder a process builds. Weigh those
+against the measured speed difference, because a container memory limit and a cold-start budget
+are what the extra is actually spent against.
 
 
 in case you are using ``pytz``, also require it via its extra to avoid incompatibilities (e.g. due to updated timezone names):

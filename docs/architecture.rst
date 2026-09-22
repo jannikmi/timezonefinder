@@ -102,8 +102,8 @@ The ray-casting inner loop exists in three forms:
 - **Numba JIT** - the Python implementation, compiled when ``utils_numba`` is first imported -
   which constructing a finder triggers, because its signatures are eager - if the optional
   ``numba`` dependency is installed. Preferred over the C extension when both are present, and
-  the one path that changes what a process costs before any query: see the closing section of
-  :doc:`benchmark_results_acceleration_paths`.
+  the one path that also changes what a process costs before any query - resident memory and the
+  compilation itself; :doc:`benchmark_results_acceleration_paths` measures it.
 - **pure Python** - the same source, uncompiled. Correct, and the slowest of the three by a wide
   margin.
 
