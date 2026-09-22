@@ -28,8 +28,9 @@ against resolution 4, which is half of why re-running this needs the inversion b
 on it, remembering that uniformly random points are ~11 % ambiguous and an ambiguous query
 costs ~11x a unique one.
 
-Both backends have to be measured, since ``timezonefinder/utils.py`` binds the
-point-in-polygon implementation at import and the C extension wins wherever it loaded::
+Both environments have to be measured - not two backends, since ``timezonefinder/utils.py``
+binds the C extension in both wherever it loaded, while still importing and compiling
+``utils_numba`` where numba is installed::
 
     # a dev checkout: the clang kernel, in a process that also holds numba
     PYTHONPATH=. uv run python prototypes/shortcut_resolution_query_bench.py \

@@ -196,7 +196,8 @@ BENCHMARK_ENV_PLAIN := --isolated --group test
 benchmarks:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark \
 		--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS) --benchmark-max-time=0 \
 		--benchmark-json=$(BENCHMARK_JSON)
@@ -211,7 +212,8 @@ benchmarks:
 memory:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
@@ -222,7 +224,8 @@ memory:
 latency:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
 # All three point-in-polygon paths against each other, which no single environment can
@@ -241,7 +244,8 @@ latency:
 acceleration-paths:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH) --expect-interpreted python
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_PYTHON)
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.assert_acceleration_path \
@@ -258,7 +262,8 @@ acceleration-paths:
 batch-break-even:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_batch_break_even \
 		--output=$(BATCH_BREAK_EVEN_JSON)
 
@@ -320,6 +325,16 @@ BENCHMARK_MIN_ROUNDS := 50
 # to measure rather than reporting the wrong kernel's numbers - which is the
 # ordinary case here, since `make install` syncs --all-groups.
 BENCHMARK_ACCELERATION_PATH := clang
+
+# The second half of that guard, and it is load-bearing on its own: the C extension
+# outranks numba, so `--expect clang` passes in an environment that *has* numba and
+# would no longer refuse one. What still has to be refused is the numba install
+# itself, because the tracked configuration is a process with no numba in it -
+# importing it costs resident memory, which `memory` records, and JIT-compiles the
+# `utils_numba` kernels that `benchmarks`' `test_pt_in_poly_python*` rows time under
+# names the trend chart joins on. Asserting the interpreted path is `python` is how
+# that is said now that the active path cannot say it.
+BENCHMARK_INTERPRETED_PATH := python
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
 
@@ -347,11 +362,16 @@ print-memory-chart-json:
 print-benchmark-acceleration-path:
 	@echo $(BENCHMARK_ACCELERATION_PATH)
 
+# the other half of the same guard, for the workflow steps that assert it
+print-benchmark-interpreted-path:
+	@echo $(BENCHMARK_INTERPRETED_PATH)
+
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
 	uv run python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run pytest benchmarks -m benchmark_core \
 		--benchmark-min-rounds=$(BENCHMARK_MIN_ROUNDS) \
 		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON)
@@ -383,7 +403,8 @@ benchmark-noise:
 memory-ci:
 	@mkdir -p $(dir $(CI_MEMORY_JSON))
 	uv run python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run python -m scripts.measure_memory \
 		--output=$(RAW_MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
@@ -513,7 +534,7 @@ docs:
 .PHONY: clean test testint testall build docs speedtest benchmarks reports \
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
-	print-benchmark-acceleration-path latency \
+	print-benchmark-acceleration-path print-benchmark-interpreted-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths batch-break-even
 
