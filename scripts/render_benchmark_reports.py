@@ -542,6 +542,141 @@ def _anchor_agreement(runs: Sequence[dict[str, Any]], section: str) -> list[list
     return rows
 
 
+#: The cold-process measurement :mod:`scripts._startup_probe` takes, one step per row.
+#: Memory and time are two tables rather than one: four columns of each would not fit,
+#: and a reader with a container limit and a reader with a cold-start budget are
+#: rarely the same reader.
+STARTUP_MEMORY_STEPS = (
+    ("import_rss", "added by ``import timezonefinder``"),
+    ("init_rss", "added by ``TimezoneFinder()``"),
+    ("first_query_rss", "added by the first query"),
+    ("ready_rss", "**the whole process, once the first answer is out**"),
+)
+
+STARTUP_TIME_STEPS = (
+    ("import_seconds", "``import timezonefinder``"),
+    ("init_seconds", "``TimezoneFinder()``"),
+    ("first_query_seconds", "the first query"),
+    ("time_to_first_answer", "**the whole way to the first answer**"),
+)
+
+#: Summed rather than measured: no process can time the three steps and the whole at
+#: once, and the sum is what a caller waits for.
+TIME_TO_FIRST_ANSWER_PARTS = (
+    "import_seconds",
+    "init_seconds",
+    "first_query_seconds",
+)
+
+
+def _startup_value(startup: dict[str, Any], metric: str) -> float | None:
+    if metric != "time_to_first_answer":
+        return startup.get(metric)
+    total = 0.0
+    for part in TIME_TO_FIRST_ANSWER_PARTS:
+        measured = startup.get(part)
+        if measured is None:
+            return None
+        total += float(measured)
+    return total
+
+
+def _startup_column_label(startup: dict[str, Any]) -> str:
+    return "With Numba" if startup["using_numba"] else "Plain install"
+
+
+def _signed(value: float, formatter: Callable[[float], str]) -> str:
+    return f"+{formatter(value)}" if value > 0 else formatter(value)
+
+
+def _startup_table(
+    reporter: BenchmarkReporter,
+    startups: Sequence[dict[str, Any]],
+    steps: Sequence[tuple[str, str]],
+    formatter: Callable[[float], str],
+) -> None:
+    """One table of cold-process numbers, plain install first and the extra's cost last.
+
+    The last column is a difference rather than a ratio: these are two environments
+    and what a reader installing the extra pays is the amount added, not a multiple
+    of a baseline they would no longer be running.
+    """
+    rows = []
+    for metric, label in steps:
+        values = [_startup_value(startup, metric) for startup in startups]
+        cells = [
+            MEASUREMENT_UNAVAILABLE if value is None else formatter(value)
+            for value in values
+        ]
+        first, last = values[0], values[-1]
+        cost = (
+            MEASUREMENT_UNAVAILABLE
+            if first is None or last is None
+            else _signed(last - first, formatter)
+        )
+        rows.append([label, *cells, cost])
+    reporter.add_table(
+        ["Step", *(_startup_column_label(s) for s in startups), "Cost of the extra"],
+        rows,
+    )
+
+
+def add_startup_section(
+    reporter: BenchmarkReporter, runs: Sequence[dict[str, Any]]
+) -> None:
+    """What each environment costs from a cold process to its first answer.
+
+    Skipped rather than faked when a run predates the measurement: the renderer is a
+    pure function of stored JSON, so a report measured before this section existed
+    renders without it instead of renaming its absence into a zero.
+    """
+    startups = [run["startup"] for run in runs if run.get("startup")]
+    if len(startups) != len(runs):
+        return
+    # Plain install first, so the added column reads as something the extra costs.
+    startups = sorted(startups, key=lambda s: s["using_numba"])
+
+    reporter.add_section("What installing Numba costs before any query", level=1)
+    reporter.add_text(
+        "Speed is only one consequence of installing the ``numba`` extra, and it is "
+        "the only one the tables above can see: a paired comparison runs both "
+        "candidates in one process, which has already imported whatever its "
+        "environment holds. The rows below are therefore not paired - each is a "
+        "fresh process that imports the package, constructs a default "
+        "``TimezoneFinder()`` and answers one query, measured by "
+        "``scripts/_startup_probe.py`` and reported as the median of its repetitions. "
+        "Both environments hold the C extension and differ in exactly one thing, so "
+        "the last column is what the extra costs."
+    )
+
+    reporter.add_section("Resident memory", level=2)
+    _startup_table(reporter, startups, STARTUP_MEMORY_STEPS, format_bytes)
+    reporter.add_text(
+        "Every row but the last is what that step added; the last is the whole "
+        "process, which is the figure a container memory limit is set against. The "
+        "difference is the Numba and ``llvmlite`` import plus the code it compiles, "
+        "and it is paid per process - a worker pool pays it once per worker, and it "
+        "does not shrink for ``TimezoneFinderL`` or for the memory-mapped default "
+        "mode, because it is not boundary data (:doc:`benchmark_results_memory` "
+        "measures that part)."
+    )
+
+    reporter.add_section("Time to the first answer", level=2)
+    _startup_table(reporter, startups, STARTUP_TIME_STEPS, format_duration)
+    reporter.add_text(
+        "The compilation lands in the construction row rather than in the query one: "
+        "``timezonefinder/utils_numba.py`` declares eager signatures, so the kernels "
+        "are compiled when that module is first imported, which constructing a finder "
+        "triggers. Numba caches that output on disk beside the installed package, so "
+        "the figures here are the steady state - the median over repetitions discards "
+        "the one process that compiled - and the *first* process in a fresh "
+        "environment pays more. Where the installed package directory is read-only or "
+        "thrown away between runs, every process pays it. Later queries are what the "
+        "tables above measure; this is what a process pays before the first of them, "
+        "and a short-lived process or a cold-started function pays it per invocation."
+    )
+
+
 def render_acceleration_paths(
     runs: Sequence[dict[str, Any]], output_path: Path
 ) -> None:
@@ -662,6 +797,8 @@ def render_acceleration_paths(
             f"{ACCELERATION_PATH_LABELS[path]} against the C extension", level=2
         )
         _acceleration_table(reporter, run, "lookups", PARAM_LABELS)
+
+    add_startup_section(reporter, runs)
 
     reporter.add_section("How comparable the two runs are", level=1)
     reporter.add_text(

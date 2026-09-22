@@ -109,6 +109,14 @@ Installing Numba also changes more than the point-in-polygon kernel: ``validate_
 calls two JIT-compiled scalar helpers rather than two plain comparisons, and every query pays that
 before any geometry. That page measures it.
 
+**And speed is not the only consequence.** ``numba`` and the LLVM toolchain it brings add more
+resident memory than the whole packaged boundary dataset does, so the footprint
+:doc:`benchmark_results_memory` reports for a mode is no longer what the process holds. The kernels
+are compiled when a finder is first constructed, which is a pause a short-lived or cold-started
+process pays on every start; Numba caches the compiled code beside the installed package, so a
+read-only or ephemeral installation directory means paying the compilation every time. Weigh both
+against a ratio that the measurements have repeatedly found to be around one.
+
 All three implementations compute identical results; they only differ in speed. :doc:`architecture`
 explains why the choice is made once at import time and what follows from that - most importantly
 that they are separate code paths whose timings must never be compared to each other under one

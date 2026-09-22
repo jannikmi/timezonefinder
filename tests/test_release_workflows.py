@@ -65,6 +65,7 @@ DATA_UPDATE_GATE = "the weekly data update's merge"
 SCRIPT_GATES: dict[str, str | None] = {
     "audit_shortcut_candidates": DATA_UPDATE_GATE,
     "_memory_probe": NOT_A_GATE,
+    "_startup_probe": NOT_A_GATE,
     "assert_acceleration_path": NOT_A_GATE,
     "benchmark_noise": NOT_A_GATE,
     # refuses, but over a report's binding to the commit that measured it, and

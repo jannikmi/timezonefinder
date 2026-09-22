@@ -309,12 +309,30 @@ def test_interpreted_kernel_labels_name_the_measuring_environment_and_restore():
     assert FUNCTION_LABELS["test_pt_in_poly_python_packed"] == before
 
 
+def _fake_startup(*, using_numba: bool) -> dict:
+    """One `scripts._startup_probe` aggregate, numba twice as expensive per step."""
+    factor = 2 if using_numba else 1
+    return {
+        "repetitions": 3,
+        "using_numba": using_numba,
+        "using_clang_pip": True,
+        "import_rss": 10 * 1024**2 * factor,
+        "init_rss": 2 * 1024**2 * factor,
+        "first_query_rss": 1024**2 * factor,
+        "ready_rss": 20 * 1024**2 * factor,
+        "import_seconds": 0.1 * factor,
+        "init_seconds": 0.02 * factor,
+        "first_query_seconds": 0.5 * factor,
+    }
+
+
 def _fake_acceleration_run(
     path: str,
     *,
     cpu: str = "Apple M1 Pro",
     baseline: float = 1.0,
     clock: str = "3.2 GHz",
+    startup: bool = True,
 ) -> dict:
     """One `scripts.measure_acceleration_paths` report, with one row per section."""
     comparison = {
@@ -339,6 +357,7 @@ def _fake_acceleration_run(
         },
         "kernels": {"small": comparison},
         "lookups": {"random": comparison},
+        **({"startup": _fake_startup(using_numba=path == "numba")} if startup else {}),
     }
 
 
@@ -355,6 +374,40 @@ def test_acceleration_page_reports_each_pair_against_its_own_clang_baseline(tmp_
     assert page.count("2.00x") >= 2
     # and the page must say, in so many words, that it does not cross the two runs
     assert "third ratio is not derived" in page
+
+
+def test_acceleration_page_prices_the_numba_extra_before_any_query(tmp_path):
+    output = tmp_path / "acceleration.rst"
+
+    render_acceleration_paths(
+        [_fake_acceleration_run("numba"), _fake_acceleration_run("python")], output
+    )
+
+    page = output.read_text(encoding="utf-8")
+    assert "What installing Numba costs before any query" in page
+    # the plain install is the first column, so the extra's cost is an addition
+    assert page.index("Plain install") < page.index("With Numba")
+    # 20 MiB against 40 MiB in the fixture, and the difference stated as such
+    assert "+20.0 MiB" in page
+    # the three timed steps, summed rather than measured: 0.62s against 1.24s
+    assert "+620ms" in page
+
+
+def test_acceleration_page_omits_the_startup_section_when_a_run_predates_it(tmp_path):
+    output = tmp_path / "acceleration.rst"
+
+    render_acceleration_paths(
+        [
+            _fake_acceleration_run("numba"),
+            _fake_acceleration_run("python", startup=False),
+        ],
+        output,
+    )
+
+    page = output.read_text(encoding="utf-8")
+    assert "What installing Numba costs before any query" not in page
+    # the rest of the page is unaffected
+    assert "Numba JIT" in page
 
 
 def test_acceleration_page_refuses_runs_from_two_machines(tmp_path):

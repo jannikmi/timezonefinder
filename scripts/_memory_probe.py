@@ -3,8 +3,11 @@
 """Measure one finder configuration's memory footprint, in its own process.
 
 Run as a subprocess by :mod:`scripts.measure_memory`, once per configuration
-per repetition, and never imported by anything else. It prints a single JSON
-object of byte counts to stdout and nothing else.
+per repetition. It prints a single JSON object of byte counts to stdout and
+nothing else. Only :func:`read_rss` is imported elsewhere - by
+:mod:`scripts._startup_probe`, which is the other probe that must stay cheap
+enough to measure an import; nothing imports this module to *run* a
+measurement.
 
 Why a separate process
 ----------------------
