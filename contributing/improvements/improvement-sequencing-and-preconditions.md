@@ -13,7 +13,7 @@ FT-3 waits on an h3 release
 FT-5 waits on a decision
 GH-364 independent
 
-IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3, moots GH-657, frees FT-3
+TOOL-7 ─→ IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3, moots GH-657, frees FT-3
 PREC-1 waits on a decision; it changes only the zone order the ordering optimizer keeps in overlap cells
 
 independent: GH-524

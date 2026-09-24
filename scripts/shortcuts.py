@@ -54,9 +54,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     zone_buckets = defaultdict(list)
     zone_sizes: defaultdict[int, int] = defaultdict(int)
 
-    # Both sorts below are stable. Start from polygon-id order so equal zone totals
-    # and equal polygon sizes cannot inherit a set's iteration order.
-    for poly_id in sorted(poly_ids):
+    for poly_id in poly_ids:
         zone_id = int(zone_ids[poly_id])
         zone_buckets[zone_id].append(poly_id)
         zone_sizes[zone_id] += int(nr_vertices[poly_id])

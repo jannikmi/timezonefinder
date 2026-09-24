@@ -14,7 +14,7 @@ So the answer in an overlap is decided by which zone has fewer vertices among a 
 
 ## The rule
 
-**Decided 2026-09-08, for covered cells, as part of PERF-7.** Of two overlapping zones, the one for which the shared area is the larger share of *itself* is the enclave and takes precedence. The two ratios share the shared area as their numerator, so this is exactly *smaller spherical zone area wins*, needs no polygon clipping, and is computed once per zone pair from the geometry alone. Because it is a comparison of one scalar per zone, it is acyclic by construction and one global order always satisfies it; an exact area tie must use a fixed key such as the zone name rather than inherit input order. Areas must be spherical: a planar sum over the stored coordinates lets latitude decide.
+**Decided 2026-09-08, for covered cells, as part of PERF-7.** Of two overlapping zones, the one for which the shared area is the larger share of *itself* is the enclave and takes precedence. The two ratios share the shared area as their numerator, so this is exactly *smaller spherical zone area wins*, needs no polygon clipping, and is computed once per zone pair from the geometry alone. Because it is a comparison of one scalar per zone, it is acyclic by construction and one global order always satisfies it; the only hazard is an exact area tie, which would leave the pair to the input order (TOOL-7's set-iteration nondeterminism), so the implementation breaks ties on something fixed, such as the zone name. Areas must be spherical: a planar sum over the stored coordinates lets latitude decide.
 
 Refused along the way, kept so they are not re-proposed:
 
