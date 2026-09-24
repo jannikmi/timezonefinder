@@ -66,6 +66,7 @@ integrals over clipped geometry. The approximations are these, explicitly:
    All candidates, including zero-area candidates, remain in the binary.
 """
 
+from dataclasses import dataclass
 from itertools import combinations, groupby
 from pathlib import Path
 
@@ -94,6 +95,27 @@ BLOCK_PROBE = 1
 ACTIVE_VERTEX = 1
 CELL_AREA_RTOL = 1e-6
 IMPROVEMENT_RTOL = 1e-12
+
+
+@dataclass(frozen=True)
+class CostCoefficients:
+    """Versionable coefficients for the runtime events modeled by the optimizer.
+
+    The converter still uses the reviewed defaults below.  Calibration tooling may
+    construct another instance to evaluate an alternative order, but never mutates
+    these defaults or makes conversion depend on the machine running it.
+    """
+
+    bbox: float = BBOX
+    hole_union_probe: float = HOLE_UNION_PROBE
+    hole_lookup: float = HOLE_LOOKUP
+    hole_bbox: float = HOLE_BBOX
+    pip_dispatch: float = PIP_DISPATCH
+    block_probe: float = BLOCK_PROBE
+    active_vertex: float = ACTIVE_VERTEX
+
+
+DEFAULT_COST_COEFFICIENTS = CostCoefficients()
 
 
 def spherical_area(geometry: BaseGeometry) -> float:
@@ -329,8 +351,14 @@ class CellOptimizer:
 class ShortcutOrderer:
     """Conversion-local geometry and packed block metadata; no runtime additions."""
 
-    def __init__(self, data: TimezoneData, output_path: Path):
+    def __init__(
+        self,
+        data: TimezoneData,
+        output_path: Path,
+        coefficients: CostCoefficients = DEFAULT_COST_COEFFICIENTS,
+    ):
         self.data = data
+        self.coefficients = coefficients
         # `self.boundaries` reads the *written* binaries and `self.data.boundaries`
         # the in-memory rings the same parse built. Deliberately both, and one hop
         # apart: the cost model below is about the packed layout, while the geometry
@@ -412,18 +440,23 @@ class ShortcutOrderer:
         if isinstance(array, HoleArray):
             array, pid = array._resolve(pid)
         start, end = array.block_offsets[pid : pid + 2]
-        model.add(gate, PIP_DISPATCH + BLOCK_PROBE * (end - start))
+        coefficients = self.coefficients
+        model.add(
+            gate,
+            coefficients.pip_dispatch + coefficients.block_probe * (end - start),
+        )
         for low, high in array.block_ranges[start:end]:
             model.add(
                 self.intersection(gate, (gate[0], int(low), gate[2], int(high))),
-                ACTIVE_VERTEX * POLYGON_BLOCK_SIZE,
+                coefficients.active_vertex * POLYGON_BLOCK_SIZE,
             )
 
     def model(self, pid: int) -> CheckCost:
         if pid not in self.models:
-            model = CheckCost()
+            coefficients = self.coefficients
+            model = CheckCost(coefficients.bbox)
             outer = self.bounds(self.boundaries, pid)
-            model.add(outer, HOLE_UNION_PROBE)
+            model.add(outer, coefficients.hole_union_probe)
             self.add_pip(model, self.boundaries, pid, outer)
             amount, first = self.data.hole_registry.get(pid, (0, 0))
             if amount:
@@ -437,7 +470,10 @@ class ShortcutOrderer:
                     max(b[3] for b in boxes),
                 )
                 gate = self.intersection(outer, union)
-                model.add(gate, HOLE_LOOKUP + amount * HOLE_BBOX)
+                model.add(
+                    gate,
+                    coefficients.hole_lookup + amount * coefficients.hole_bbox,
+                )
                 for hid, bounds in zip(
                     range(first, first + amount), boxes, strict=True
                 ):

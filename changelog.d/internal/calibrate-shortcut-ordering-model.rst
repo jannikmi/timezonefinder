@@ -1,0 +1,1 @@
+Shortcut-ordering costs now have a reproducible stage-count calibration, held-out whole-query validation, backend and storage provenance, deterministic stale-input detection, and an explicit benchmark-workflow artifact instead of untracked engineering estimates alone.
