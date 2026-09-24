@@ -410,6 +410,40 @@ the stage. Where a real win would have to come from is visible in the same ladde
 in two calls before any lookup logic runs.**
 
 
+Calibrating the shortcut-ordering model
+---------------------------------------
+
+``scripts/shortcut_ordering.py`` orders the candidate polygons stored for an ambiguous H3 cell.
+It integrates a deterministic work model over the cell; conversion itself never samples points or
+times the machine running it. The reviewed production coefficients therefore live in source and
+are deliberately *not* learned during conversion.
+
+``make shortcut-calibration`` is the separate empirical check. It runs the real
+``inside_of_polygon`` control flow through counting adapters, so outer-box rejection, the hole-union
+gate, individual-hole early termination and packed-block activity are counted without adding probes
+to the production lookup. It then fits seven non-negative terms on one deterministic partition of
+H3 cells and reports residuals on different cells. Rare successful-hole exits are generated from
+real packaged holes and reported separately; they do not enter the fit, because deliberately
+oversampling a rare path must not change the workload distribution.
+
+Prediction error is not an ordering result. The command also builds calibrated and area-only orders
+for a bounded held-out cell set (always including its longest candidate list), asserts every answer
+against the production order, and compares the complete public ``timezone_at`` call with
+``benchmarks/candidate_comparison.py``. Both arms use the same index-adapter shape, the order
+alternates by round, and every held-out query remains in the aggregate so easy cells dilute a local
+change exactly as they do in a real workload. The two estimators may still say ``unresolved``; that
+is a result, and is a reason to retain the reviewed constants rather than publish a noisy fit.
+
+``benchmarks/shortcut_ordering_model.json`` maps every coefficient to its runtime event and hashes
+the executable stages, packed-kernel sources, counting instrument and fixture/data identity that
+define the measurement. ``make shortcut-calibration-check`` performs only that deterministic
+freshness check and is safe in ordinary CI. The benchmark workflow exposes the timed calibration as
+an explicit dispatch and uploads its JSON artifact; it never commits the artifact or rewrites a
+coefficient. The reference run is clang with mapped data, matching a plain installation. Numba,
+in-memory and pure-Python runs are supporting sensitivity checks, not numbers that may be combined
+with the reference run.
+
+
 Memory is measured the same way
 -------------------------------
 
