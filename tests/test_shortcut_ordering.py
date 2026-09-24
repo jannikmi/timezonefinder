@@ -23,7 +23,7 @@ from scripts.shortcut_ordering import (
     cell_region,
     spherical_area,
 )
-from scripts.shortcuts import check_shortcut_sorting
+from scripts.shortcuts import check_shortcut_sorting, optimise_shortcut_ordering
 from timezonefinder.configs import COORD2INT_FACTOR, POLYGON_BLOCK_SIZE
 
 pytestmark = pytest.mark.unit
@@ -36,6 +36,17 @@ def rectangle(x0, x1, y0=0, y1=1):
         x1 * COORD2INT_FACTOR,
         y1 * COORD2INT_FACTOR,
     )
+
+
+@pytest.mark.parametrize("zones", [[0, 1, 2, 3], [0, 1, 2, 2]])
+def test_legacy_ordering_breaks_ties_by_polygon_id(zones):
+    data = SimpleNamespace(
+        boundaries=SimpleNamespace(nr_vertices=np.array([4, 3, 1, 1])),
+        poly_zone_ids=np.array(zones),
+    )
+
+    for candidates in itertools.permutations(range(4)):
+        assert optimise_shortcut_ordering(data, list(candidates)) == [2, 3, 1, 0]
 
 
 def test_spherical_area_rectangles_holes_and_latitude_distortion():
