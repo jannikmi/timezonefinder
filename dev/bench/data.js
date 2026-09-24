@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790289017332,
+  "lastUpdate": 1790289019189,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -25007,6 +25007,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8721 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0183487b4e424a609a9cd6f4be9cea30c8c08e9",
+          "message": "TOOL-7: record the shortcut tie precedence decision (#702)\n\n* TOOL-7: make shortcut ordering ties deterministic\n\n* TOOL-7: retire deterministic ordering item\n\n* TOOL-7: record the cross-zone precedence decision\n\nIndependent review found that sorting tied polygon ids changes the final fallback in an unsafe 2026d cell. Remove the implementation, restore the item as needs-decision work, and block its dependent comparison rather than choosing answer semantics implicitly.",
+          "timestamp": "2026-09-25T00:29:23+02:00",
+          "tree_id": "34cb4ebf64123362b25e176cb6594710845b87da",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c0183487b4e424a609a9cd6f4be9cea30c8c08e9"
+        },
+        "date": 1790289018870,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0152225494384766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.276041030883789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.276759147644043,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.8619966506958,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.86276340484619,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7112 GHz"
           }
         ]
       }
