@@ -20,6 +20,7 @@ from scripts.shortcut_ordering import (
     CellOptimizer,
     CheckCost,
     ShortcutOrderer,
+    DEFAULT_COST_COEFFICIENTS,
     cell_region,
     spherical_area,
 )
@@ -266,6 +267,7 @@ def test_hole_union_gate_skips_all_individual_hole_costs():
     orderer.data = SimpleNamespace(hole_registry={0: (95, 0)})
     orderer.boundaries = array(1, 0, 100)
     orderer.holes = array(95, 10, 20)
+    orderer.coefficients = DEFAULT_COST_COEFFICIENTS
     orderer.models = {}
     model = orderer.model(0)
     pip = PIP_DISPATCH + BLOCK_PROBE + ACTIVE_VERTEX * POLYGON_BLOCK_SIZE

@@ -72,6 +72,11 @@ on:
         type: boolean
         required: false
         default: false
+      calibrate_shortcuts:
+        description: Calibrate and validate the shortcut-ordering cost model
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -154,7 +159,7 @@ env:
 jobs:
   plan:
     name: plan repetitions
-    if: ${{ !inputs.render_reports && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
+    if: ${{ !inputs.render_reports && !inputs.calibrate_shortcuts && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: ubuntu-latest
     permissions: {}
     outputs:
@@ -187,7 +192,7 @@ jobs:
   measure:
     name: measure (run ${{ matrix.repetition }})
     needs: [plan]
-    if: ${{ !inputs.render_reports && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
+    if: ${{ !inputs.render_reports && !inputs.calibrate_shortcuts && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     # One runner *image* - and that is all `ubuntu-latest` guarantees. It does
     # NOT pin the CPU: this pool has served AMD EPYC 9V74, AMD EPYC 7763 and
     # Intel Xeon Platinum 8573C parts between 2.30 and 3.69 GHz, and the clock
@@ -236,6 +241,9 @@ jobs:
         uses: ./.github/actions/obtain-data
         with:
           token: ${{ github.token }}
+
+      - name: Check shortcut-ordering calibration freshness
+        run: make shortcut-calibration-check
 
       # assert rather than assume: a numba dependency sneaking in via a
       # transitive dependency or a lockfile change would silently corrupt the
@@ -525,7 +533,7 @@ jobs:
   noise:
     name: report noise floor
     needs: [measure]
-    if: github.event_name == 'workflow_dispatch' && !inputs.render_reports
+    if: github.event_name == 'workflow_dispatch' && !inputs.render_reports && !inputs.calibrate_shortcuts
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -614,5 +622,50 @@ jobs:
         with:
           name: benchmark-pages
           path: tmp/benchmark-pages/
+          if-no-files-found: error
+          retention-days: 90
+
+  calibrate-shortcuts:
+    name: calibrate shortcut ordering
+    if: github.event_name == 'workflow_dispatch' && inputs.calibrate_shortcuts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies (without numba)
+        run: uv sync --group test
+
+      - name: Obtain the packaged boundary data
+        uses: ./.github/actions/obtain-data
+        with:
+          token: ${{ github.token }}
+
+      - name: Assert the primary calibration path is active
+        env:
+          UV_NO_SYNC: "1"
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.assert_acceleration_path \
+            --expect "$(make -s print-benchmark-acceleration-path)"
+
+      - name: Measure held-out model and ordering evidence
+        run: make shortcut-calibration
+
+      - name: Upload the raw calibration artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: shortcut-ordering-calibration
+          path: tmp/shortcut-ordering-calibration.json
           if-no-files-found: error
           retention-days: 90

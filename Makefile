@@ -26,6 +26,8 @@
 #                configuration, writing tmp/benchmark.json
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
+#   shortcut-calibration-check - verify the ordering model still describes the runtime
+#   shortcut-calibration - fit and validate ordering costs, writing a JSON artifact
 #   latency    - measure the per-query latency distribution (p50/p90/p99/p99.9)
 #   acceleration-paths - compare all three point-in-polygon paths (clang / numba /
 #                        pure Python), one environment per measurable pair
@@ -343,6 +345,21 @@ print-memory-chart-json:
 print-benchmark-acceleration-path:
 	@echo $(BENCHMARK_ACCELERATION_PATH)
 
+# Deterministic half of the shortcut-ordering calibration: cheap enough for every
+# benchmark job, and deliberately contains no timing assertion.
+shortcut-calibration-check:
+	uv run python -m scripts.calibrate_shortcut_ordering --check-model
+
+# Expensive, reporting-only half. The workflow uploads the raw JSON; this target never
+# rewrites the reviewed production coefficients or the reference model.
+SHORTCUT_CALIBRATION_JSON := tmp/shortcut-ordering-calibration.json
+shortcut-calibration: check-data shortcut-calibration-check
+	@mkdir -p $(dir $(SHORTCUT_CALIBRATION_JSON))
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.calibrate_shortcut_ordering \
+		--backend $(BENCHMARK_ACCELERATION_PATH) --output=$(SHORTCUT_CALIBRATION_JSON)
+
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
@@ -510,6 +527,7 @@ docs:
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
+	shortcut-calibration shortcut-calibration-check \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths batch-break-even
 

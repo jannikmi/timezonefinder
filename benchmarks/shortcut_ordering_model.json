@@ -1,0 +1,186 @@
+{
+  "feature_mapping": {
+    "active_vertex": "one modeled vertex slot in a latitude-active packed block",
+    "bbox": "one outer PolygonArray.outside_bbox call",
+    "block_probe": "one packed latitude-block range visited by a kernel call",
+    "hole_bbox": "one visited individual-hole bounding box",
+    "hole_lookup": "one HoleArray.ids_of registry lookup after the union box survives",
+    "hole_union_probe": "one HoleArray.any_contains union-box chain",
+    "pip_dispatch": "one outer or hole packed-kernel call"
+  },
+  "latest_recorded_validation": {
+    "area_only_changed_cells": 0,
+    "area_only_whole_query_verdict": "no difference",
+    "calibrated_changed_cells": 0,
+    "calibrated_whole_query_verdict": "unresolved",
+    "calibration_observations": 1016,
+    "data_version": "2026d",
+    "date": "2026-09-25",
+    "decision": "retain the reviewed production coefficients; this run found no ordering change or reliable whole-query gain",
+    "fitted_coefficients_ns": {
+      "active_vertex": 1.149715929872834,
+      "bbox": 134.51591678810658,
+      "block_probe": 0.5220621265638014,
+      "hole_bbox": 101.24506768030237,
+      "hole_lookup": 250.8128210993518,
+      "hole_union_probe": 186.22400890732752,
+      "pip_dispatch": 324.25605309769776
+    },
+    "fixture_version": 3,
+    "held_out_median_absolute_error_ns": 31.48408321189342,
+    "held_out_observations": 359,
+    "held_out_p95_absolute_error_ns": 117.46750909678907,
+    "largest_candidate_list": 17,
+    "reproduce": "make shortcut-calibration, or dispatch benchmark.yml with calibrate_shortcuts=true",
+    "scope": "supporting local clang/mapped run; the workflow dispatch is the reference ubuntu-latest artifact"
+  },
+  "model_inputs": {
+    "constants": {
+      "ABSENT": -1,
+      "CELL_AREA_RTOL": 1e-06,
+      "COORD2INT_FACTOR": 10000000,
+      "FEATURES": [
+        "bbox",
+        "hole_union_probe",
+        "hole_lookup",
+        "hole_bbox",
+        "pip_dispatch",
+        "block_probe",
+        "active_vertex"
+      ],
+      "IMPROVEMENT_RTOL": 1e-12,
+      "INT2COORD_FACTOR": 1e-07,
+      "POLYGON_BLOCK_SIZE": 128,
+      "SHORTCUT_H3_RES": 4,
+      "SLOT_DIGITS_SHIFT": 33,
+      "SLOT_MASK": 524287,
+      "SOURCE_COORD_STEP": 10,
+      "STRATA": {
+        "ambiguous_shortcut": "ambiguous_shortcut_points",
+        "on_land": "on_land_points",
+        "random": "random_points",
+        "unique_shortcut": "unique_shortcut_points"
+      },
+      "candidate_comparison": {
+        "batch_size": 2500,
+        "rounds": 61,
+        "threshold": 0.03,
+        "win_margin": 0.1
+      },
+      "packed_acceleration_backends": {
+        "clang": "timezonefinder.utils_clang.pt_in_poly_clang_packed",
+        "numba": "timezonefinder.utils_numba.pt_in_poly_packed",
+        "python": "timezonefinder.utils_numba.pt_in_poly_packed"
+      },
+      "packed_buffer_backends": {
+        "clang": "timezonefinder.utils_clang.packed_buffers_clang",
+        "numba": "timezonefinder.utils_numba.packed_buffers_numba",
+        "python": "timezonefinder.utils_numba.packed_buffers_numba"
+      },
+      "production_coefficients": {
+        "active_vertex": 1,
+        "bbox": 160,
+        "block_probe": 1,
+        "hole_bbox": 120,
+        "hole_lookup": 120,
+        "hole_union_probe": 80,
+        "pip_dispatch": 700
+      }
+    },
+    "fixtures": {
+      "data_version": "2026d",
+      "fixture_version": 3
+    },
+    "members": [
+      "scripts.shortcut_ordering.CostCoefficients",
+      "scripts.shortcut_ordering.CheckCost",
+      "scripts.shortcut_ordering.CellOptimizer",
+      "scripts.shortcut_ordering.spherical_area",
+      "scripts.shortcut_ordering._cell_region",
+      "scripts.shortcut_ordering.cell_region",
+      "scripts.shortcut_ordering.cell_cap",
+      "scripts.shortcut_ordering.improves",
+      "scripts.shortcut_ordering.ShortcutOrderer.geometry",
+      "scripts.shortcut_ordering.ShortcutOrderer.safe_to_reorder",
+      "scripts.shortcut_ordering.ShortcutOrderer.bounds",
+      "scripts.shortcut_ordering.ShortcutOrderer.intersection",
+      "scripts.shortcut_ordering.ShortcutOrderer.add_pip",
+      "scripts.shortcut_ordering.ShortcutOrderer.model",
+      "scripts.shortcut_ordering.ShortcutOrderer.order",
+      "timezonefinder.timezonefinder.TimezoneFinder.inside_of_polygon",
+      "timezonefinder.timezonefinder.TimezoneFinder.timezone_at",
+      "timezonefinder.timezonefinder.TimezoneFinder._zone_id_among",
+      "timezonefinder.timezonefinder.TimezoneFinder._zone_id_in_ambiguous_cell",
+      "timezonefinder.polygon_array.PolygonArray.outside_bbox",
+      "timezonefinder.polygon_array.PolygonArray._pip_at",
+      "timezonefinder.polygon_array.PolygonArray.pip_with_bbox_check",
+      "timezonefinder.polygon_array.PolygonArray.in_any_polygon",
+      "timezonefinder.polygon_array.HoleArray.ids_of",
+      "timezonefinder.polygon_array.HoleArray.any_contains",
+      "timezonefinder.polygon_array.HoleArray._resolve",
+      "timezonefinder.polygon_array.HoleArray.pip",
+      "timezonefinder.polygon_array.HoleArray._build_union_bounds",
+      "timezonefinder.shortcut_index.ShortcutIndex.entry_of",
+      "timezonefinder.shortcut_index.ShortcutIndex.candidates_of",
+      "timezonefinder.shortcut_index.ShortcutIndex.stop_index_of",
+      "timezonefinder.shortcut_index.get_last_change_idx",
+      "timezonefinder.utils.coord2int",
+      "timezonefinder.utils.validate_coordinates",
+      "timezonefinder.utils_numba.pt_in_poly_packed",
+      "timezonefinder.utils_numba._residual_at",
+      "timezonefinder.utils_numba.packed_buffers_numba",
+      "timezonefinder.utils_clang.pt_in_poly_clang_packed",
+      "timezonefinder.utils_clang.packed_buffers_clang",
+      "scripts.assert_acceleration_path.active_acceleration_path",
+      "benchmarks.candidate_comparison.CandidateComparison",
+      "benchmarks.candidate_comparison.compare_candidates",
+      "scripts.calibrate_shortcut_ordering.StageCounts",
+      "scripts.calibrate_shortcut_ordering.Observation",
+      "scripts.calibrate_shortcut_ordering._bound_backend",
+      "scripts.calibrate_shortcut_ordering._sum_counts",
+      "scripts.calibrate_shortcut_ordering._PolygonProbe",
+      "scripts.calibrate_shortcut_ordering._HoleProbe",
+      "scripts.calibrate_shortcut_ordering.trace_predicate",
+      "scripts.calibrate_shortcut_ordering._minimum_predicate_ns",
+      "scripts.calibrate_shortcut_ordering._validation_cell",
+      "scripts.calibrate_shortcut_ordering.collect_observations",
+      "scripts.calibrate_shortcut_ordering.collect_hole_hit_observations",
+      "scripts.calibrate_shortcut_ordering._fit_nonnegative",
+      "scripts.calibrate_shortcut_ordering._fit_report",
+      "scripts.calibrate_shortcut_ordering._RuntimeHoles",
+      "scripts.calibrate_shortcut_ordering._runtime_orderer",
+      "scripts.calibrate_shortcut_ordering._ReorderedIndex",
+      "scripts.calibrate_shortcut_ordering._ordering_report",
+      "scripts.calibrate_shortcut_ordering.measure",
+      "timezonefinder/inside_poly_extension/inside_polygon_int.c",
+      "timezonefinder/inside_poly_extension/inside_polygon_int.h"
+    ],
+    "sha256": "f69200cfdbd3631122be576d7ee808e5045df060483dc8410f06ec2bf6ad9457"
+  },
+  "production_coefficients": {
+    "active_vertex": 1,
+    "bbox": 160,
+    "block_probe": 1,
+    "hole_bbox": 120,
+    "hole_lookup": 120,
+    "hole_union_probe": 80,
+    "pip_dispatch": 700
+  },
+  "reference_policy": {
+    "primary_environment": "clang C extension with mapped polygon data on GitHub ubuntu-latest",
+    "production_updates": "reviewed source changes only; calibration artifacts never rewrite coefficients",
+    "supporting_environments": [
+      "clang C extension with in-memory polygon data",
+      "numba with mapped and in-memory polygon data",
+      "pure-Python fallback with mapped polygon data"
+    ],
+    "validation": "fit on a deterministic 75% cell partition and compare whole public calls on held-out cells"
+  },
+  "schema_version": 1,
+  "structural_limitations": [
+    "The geometric proxy conservatively charges the outer PIP on points that terminate successfully inside a hole; the runtime does not.",
+    "The geometric proxy charges every individual hole in a surviving union box; runtime traversal stops after the first matching hole.",
+    "One constant set cannot represent backend, storage, cache, branch, or early kernel termination effects; reports retain residuals and environment provenance instead of forcing those effects into coefficients.",
+    "The active_vertex feature uses POLYGON_BLOCK_SIZE slots for a latitude-active block, including a ragged final block, matching the production proxy rather than claiming an exact edge count."
+  ]
+}
