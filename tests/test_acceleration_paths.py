@@ -29,6 +29,8 @@ kernel ever sees.
 
 from collections.abc import Callable
 import importlib
+import subprocess
+import sys
 
 import pytest
 
@@ -320,9 +322,45 @@ def test_the_extension_outranks_numba_wherever_it_loaded(
         )
         assert reloaded.packed_buffers is PACKED_BUFFER_FACTORIES[expected]
         # `numba` and `python` are one source and share their function objects, so the
-        # identity above cannot tell them apart - only the flag can, and it is what
-        # `TimezoneFinder.using_numba()` keeps reporting either way
-        assert reloaded.using_numba is numba_importable
+        # identity above cannot tell them apart - only the flag can, and it now follows
+        # the dispatch: `using_numba` is true exactly when that source is what runs
+        # *and* Numba compiled it
+        assert reloaded.using_numba is (numba_importable and not extension_loaded)
     finally:
         monkeypatch.undo()
         importlib.reload(utils)
+
+
+@pytest.mark.unit
+@pytest.mark.skipif(
+    not interpreted_path_name() == "numba",
+    reason="the import this guards can only be skipped where numba is installed",
+)
+def test_a_lookup_never_imports_numba_where_the_extension_loaded() -> None:
+    """The point of the conditional import, asserted where it can fail.
+
+    ``timezonefinder.utils`` imports ``utils_numba`` only in the branch the missing
+    extension takes, because that import *is* Numba's - the signatures are eager - and
+    it costs a process ~100 MiB of resident memory and a compilation pause it has no
+    use for. A module-level import, or a helper moved back into ``utils_numba``, would
+    reinstate that for every installation silently: the answers stay identical and only
+    the footprint moves, which no other test in this file can see.
+
+    A subprocess rather than this one, because the test session itself imports
+    ``utils_numba`` deliberately - the tables above need both kernels - so
+    ``sys.modules`` here says nothing about what a lookup pulls in.
+    """
+    program = (
+        "import sys;"
+        "from timezonefinder import TimezoneFinder;"
+        "tf = TimezoneFinder();"
+        "tf.timezone_at(lng=13.4, lat=52.5);"
+        "tf.cleanup();"
+        "assert not tf.using_clang_pip() or 'numba' not in sys.modules, "
+        "sorted(m for m in sys.modules if m.startswith('numba'))[:5]"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", program], capture_output=True, text=True
+    )
+
+    assert completed.returncode == 0, completed.stderr

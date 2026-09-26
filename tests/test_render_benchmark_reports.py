@@ -314,7 +314,9 @@ def _fake_startup(*, using_numba: bool) -> dict:
     factor = 2 if using_numba else 1
     return {
         "repetitions": 3,
-        "using_numba": using_numba,
+        "numba_installed": using_numba,
+        # both environments bind the extension now, so this is false either way
+        "using_numba": False,
         "using_clang_pip": True,
         "import_rss": 10 * 1024**2 * factor,
         "init_rss": 2 * 1024**2 * factor,

@@ -26,6 +26,7 @@ def _sample(**overrides) -> dict:
         "import_seconds": 0.03,
         "init_seconds": 0.4,
         "first_query_seconds": 0.0001,
+        "numba_installed": False,
         "using_numba": False,
         "using_clang_pip": True,
     }
@@ -66,7 +67,10 @@ def test_startup_reports_the_median_process(monkeypatch):
 
 
 def test_startup_refuses_a_probe_from_another_environment(monkeypatch):
-    _fake_probe(monkeypatch, [_sample(using_numba=True)] * 3)
+    # what identifies the environment is the numba *installed* in it: since the C
+    # extension outranks numba, a numba environment binds clang and reports
+    # `using_numba` false, so the binding cannot tell the two runs apart
+    _fake_probe(monkeypatch, [_sample(numba_installed=True)] * 3)
 
     with pytest.raises(RuntimeError, match="numba"):
         measure_startup("python")
@@ -89,4 +93,7 @@ def test_the_probe_measures_this_environment():
     assert all(startup[metric] is not None for metric in STARTUP_METRICS)
     # the process holds the package and its data by the time it has answered
     assert startup["ready_rss"] > startup["init_rss"] > 0
-    assert startup["using_numba"] is (interpreted_path_name() == "numba")
+    # the probe reports the environment it ran in; the binding is a different question
+    # and is false here whenever the C extension loaded
+    assert startup["numba_installed"] is (interpreted_path_name() == "numba")
+    assert startup["using_numba"] is not startup["using_clang_pip"]

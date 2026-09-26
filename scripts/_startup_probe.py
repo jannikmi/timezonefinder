@@ -49,6 +49,7 @@ answers outright.
 
 import argparse
 import gc
+import importlib.util
 import json
 import sys
 import time
@@ -88,6 +89,16 @@ def measure(lng: float, lat: float) -> dict:
         "import_seconds": import_seconds,
         "init_seconds": init_seconds,
         "first_query_seconds": first_query_seconds,
+        # Which environment this is, and `find_spec` rather than an import on purpose:
+        # importing `utils_numba` to ask would pull Numba into the very process whose
+        # resident set is the measurement, adding ~100 MiB to the number. That is also
+        # what makes this the right question here - the page's columns are "does this
+        # environment have Numba", not "did anything compile". A Numba that is found
+        # but cannot import would mislabel the column; the parent cross-checks the
+        # label against the run's own path for exactly that reason.
+        "numba_installed": importlib.util.find_spec("numba") is not None,
+        # and what the dispatch did with it: false wherever the C extension won, which
+        # since the import became conditional is also "nothing here is JIT-compiled"
         "using_numba": timezonefinder.TimezoneFinder.using_numba(),
         "using_clang_pip": timezonefinder.TimezoneFinder.using_clang_pip(),
     }

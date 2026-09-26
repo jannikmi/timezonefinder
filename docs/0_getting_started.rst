@@ -20,11 +20,11 @@ This builds a C extension for the point-in-polygon test. The optional ``numba`` 
     pip install timezonefinder[numba]
 
 
-The extra is not free, and on an installation whose extension built it now buys nothing: ``numba``
-and the LLVM toolchain it brings add more resident memory to every process than the whole packaged
-boundary dataset does, and a JIT compilation to the first finder a process builds - which is paid
-for compiling the helper functions even though the C extension is what answers the query. Install
-it where no compiler is available, and leave it out where one is.
+Installing it where the extension built changes nothing at all: the package imports Numba only where
+the JIT kernel is what answers queries, so an installation with both never loads it. Where it *is*
+the kernel, it costs what a compiler costs - more resident memory than the whole packaged boundary
+dataset, and a compilation when the first finder is built. So install it where no compiler is
+available, and leave it out where one is.
 
 
 in case you are using ``pytz``, also require it via its extra to avoid incompatibilities (e.g. due to updated timezone names):

@@ -99,13 +99,12 @@ exact rather than approximate.
 The ray-casting inner loop exists in three forms:
 
 - **clang C extension** - compiled by ``cffi`` at install time if a compiler is available.
-- **Numba JIT** - the Python implementation, compiled when ``utils_numba`` is first imported -
-  which constructing a finder triggers, because its signatures are eager - if the optional
-  ``numba`` dependency is installed. The fallback for an installation without the extension
-  since the dispatch followed the measurement, and still the one path that changes what a
-  process costs before any query -
-  resident memory and the compilation itself, paid wherever ``numba`` is importable even when the
-  extension is what answers the query; :doc:`benchmark_results_acceleration_paths` measures it.
+- **Numba JIT** - the Python implementation, compiled when ``utils_numba`` is first imported,
+  which happens only where the extension is missing and the optional ``numba`` dependency is
+  installed. ``utils.py`` imports that module inside the fallback branch precisely so an
+  installation with the extension never pays Numba's import: ~100 MiB of resident memory and a
+  compilation pause, which :doc:`benchmark_results_acceleration_paths` measures for the
+  configuration that does pay them.
 - **pure Python** - the same source, uncompiled. Correct, and the slowest of the three by a wide
   margin.
 
@@ -123,7 +122,9 @@ surface throughout this documentation:
   measurement that reversed it would change the order again.
 - The fallback contract is *correct but slower, never broken*. If the C extension fails to compile
   and Numba is absent, the package still works. Ask which path is live with
-  ``TimezoneFinder.using_clang_pip()`` and ``TimezoneFinder.using_numba()``.
+  ``TimezoneFinder.using_clang_pip()`` and ``TimezoneFinder.using_numba()``; both report the
+  *binding*, so on an installation with the extension the first is ``True`` and the second is
+  ``False`` whatever is installed beside it.
 
 
 Two accuracy tiers, two memory modes

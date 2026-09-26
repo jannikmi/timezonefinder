@@ -22,7 +22,11 @@ from scripts.reporting import (
     render_rst_table,
     rst_title,
 )
-from timezonefinder import TimezoneFinder, __version__ as timezonefinder_version
+from timezonefinder import (
+    TimezoneFinder,
+    utils_numba,
+    __version__ as timezonefinder_version,
+)
 
 # Which pytest-benchmark ``stats`` field is treated as *the* number for a
 # benchmark. Defined here rather than in each consumer because the CI
@@ -340,7 +344,17 @@ def get_system_status() -> dict[str, Any]:
         "platform_processor": platform.processor() or "Unknown",
         "numpy_version": np.__version__,
         "using_clang_pip": tf_instance.using_clang_pip(),
-        "using_numba": tf_instance.using_numba(),
+        # The *environment's* Numba, not the dispatch's: `TimezoneFinder.using_numba()`
+        # answers whether the JIT kernel is what a lookup runs, which is `False`
+        # wherever the C extension won, while what a report needs to know is whether
+        # this environment has Numba at all. That decides two things the dispatch does
+        # not: whether `benchmarks/test_inside_polygon.py`'s `*_python` rows timed a
+        # JIT-compiled kernel under those node ids, and whether this is the tracked
+        # configuration (`is_ci_tracked_configuration`). Asking `utils_numba` is a real
+        # import attempt, so a Numba that cannot import reads as absent, which
+        # `importlib.util.find_spec` would get wrong; it costs that import, but only in
+        # an environment the measurement guards refuse for the tracked numbers anyway.
+        "using_numba": utils_numba.using_numba,
         # ``timezonefinder.__version__`` is the installed package version, read
         # from distribution metadata. The previous ``getattr(tf_instance,
         # "__version__", "Unknown")`` read a non-existent attribute on a class

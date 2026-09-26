@@ -585,7 +585,10 @@ def _startup_value(startup: dict[str, Any], metric: str) -> float | None:
 
 
 def _startup_column_label(startup: dict[str, Any]) -> str:
-    return "With Numba" if startup["using_numba"] else "Plain install"
+    # The environment, not the binding: both columns bind the C extension now, and what
+    # the reader is comparing is the process with Numba installed against the one
+    # without. `using_numba` would label both of them "Plain install".
+    return "With Numba" if startup["numba_installed"] else "Plain install"
 
 
 def _signed(value: float, formatter: Callable[[float], str]) -> str:
@@ -637,7 +640,7 @@ def add_startup_section(
     if len(startups) != len(runs):
         return
     # Plain install first, so the added column reads as something the extra costs.
-    startups = sorted(startups, key=lambda s: s["using_numba"])
+    startups = sorted(startups, key=lambda s: s["numba_installed"])
 
     reporter.add_section("What installing Numba costs before any query", level=1)
     reporter.add_text(
@@ -649,10 +652,12 @@ def add_startup_section(
         "``TimezoneFinder()`` and answers one query, measured by "
         "``scripts/_startup_probe.py`` and reported as the median of its repetitions. "
         "Both environments hold the C extension and both *bind* it, so the two "
-        "processes run the same kernel and differ in exactly one thing - whether "
-        "Numba is installed beside it. The last column is therefore what the extra "
-        "costs an installation that already has a working extension, which is what it "
-        "buys nothing for."
+        "processes run the same kernel and differ in exactly one thing - whether Numba "
+        "is installed beside it. The last column is therefore what the extra costs an "
+        "installation that already has a working extension, and since the package "
+        "imports Numba only where the JIT kernel is what answers queries, the honest "
+        "answer is expected to be nothing: a row that shows otherwise means something "
+        "reached into ``utils_numba`` on the way to a lookup again."
     )
 
     reporter.add_section("Resident memory", level=2)
@@ -670,10 +675,11 @@ def add_startup_section(
     reporter.add_section("Time to the first answer", level=2)
     _startup_table(reporter, startups, STARTUP_TIME_STEPS, format_duration)
     reporter.add_text(
-        "The compilation lands in the construction row rather than in the query one: "
-        "``timezonefinder/utils_numba.py`` declares eager signatures, so the kernels "
-        "are compiled when that module is first imported, which constructing a finder "
-        "triggers. Numba caches that output on disk beside the installed package, so "
+        "Where there is a compilation at all it lands in the construction row rather "
+        "than in the query one: ``timezonefinder/utils_numba.py`` declares eager "
+        "signatures, so the kernels are compiled when that module is first imported, "
+        "which constructing a finder triggers on an installation without the C "
+        "extension. Numba caches that output on disk beside the installed package, so "
         "the figures here are the steady state - the median over repetitions discards "
         "the one process that compiled - and the *first* process in a fresh "
         "environment pays more. Where the installed package directory is read-only or "
@@ -834,14 +840,14 @@ def render_acceleration_paths(
         "which is the whole reason this page does not divide one run into the other."
     )
     reporter.add_text(
-        "The second is specific to the Numba run: **a process that merely has Numba "
-        "installed is not the process a plain install runs**, even though both bind "
-        "the same C-extension kernel. ``timezonefinder/utils.py`` imports "
-        "``utils_numba`` either way, so where Numba is importable that import compiles "
-        "the helpers a query calls around the geometry (``int2coord`` and the ring "
-        "converters) and leaves the process holding the compiler as well. That is a "
-        "different allocator and a different resident set to be measured in, which the "
-        "section below prices directly."
+        "The second used to be specific to the Numba run and is not any more: "
+        "``timezonefinder/utils.py`` imports ``utils_numba`` only where the C "
+        "extension is missing, so a process that merely *has* Numba installed no "
+        "longer imports it - same kernel, same imports, same resident set as a plain "
+        "install, which is what the section below now measures. What still differs is "
+        "everything that reaches into ``utils_numba`` on purpose: the kernel rows on "
+        "this page, and ``benchmarks/test_inside_polygon.py``'s ``*_python`` rows, "
+        "which are JIT-compiled wherever Numba is installed."
     )
 
     reporter.write_report()

@@ -113,15 +113,18 @@ kernels and the data format moved, and it is not one answer for every workload, 
 shortcut index answers outright never reaches a point-in-polygon test at all. Read it off
 :doc:`benchmark_results_acceleration_paths`, which is regenerated with the rest of the reports.
 
-**And installing it still costs, even now that a lookup does not run it.** ``timezonefinder.utils``
-imports ``utils_numba`` either way, so where Numba is importable it compiles that module's helpers -
-``int2coord`` and the ring converters - when a finder is first constructed. The process therefore
-holds Numba and its LLVM toolchain regardless of the dispatch: more resident memory than the whole
-packaged boundary dataset, so the footprint :doc:`benchmark_results_memory` reports for a mode is no
-longer what the process holds, and a compilation pause a short-lived or cold-started process pays on
-every start. Numba caches the compiled code beside the installed package, so a read-only or ephemeral
-installation directory means paying that every time. On an installation whose C extension built,
-there is nothing on the other side of that trade.
+**And where it is not the kernel, it now costs nothing.** ``timezonefinder.utils`` imports
+``utils_numba`` only in the branch a missing extension takes, and that import is what pulls in Numba -
+its signatures are eager, so importing the module compiles it. An installation whose extension loaded
+therefore never imports Numba however thoroughly it is installed: same resident memory as a plain
+install, no compilation pause, and the footprints on :doc:`benchmark_results_memory` describe the
+whole process again.
+
+Where the JIT kernel *is* what answers queries, that cost is real and is what the extra buys the
+lookup with: Numba and its LLVM toolchain add more resident memory than the whole packaged boundary
+dataset, and the kernels compile when the first finder is constructed. Numba caches the compiled code
+beside the installed package, so a read-only or ephemeral installation directory pays that
+compilation on every start.
 
 All three implementations compute identical results; they only differ in speed. :doc:`architecture`
 explains why the choice is made once at import time and what follows from that - most importantly

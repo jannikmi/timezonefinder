@@ -216,13 +216,14 @@ Only the **no-Numba / clang C extension** path, because that is what a plain
 Numba and clang are completely different code paths whose numbers must never share a benchmark
 name. The workflow *asserts* the active path (``scripts/assert_acceleration_path.py``) rather than
 assuming it, and so does every ``make`` target that measures. The extension outranks Numba, so a
-stray Numba install no longer changes which kernel is timed - and the assertion therefore no longer
-catches one by the active path alone. It has to be refused all the same, because importing Numba
-costs resident memory and leaves the process holding a compiler, and because the ``*_python``
-kernel rows would be JIT-compiled under node ids the trend chart joins on. Every measurement target
-therefore asserts the *interpreted* path as well (``--expect-interpreted python``), which is the
-half that still says "no Numba here". Locally that install is the *normal* state: ``make install``
-syncs every dependency group.
+stray Numba install no longer changes which kernel a lookup runs - the package does not even import
+Numba where the extension loaded - and the assertion therefore no longer catches one by the active
+path alone. It has to be refused all the same, because ``benchmarks/test_inside_polygon.py``'s
+``*_python`` rows time ``utils_numba`` directly, so in such an environment they would be
+JIT-compiled under node ids the trend chart joins on. Every measurement target therefore asserts the
+*interpreted* path as well (``--expect-interpreted python``), which is the half that still says "no
+Numba here". Locally that install is the *normal* state: ``make install`` syncs every dependency
+group.
 
 For the same reason, **local numbers are not comparable to CI numbers** - different CPU, different
 memory bandwidth, different background load, and often a different acceleration path. The

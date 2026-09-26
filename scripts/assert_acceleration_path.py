@@ -99,8 +99,13 @@ def interpreted_path_name() -> AccelerationPath:
     JIT dispatcher, without it every one of them is the plain Python function. Anything
     naming the non-clang path - a report column, a benchmark fixture key, a test
     parametrisation - has to ask this rather than assume ``numba``.
+
+    ``utils_numba.using_numba`` rather than ``utils.using_numba``: the latter reports
+    the *dispatch*, which is ``False`` wherever the C extension won, while this module
+    imports ``utils_numba`` deliberately - it needs both kernels to compare them - and
+    that import is what answers whether the environment has Numba at all.
     """
-    return "numba" if utils.using_numba else "python"
+    return "numba" if utils_numba.using_numba else "python"
 
 
 def active_acceleration_path() -> AccelerationPath:
@@ -139,7 +144,8 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
     if active != expected:
         raise RuntimeError(
             f"expected the {expected!r} point-in-polygon acceleration path to be "
-            f"active, but {active!r} is (utils.using_numba={utils.using_numba}, "
+            f"active, but {active!r} is (utils_numba.using_numba="
+            f"{utils_numba.using_numba}, "
             f"utils.clang_extension_loaded={utils.clang_extension_loaded}). "
             "Benchmark numbers from different paths are not comparable and must "
             "never be recorded under the same benchmark names."
@@ -150,7 +156,8 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
     if expected in NUMBA_SOURCED_PATHS and expected != interpreted_path_name():
         raise RuntimeError(
             f"expected the {expected!r} point-in-polygon acceleration path, but "
-            f"utils.using_numba={utils.using_numba}. The Numba and pure-Python paths "
+            f"utils_numba.using_numba={utils_numba.using_numba}. The Numba and pure-Python "
+            "paths "
             "are the same source decorated or not, so only the environment decides "
             "which one runs: install the `numba` group to get 'numba', omit it to get "
             "'python'. Either way the C extension outranks both where it loaded, so "
@@ -186,7 +193,7 @@ def check_interpreted_path(expected: AccelerationPath) -> None:
     if interpreted != expected:
         raise RuntimeError(
             f"expected this environment to hold the {expected!r} kernel, but it holds "
-            f"{interpreted!r} (utils.using_numba={utils.using_numba}). Install the "
+            f"{interpreted!r} (utils_numba.using_numba={utils_numba.using_numba}). Install the "
             "`numba` group to get 'numba', omit it to get 'python'."
         )
 

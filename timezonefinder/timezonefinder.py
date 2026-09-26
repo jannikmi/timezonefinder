@@ -14,7 +14,7 @@ Core classes:
 import json
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import TracebackType
@@ -245,10 +245,16 @@ class AbstractTimezoneFinder(ABC):
     @staticmethod
     def using_numba() -> bool:
         """
-        Check if Numba is being used.
+        Check if the Numba-compiled point-in-polygon kernel is what this process runs.
+
+        ``False`` on an installation whose C extension loaded, *even with Numba
+        installed*: the extension outranks the JIT kernel, and ``timezonefinder.utils``
+        then never imports ``utils_numba`` at all, so nothing here is JIT-compiled and
+        the process never pays Numba's import. It was ``True`` for "Numba is
+        importable" until that import became conditional.
 
         :rtype: bool
-        :return: True if Numba is being used to JIT compile helper functions
+        :return: True if the JIT-compiled kernel is the one a lookup reaches
         """
         return utils.using_numba
 
@@ -1174,6 +1180,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: List of polygon coordinates
         """
         list_of_converted_polygons = []
+        # Annotated because the two converters return different shapes and this variable
+        # holds either. It only needed saying once they stopped being `njit` dispatchers,
+        # whose `Any` hid the union from the type checker.
+        conversion_method: Callable[[np.ndarray], CoordPairs | CoordLists]
         if coords_as_pairs:
             conversion_method = utils.convert2coord_pairs
         else:
