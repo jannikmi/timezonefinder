@@ -35,5 +35,11 @@ Constraints already decided that still apply:
 
 If adopted later, the consequences to carry: a `DATA_FORMAT_VERSION` bump and the ordered two-distribution release, which also publishes the rebuild with deterministic shortcut tie order, held for it by the [release-batching decisions](../../decisions/data-format-version-marker-and-release-batching-decisions.md) (a refusal publishes that rebuild instead); `TimezoneFinderL` shares the index; GH-657 closes as moot, GEOM-3 is re-scoped to rectangle predicates, half of PERF-7's reopening condition is met, and FT-3 ceases to depend on an upstream release; LITE-1 is phrased in H3 cells and would need rephrasing.
 
+## Preliminary measurement retained while blocked
+
+A first full prototype run on 2026-09-26 compiled all requested shapes from the packaged 2026d boundaries and retained its compact output in [the measurements directory](../../measurements/latlng-index-2026-09-26.json). The result is useful but not a verdict: it used numeric zone id as a deterministic cross-zone tie-break, which the recorded index-independent semantics explicitly forbid. All five candidates agreed over 30,000 committed fixture points and the Malacca edge-crossing witness under that placeholder.
+
+The large trade-offs are unlikely to disappear: 0.5° is the only grid below the current file-size cap and loses shortcut selectivity; 0.36° and equal-area improve selectivity but are 67–68% larger; the nested and separated two-tier layouts are both larger and much slower in the mapped Python reader. The whole timing and correctness gate must nevertheless be rerun after TOOL-7 supplies the real tie rule, because candidate order affects overlap answers, deduplication and point-in-polygon work.
+
 - **Size:** M for the prototype and its recorded verdict; the migration it may justify is L and is not this item.
-- **Status:** open — the measurement is the item; nothing in `timezonefinder/` changes.
+- **Status:** blocked on TOOL-7 — the prototype is retained on the claimed branch, but no verdict, retirement or pull request is valid until the deterministic cross-zone precedence rule lands and the measurement is rerun with it.
