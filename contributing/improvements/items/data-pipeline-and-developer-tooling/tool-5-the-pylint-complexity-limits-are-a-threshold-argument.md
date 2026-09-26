@@ -1,7 +1,7 @@
 # TOOL-5 — the pylint complexity limits are a threshold argument, not a defect list
 
 - **Location:** `pyproject.toml`, `[tool.ruff.lint] select`, which does not contain `PLR`; there is no `[tool.ruff.lint.pylint]` section, so every limit would take ruff's default.
-- **Refused 2026-09-06 by the maintainer: `PLR09xx` is not selected, and function size stays a review judgement.** Recorded in the [tooling decisions](../../decisions/benchmarking-tooling-and-dependency-decisions.md) so a later discovery pass does not re-surface the counts as a finding. Reopen only on a register finding that actually traces to a function's length.
+- **Refused 2026-09-06 by the maintainer: `PLR09xx` is not selected, and function size stays a review judgement.** Recorded in the [lint tooling decisions](../../decisions/ruff-version-and-lint-rule-selection-decisions.md) so a later discovery pass does not re-surface the counts as a finding. Reopen only on a register finding that actually traces to a function's length.
 - **What it is.** `PLR09xx` prices function complexity against a number. Measured 2026-09-06 at c27b452 on ruff 0.15.22, against ruff's defaults: **15 sites** — `PLR0913` too many arguments 7, `PLR0915` too many statements 5, `PLR0912` too many branches 2, `PLR0911` too many return statements 1.
 - **Three facts that decided it, kept because they are what a re-proposal has to answer.**
   - **10 of the 15 are in `scripts/` and `benchmarks/`, not in the shipped package.** Only five sit under `timezonefinder/`: `_data_integrity.py:508` and `:566`, `block_payload.py:279`, `utils_clang.py:96`, `utils_numba.py:200`.
