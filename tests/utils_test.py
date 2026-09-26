@@ -145,6 +145,31 @@ def test_dtype_conversion():
     np.testing.assert_almost_equal(lat, lat2)
 
 
+def test_the_converters_are_exact_on_the_storage_grid():
+    """The NumPy converters answer what the JIT-compiled ones did, bit for bit.
+
+    They were ``njit`` functions in ``utils_numba`` until that import became
+    conditional on the C extension being absent; both forms are one ``float64``
+    multiply per coordinate, so "bit for bit" is the claim to make rather than
+    "close enough", and a regression here would silently move published geometry.
+    ``int2coord`` is the scalar reference the vectorised pair has to agree with.
+    """
+    x_ints, y_ints = get_rnd_poly_int()
+    polygon_int = np.array((x_ints, y_ints))
+
+    lists = utils.convert2coords(polygon_int)
+    pairs = utils.convert2coord_pairs(polygon_int)
+
+    assert lists == [
+        [utils.int2coord(x) for x in x_ints],
+        [utils.int2coord(y) for y in y_ints],
+    ]
+    assert pairs == [
+        (utils.int2coord(x), utils.int2coord(y))
+        for x, y in zip(x_ints, y_ints, strict=True)
+    ]
+
+
 def test_convert2coord_pairs():
     x_ints, y_ints = get_rnd_poly_int()
     polygon_int = np.array((x_ints, y_ints))

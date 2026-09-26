@@ -50,13 +50,15 @@ def acceleration_label(data: dict[str, Any]) -> str:
 
     Numba and clang are different implementations whose numbers are not
     comparable (see :mod:`scripts.assert_acceleration_path`), so a report that
-    describes itself has to say which one it used.
+    describes itself has to say which one it used. ``using_clang_pip`` reports the
+    binding and is read first, because the extension outranks Numba wherever it
+    loaded: a run with both available ran the extension.
     """
     recorded = data.get("machine_info", {}).get("timezonefinder") or {}
-    if recorded.get("using_numba"):
-        return "numba"
     if recorded.get("using_clang_pip"):
         return "clang C extension"
+    if recorded.get("using_numba"):
+        return "numba"
     if not recorded:
         return "unrecorded"
     return "pure Python"

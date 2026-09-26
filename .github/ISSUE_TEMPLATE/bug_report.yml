@@ -37,15 +37,15 @@ body:
     attributes:
       label: Environment
       description: |
-        Run this and paste the output. It reports the installed versions and which point-in-polygon backend your installation actually uses - `numba` takes precedence over the C extension whenever it is installed, and a wrong answer that depends on the backend is a different bug from one that does not.
+        Run this and paste the output. It reports the installed versions, which point-in-polygon backend your installation actually runs, and whether the `numba` extra is present at all - the C extension takes precedence wherever it loaded, so an installation with `numba` present can still report that it runs `clang`. A wrong answer that depends on the backend is a different bug from one that does not.
 
         ```shell
-        python -c "import platform, importlib.metadata as md; from timezonefinder import TimezoneFinder as TF; print('timezonefinder', md.version('timezonefinder'), '| timezonefinder-data', md.version('timezonefinder-data')); print('python', platform.python_version(), platform.platform()); print('numba', TF.using_numba(), '| clang', TF.using_clang_pip())"
+        python -c "import platform, importlib.util as iu, importlib.metadata as md; from timezonefinder import TimezoneFinder as TF; print('timezonefinder', md.version('timezonefinder'), '| timezonefinder-data', md.version('timezonefinder-data')); print('python', platform.python_version(), platform.platform()); print('runs', 'clang' if TF.using_clang_pip() else 'numba' if TF.using_numba() else 'python', '| numba installed', iu.find_spec('numba') is not None)"
         ```
       render: text
       placeholder: |
         timezonefinder 9.0.0 | timezonefinder-data 3.2026.3.post1
         python 3.12.3 Linux-6.18.44-fc-v24-x86_64-with-glibc2.39
-        numba True | clang False
+        runs clang | numba installed False
     validations:
       required: true

@@ -145,6 +145,23 @@ def test_every_measurement_target_asserts_its_acceleration_path(target: str) -> 
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("target", MEASUREMENT_TARGETS)
+def test_every_measurement_target_also_refuses_a_numba_environment(target: str) -> None:
+    """``--expect clang`` stopped implying "and no numba" when the dispatch changed.
+
+    The C extension now outranks numba, so a stray numba install binds clang all the
+    same and the active-path assertion passes - while the process still imports numba,
+    which inflates the footprint ``memory`` records and JIT-compiles the kernels
+    ``benchmarks`` times under trend-chart node ids. Only the interpreted half of the
+    assertion can refuse that environment now.
+    """
+    assert "--expect-interpreted" in _make_recipe(target), (
+        f"make {target} accepts an environment with numba installed, whose resident "
+        "memory and utils_numba kernels are not the tracked configuration's"
+    )
+
+
+@pytest.mark.unit
 def test_the_published_suite_uses_one_fixed_round_count() -> None:
     recipe = _make_recipe("benchmarks")
     assert "--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS)" in recipe
@@ -511,4 +528,22 @@ def test_the_comparison_is_posted_anew_rather_than_edited_in_place(
         f"{BENCHMARK_COMMENT_WORKFLOW.name} deletes the previous comparison "
         "before posting the new one. A failure in between then leaves the "
         "pull request with no comparison at all - post first, delete after."
+    )
+
+
+@pytest.mark.unit
+def test_the_benchmark_workflow_asserts_both_halves_of_the_path() -> None:
+    """Both measured checkouts, head and merge base, or the comparison is not paired.
+
+    The workflow asserts the path itself rather than trusting its own
+    ``uv sync --group test``, for the reason the Makefile does; since the extension
+    outranks numba, that assertion needs the interpreted half too.
+    """
+    workflow = BENCHMARK_WORKFLOW.read_text(encoding="utf-8")
+
+    assertions = workflow.count("scripts.assert_acceleration_path")
+    assert assertions, "benchmark.yml no longer asserts the acceleration path at all"
+    assert workflow.count("--expect-interpreted") == assertions, (
+        "an acceleration-path assertion in benchmark.yml no longer refuses an "
+        "environment with numba installed"
     )

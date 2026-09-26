@@ -46,13 +46,18 @@ the report leads with the one that measures the *real* function untouched.
   settle, which is why it is not the primary instrument. Read the *ordering* of its
   lines; never a share-of-total.
 
-Both backends must be measured. ``timezonefinder/utils.py`` binds the point-in-polygon
-implementation at *import* time and numba wins whenever it is importable, so::
+Both environments must be measured - not two backends, since the C extension wins in
+both. ``timezonefinder/utils.py`` binds the point-in-polygon implementation at *import*
+time and prefers the extension wherever it loaded, and it imports ``utils_numba`` only
+where the extension is missing - so a process holding numba does *not* pay that import.
+What still differs between the two is everything else numba being installed brings into
+the interpreter, which is why both are measured::
 
-    # numba (what a dev checkout runs)
+    # a dev checkout: the clang kernel, in a process that also holds numba
     PYTHONPATH=. uv run python prototypes/query_stage_profile.py
 
-    # clang (what a plain `pip install timezonefinder` runs, and what CI tracks)
+    # a plain `pip install timezonefinder`, which is what CI tracks: the same kernel
+    # in a process with no numba in it at all
     PYTHONPATH=. uv run --isolated --no-group numba --group proto --group test \
         python prototypes/query_stage_profile.py
 

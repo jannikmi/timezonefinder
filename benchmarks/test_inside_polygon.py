@@ -49,8 +49,9 @@ def test_pt_in_poly_clang(benchmark, pip_inputs_by_stratum, stratum):
 @pytest.mark.parametrize("stratum", STRATA)
 @pytest.mark.usefixtures("strict_numpy_warnings")
 def test_pt_in_poly_python(benchmark, pip_inputs_by_stratum, stratum):
-    # uses Numba JIT when available (utils.using_numba), the CFFI-backed
-    # clang fallback otherwise - see timezonefinder/utils_numba.py
+    # times `utils_numba` directly, so this is the JIT-compiled kernel wherever numba
+    # is installed (`utils_numba.using_numba`) and the interpreted one otherwise -
+    # independently of which kernel `utils.py` bound for a lookup
     inputs = pip_inputs_by_stratum[stratum]
     benchmark(_run_over, utils_numba.pt_in_poly_python, inputs)
 

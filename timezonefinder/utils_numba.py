@@ -13,15 +13,10 @@ if __name__ == "__main__":
 
 import numpy as np
 
-from timezonefinder.configs import (
-    INT2COORD_FACTOR,
-    SOURCE_COORD_STEP,
-    CoordLists,
-    CoordPairs,
-)
+from timezonefinder.configs import SOURCE_COORD_STEP
 
 try:
-    from numba import njit, boolean, i4, i8, u1, u4, f8
+    from numba import njit, boolean, i4, i8, u1, u4
     from numba.types import Array
 
     using_numba = True
@@ -36,7 +31,6 @@ except ImportError:
         i8,
         u1,
         u4,
-        f8,
     )
 
 
@@ -324,30 +318,3 @@ def packed_buffers_numba(
     the call site spreads the result - rather than through a branch on every lookup.
     """
     return (payload, block_ranges, block_bases, block_widths, block_payload_offsets)
-
-
-# @cc.export('int2coord', f8(i4))
-@njit(f8(i4), cache=True)
-def int2coord(i4: int) -> float:
-    return float(i4 * INT2COORD_FACTOR)
-
-
-@njit(cache=True)
-def convert2coords(polygon_data: np.ndarray) -> CoordLists:
-    # return a tuple of coordinate lists
-    return [
-        [int2coord(x) for x in polygon_data[0]],
-        [int2coord(y) for y in polygon_data[1]],
-    ]
-
-
-@njit(cache=True)
-def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
-    # return a list of coordinate tuples (x,y)
-    x_coords = polygon_data[0]
-    y_coords = polygon_data[1]
-    nr_coords = len(x_coords)
-    coodinate_list = [
-        (int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)
-    ]
-    return coodinate_list
