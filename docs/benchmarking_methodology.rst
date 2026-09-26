@@ -341,8 +341,9 @@ paths does (Numba and pure Python are one source decorated or not, so no process
 *pair* is still measured inside one process against the implementation both environments hold, and
 the ratio that would have to cross the boundary is not computed at all. The two runs' shared
 baseline is published beside the results as the reader's own comparability check - see
-:doc:`benchmark_results_acceleration_paths`, where it shows what a process pays for merely having
-Numba installed, which it pays whether or not a lookup runs the JIT kernel.
+:doc:`benchmark_results_acceleration_paths`, where it shows what a process pays for *running* the
+JIT kernel - which is the only case that pays, since the import that compiles it happens only on the
+branch that binds it.
 
 All four are held by ``benchmarks/candidate_comparison.py`` rather than re-derived per attempt.
 ``compare_candidates`` takes two named callables that each perform the whole public call for one

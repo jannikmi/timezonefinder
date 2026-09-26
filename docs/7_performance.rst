@@ -104,9 +104,11 @@ faster on a whole lookup. Where no compiler is available the ordering never matt
 case the extra still serves; there its rival is the pure-Python fallback, which the same page
 measures in orders of magnitude rather than percent.
 
-The two methods above therefore answer different questions: ``using_numba()`` says Numba is
-installed and compiling this process's helper functions, ``using_clang_pip()`` says which kernel a
-lookup actually reaches. On an installation holding both, both are ``True``.
+The two methods above therefore answer different questions, and neither is "is Numba installed":
+``using_numba()`` says the JIT kernel is what this process's lookups run, ``using_clang_pip()`` says
+the extension is. Exactly one of them is ``True`` unless neither is available, so on an installation
+holding both, ``using_numba()`` is ``False``. To ask whether the *extra* is present, ask the
+environment - ``importlib.util.find_spec("numba")`` - not the finder.
 
 **Which path is fastest remains a measurement**, not a property of the dispatch - it has moved as the
 kernels and the data format moved, and it is not one answer for every workload, since a query the H3

@@ -96,4 +96,6 @@ def test_the_probe_measures_this_environment():
     # the probe reports the environment it ran in; the binding is a different question
     # and is false here whenever the C extension loaded
     assert startup["numba_installed"] is (interpreted_path_name() == "numba")
-    assert startup["using_numba"] is not startup["using_clang_pip"]
+    # the two bindings are mutually exclusive; both are false where neither is available,
+    # which is the pure-Python fallback this assertion must not fail on
+    assert not (startup["using_numba"] and startup["using_clang_pip"])

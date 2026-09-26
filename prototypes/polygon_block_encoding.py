@@ -19,7 +19,8 @@ Six sections, in the order the argument runs:
 * ``bench``  - whether the work count in ``skip`` becomes wall clock, on a whole query
 
 The point-in-polygon backend is bound at *import* time and the C extension wins wherever it
-loaded, but a process holding numba still imports and compiles `utils_numba`, so the tail
+loaded; `utils_numba` is imported only where it does not, so neither environment below
+compiles it. They still differ in what else numba puts in the interpreter, so the tail
 section must be run the way CI measures::
 
     # a plain `pip install timezonefinder`, which is what CI tracks

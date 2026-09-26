@@ -48,8 +48,10 @@ the report leads with the one that measures the *real* function untouched.
 
 Both environments must be measured - not two backends, since the C extension wins in
 both. ``timezonefinder/utils.py`` binds the point-in-polygon implementation at *import*
-time and prefers the extension wherever it loaded, but it imports ``utils_numba``
-either way, so a process holding numba pays that import and compiles its helpers::
+time and prefers the extension wherever it loaded, and it imports ``utils_numba`` only
+where the extension is missing - so a process holding numba does *not* pay that import.
+What still differs between the two is everything else numba being installed brings into
+the interpreter, which is why both are measured::
 
     # a dev checkout: the clang kernel, in a process that also holds numba
     PYTHONPATH=. uv run python prototypes/query_stage_profile.py

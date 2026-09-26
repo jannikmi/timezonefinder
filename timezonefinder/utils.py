@@ -110,12 +110,15 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
 # came off and the definitions followed it out. The rule is in the
 # `query-path decisions <../contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md>`__.
 #
-# ``int2coord`` above stays where it is and stays compiled, which is the line between
-# the two modules: ``convert2coords`` and ``convert2coord_pairs`` call it from nopython
-# mode over a whole ring, where the dispatch amortises to nothing. Same for the
-# vectorised bounds validators the data converter uses (``scripts/utils_numba.py``) -
-# those inline the comparison below rather than calling it, because numba cannot call a
-# pure-Python function from nopython mode, and ``tests/test_property_validation.py``
+# ``int2coord`` and the two ring converters above are here for the same reason and are
+# not compiled either: importing ``utils_numba`` is what pulls Numba into the process,
+# so anything this module needs unconditionally has to live outside it. The ring
+# converters do their scaling in one NumPy multiply instead, which beats the
+# interpreted loops a plain install used to run by 14-46x and loses 1.2-2.6x against
+# the jitted ones - the trade recorded at the decision site. The vectorised bounds
+# validators the data converter uses (``scripts/utils_numba.py``) are still compiled,
+# and they inline the comparison below rather than calling it, because numba cannot
+# call a pure-Python function from nopython mode; ``tests/test_property_validation.py``
 # holds the two forms to each other.
 #
 # All three read the bounds and the scale from ``configs``; do not restate them as
