@@ -36,7 +36,7 @@ from timezonefinder.configs import (
 )
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder.zone_names import read_zone_names
-from timezonefinder.utils_numba import convert2coords
+from timezonefinder.utils import convert2coords
 
 
 #######################

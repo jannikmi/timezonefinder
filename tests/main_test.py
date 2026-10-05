@@ -108,9 +108,18 @@ class TestBaseTimezoneFinderClass:
             cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir)
 
     def test_using_numba(self):
+        """``using_numba()`` reports the bound kernel, not what is installed.
+
+        The C extension outranks the JIT kernel, and ``timezonefinder.utils`` only
+        imports ``utils_numba`` where the extension is missing - so on an ordinary
+        installation this is ``False`` however much Numba is installed, and the
+        installed-vs-importable distinction the helper below explains only decides the
+        answer where the extension did not load.
+        """
         numba_installed = find_spec("numba") is not None
-        assert self.test_instance.using_numba() == numba_installed, (
-            numba_binding_mismatch(numba_installed)
+        expected = numba_installed and not self.test_instance.using_clang_pip()
+        assert self.test_instance.using_numba() == expected, numba_binding_mismatch(
+            numba_installed
         )
 
     def test_using_clang_pip(self):

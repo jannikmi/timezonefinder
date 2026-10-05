@@ -538,7 +538,9 @@ def test_description_names_the_cpu_and_the_acceleration_path():
     "provenance, expected",
     [
         ({}, "clang C extension"),
-        ({"using_numba": True}, "numba"),
+        # the extension outranks numba wherever it loaded, so a run holding both ran it
+        ({"using_numba": True}, "clang C extension"),
+        ({"using_clang_pip": False, "using_numba": True}, "numba"),
         ({"using_clang_pip": False}, "pure Python"),
     ],
 )

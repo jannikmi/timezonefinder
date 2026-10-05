@@ -312,19 +312,23 @@ def measure_startup(path: str) -> dict[str, Any]:
         )
         samples.append(json.loads(completed.stdout))
 
-    measured_path = "numba" if samples[0]["using_numba"] else path
-    if measured_path != path:
-        # The probe is a second process and could in principle bind a different
-        # backend than the one this run is labelled with - a stray numba on the
+    # Which environment the probe ran in, not which kernel it bound: the C extension
+    # outranks numba, so a numba environment binds clang and reports `using_numba`
+    # false - what identifies the environment is whether numba is installed in it.
+    probed_path = "numba" if samples[0]["numba_installed"] else "python"
+    if probed_path != path:
+        # The probe is a second process and could in principle be a different
+        # environment than the one this run is labelled with - a stray numba on the
         # interpreter's path would do it. That would put one environment's import
         # cost in the other's column, which is the whole quantity at stake.
         raise RuntimeError(
-            f"the startup probe bound the {measured_path} path while this run "
+            f"the startup probe ran in the {probed_path} environment while this run "
             f"measures {path}. Both must come from one environment."
         )
 
     report: dict[str, Any] = {
         "repetitions": STARTUP_REPETITIONS,
+        "numba_installed": samples[0]["numba_installed"],
         "using_numba": samples[0]["using_numba"],
         "using_clang_pip": samples[0]["using_clang_pip"],
     }
