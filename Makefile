@@ -177,10 +177,10 @@ speedtest:
 # group so that the CI-tracked measurement below cannot pick it up.
 BENCHMARK_ENV := --isolated --group test --group compare
 
-# The same environment plus numba, which is the *only* way to reach the JIT path: it is
-# selected by being importable, never by a flag. `compare` is left out because nothing
-# in the acceleration-path comparison measures tzfpy, and the two environments should
-# differ in exactly one thing - whether numba is installed.
+# The same environment plus numba, which is the *only* way to have the JIT kernel at
+# all: it exists by being importable, never by a flag. `compare` is left out because
+# nothing in the acceleration-path comparison measures tzfpy, and the two environments
+# should differ in exactly one thing - whether numba is installed.
 BENCHMARK_ENV_NUMBA := --isolated --group test --group numba
 BENCHMARK_ENV_PLAIN := --isolated --group test
 
@@ -196,7 +196,8 @@ BENCHMARK_ENV_PLAIN := --isolated --group test
 benchmarks:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark \
 		--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS) --benchmark-max-time=0 \
 		--benchmark-json=$(BENCHMARK_JSON)
@@ -211,7 +212,8 @@ benchmarks:
 memory:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
@@ -222,26 +224,32 @@ memory:
 latency:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
 # All three point-in-polygon paths against each other, which no single environment can
-# measure: numba wins the import-time dispatch whenever it is installed and pure Python
-# is what the same source is without it, so the two pairs are taken in two environments
-# and anchored on clang, the one path both of them hold. Paired inside each process -
-# see scripts/measure_acceleration_paths.py for why a cross-process pair would not be.
+# measure: numba and pure Python are one source decorated or not, so no process holds
+# both, and the two pairs are taken in two environments and anchored on clang, the one
+# path both of them hold. Paired inside each process - see
+# scripts/measure_acceleration_paths.py for why a cross-process pair would not be.
 #
-# The path is asserted per environment for the reason `benchmarks` asserts it: the
-# whole page is about which implementation produced which column, so an environment
-# that quietly bound a different one would mislabel every row rather than fail.
+# Both environments now *bind* clang, which outranks the other two wherever it loaded,
+# so what distinguishes them is which kernel they hold rather than which one they
+# selected: `--expect-interpreted` is the assertion that says so, and the comparison
+# rebinds that kernel itself. Asserting both halves for the reason `benchmarks` asserts
+# the path at all - the whole page is about which implementation produced which column,
+# so an environment that quietly held a different one would mislabel every row rather
+# than fail.
 acceleration-paths:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_PYTHON)
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.assert_acceleration_path \
-		--expect numba
+		--expect $(BENCHMARK_ACCELERATION_PATH) --expect-interpreted numba
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_NUMBA)
 
@@ -254,7 +262,8 @@ acceleration-paths:
 batch-break-even:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_batch_break_even \
 		--output=$(BATCH_BREAK_EVEN_JSON)
 
@@ -316,6 +325,16 @@ BENCHMARK_MIN_ROUNDS := 50
 # to measure rather than reporting the wrong kernel's numbers - which is the
 # ordinary case here, since `make install` syncs --all-groups.
 BENCHMARK_ACCELERATION_PATH := clang
+
+# The second half of that guard, and it is load-bearing on its own: the C extension
+# outranks numba, so `--expect clang` passes in an environment that *has* numba and
+# would no longer refuse one. What still has to be refused is the numba install
+# itself, because the tracked configuration is a process with no numba in it -
+# importing it costs resident memory, which `memory` records, and JIT-compiles the
+# `utils_numba` kernels that `benchmarks`' `test_pt_in_poly_python*` rows time under
+# names the trend chart joins on. Asserting the interpreted path is `python` is how
+# that is said now that the active path cannot say it.
+BENCHMARK_INTERPRETED_PATH := python
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
 
@@ -343,11 +362,16 @@ print-memory-chart-json:
 print-benchmark-acceleration-path:
 	@echo $(BENCHMARK_ACCELERATION_PATH)
 
+# the other half of the same guard, for the workflow steps that assert it
+print-benchmark-interpreted-path:
+	@echo $(BENCHMARK_INTERPRETED_PATH)
+
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
 	uv run python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run pytest benchmarks -m benchmark_core \
 		--benchmark-min-rounds=$(BENCHMARK_MIN_ROUNDS) \
 		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON)
@@ -379,7 +403,8 @@ benchmark-noise:
 memory-ci:
 	@mkdir -p $(dir $(CI_MEMORY_JSON))
 	uv run python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run python -m scripts.measure_memory \
 		--output=$(RAW_MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
@@ -509,7 +534,7 @@ docs:
 .PHONY: clean test testint testall build docs speedtest benchmarks reports \
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
-	print-benchmark-acceleration-path latency \
+	print-benchmark-acceleration-path print-benchmark-interpreted-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths batch-break-even
 

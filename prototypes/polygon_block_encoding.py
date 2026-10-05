@@ -18,14 +18,16 @@ Six sections, in the order the argument runs:
 * ``size``   - what each candidate encoding costs on disk, including the block index
 * ``bench``  - whether the work count in ``skip`` becomes wall clock, on a whole query
 
-The point-in-polygon backend is bound at *import* time and numba wins whenever it is
-importable, so the tail section must be run the way CI measures::
+The point-in-polygon backend is bound at *import* time and the C extension wins wherever it
+loaded; `utils_numba` is imported only where it does not, so neither environment below
+compiles it. They still differ in what else numba puts in the interpreter, so the tail
+section must be run the way CI measures::
 
-    # clang (what a plain `pip install timezonefinder` runs, and what CI tracks)
+    # a plain `pip install timezonefinder`, which is what CI tracks
     PYTHONPATH=. uv run --isolated --no-group numba --group proto --group test \
         python prototypes/polygon_block_encoding.py
 
-    # numba (what a dev checkout runs)
+    # a dev checkout, whose process also holds numba - which `bench` needs
     PYTHONPATH=. uv run python prototypes/polygon_block_encoding.py
 
 Every section but ``tail`` and ``bench`` reports counts rather than times and is
