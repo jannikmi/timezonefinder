@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791243731664,
+  "lastUpdate": 1791502208155,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13101,6 +13101,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5119",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cf7f99f349e35f8220059afa26b7f0bfeeca1a8",
+          "message": "Bump virtualenv from 21.7.8 to 21.7.13 (#706)",
+          "timestamp": "2026-10-08T23:29:17Z",
+          "tree_id": "39c307cefe0ac5a562fe5925c75e54e9345c45d7",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8cf7f99f349e35f8220059afa26b7f0bfeeca1a8"
+        },
+        "date": 1791502206297,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 913310.0694994468,
+            "range": "± 18546",
+            "unit": "lookups/sec",
+            "extra": "min of 302 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1198564.2159573042,
+            "range": "± 27973",
+            "unit": "lookups/sec",
+            "extra": "min of 390 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 315856.1692079343,
+            "range": "± 9564",
+            "unit": "lookups/sec",
+            "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1405902.6541740776,
+            "range": "± 25887",
+            "unit": "lookups/sec",
+            "extra": "min of 412 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 2127092.953103056,
+            "range": "± 146348",
+            "unit": "lookups/sec",
+            "extra": "min of 765 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 381256.398435621,
+            "range": "± 6809",
+            "unit": "lookups/sec",
+            "extra": "min of 118 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1384797.5813715556,
+            "range": "± 16411",
+            "unit": "lookups/sec",
+            "extra": "min of 422 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 2095106.0835941217,
+            "range": "± 75168",
+            "unit": "lookups/sec",
+            "extra": "min of 736 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 379177.74244819075,
+            "range": "± 24272",
+            "unit": "lookups/sec",
+            "extra": "min of 116 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1500 GHz"
           }
         ]
       }
