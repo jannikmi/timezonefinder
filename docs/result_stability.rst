@@ -112,7 +112,11 @@ channels** (all of them, and not only the first, are what the warning above is a
    convention rather than a geometric fact. A cell like this is one the reordering gate below
    refuses, so the converter keeps its inherited zone precedence - but that precedence orders zones
    by their total vertex count in the cell, so a dataset that adds, drops or reshapes a polygon can
-   reorder them and decide such a point differently.
+   reorder them and decide such a point differently. Zones with equal totals are ordered by their
+   timezone identifier, so compiling the same dataset twice always yields the same order. Data
+   compiled before that rule left such ties to chance, so the first release built with it can
+   change answers even where no boundary moved: such a point here, and - because the tie can
+   decide which zone a cell tests last - every ``TimezoneFinderL`` answer in a few cells.
 3. **Shortcut composition and ordering.** The H3 shortcut index is regenerated for every dataset.
    Which cells exist, which candidates a cell holds and in which order they are tested are all
    outputs of that run - and the rules that run follows are code, so a code-side optimization
