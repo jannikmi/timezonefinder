@@ -416,6 +416,20 @@ the stage. Where a real win would have to come from is visible in the same ladde
 in two calls before any lookup logic runs.**
 
 
+Calibrating the shortcut-ordering model
+---------------------------------------
+
+``scripts/shortcut_ordering.py`` orders the candidate polygons stored for an ambiguous H3 cell. It integrates a deterministic work model over the cell; conversion itself never samples points or times the machine running it. The reviewed production coefficients therefore live in source and are deliberately *not* learned during conversion.
+
+``make shortcut-calibration`` is the separate empirical check. It runs the real ``inside_of_polygon`` control flow through counting adapters, so outer-box rejection, the hole-union gate, individual-hole early termination and packed-block activity are counted without adding probes to the production lookup. It then fits seven non-negative terms on one deterministic partition of H3 cells and reports residuals on different cells. Rare successful-hole exits are generated from real packaged holes and reported separately; they do not enter the fit, because deliberately oversampling a rare path must not change the workload distribution.
+
+Prediction error is not an ordering result. The command re-runs the optimizer with the fitted and with area-only coefficients over *every* ambiguous cell the fit never saw. An earlier version scored only the most-visited held-out cells and saw no order change at all. The changes live in a few percent of cells that are rarely the busiest, so a bounded sample can miss every one. For the cells that do change, it samples points uniformly on the sphere and checks every answer is identical under both orders. It counts the predicate work each order does, which is deterministic and noise-free, and prices that difference with both coefficient sets. It then A/B-times the complete public ``timezone_at`` call with ``benchmarks/candidate_comparison.py`` over several seeds. The share of each fixture stratum's queries that land in the changed cells says how much a local change dilutes in a real workload.
+
+``benchmarks/shortcut_ordering_model.json`` maps every coefficient to its runtime event and keeps the summary of the latest reviewed run (``make shortcut-calibration-record``). Its one deterministic test checks that the file, its recorded run and the source agree on the production coefficients, so a coefficient edit cannot land without a run against it. Nothing else gates on calibration. Ordering never changes an answer, so a stale calibration can only cost speed. A fingerprint over the predicate source was tried and dropped, because it failed on unrelated edits and offered no way to refresh it except by hand. Re-run it after a change to the predicate path, the packed kernels or the coefficients, and after a boundary data update. The benchmark workflow exposes the timed run as an explicit dispatch and uploads its JSON. The reference run is clang with mapped data, matching a plain installation. Numba, in-memory and pure-Python runs are supporting sensitivity checks, not numbers that may be combined with the reference run.
+
+The recorded reference run (clang, mapped, data 2026d) re-ordered 646 of 30,439 eligible cells with the fitted coefficients. Every answer was identical. The whole call was 3.3–4.0% faster on all eight seeds, and the counted work agreed with the fitted model but not the production one. Those cells take 0.24% of random, 0.42% of on-land and 1.76% of ambiguous-shortcut fixture queries, so the gain is real but invisible to the batch suite. The area-only order was 45% slower on the 788 cells it changed, mostly by walking into holes the cost model steers around. The fit separates the hole-union probe from the packed-kernel dispatch poorly, because one nearly always follows the other; read their individual values with the bootstrap interval the artifact reports.
+
+
 Memory is measured the same way
 -------------------------------
 

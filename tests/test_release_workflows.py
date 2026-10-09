@@ -72,6 +72,7 @@ SCRIPT_GATES: dict[str, str | None] = {
     # `benchmark.yml` publishes nothing a release depends on
     "benchmark_report_artifact": NOT_A_GATE,
     "bootstrap_data": NOT_A_GATE,
+    "calibrate_shortcut_ordering": NOT_A_GATE,
     "changelog_fragments": RELEASE_GATE,
     "check_data_dependency": RELEASE_GATE,
     "compare_benchmark_runs": NOT_A_GATE,

@@ -22,6 +22,7 @@ Timing and memory are measured in the same job and travel in the same two
 artifacts, so the counts pinned below cover both.
 """
 
+import json
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -132,6 +133,7 @@ MEASUREMENT_TARGETS = (
     "memory",
     "memory-ci",
     "batch-break-even",
+    "shortcut-calibration",
 )
 
 
@@ -250,9 +252,25 @@ TRIGGER_TABLE: tuple[tuple[str, dict[str, Any], set[str]], ...] = (
         },
         {"render-reports"},
     ),
+    (
+        "shortcut calibration dispatch",
+        {
+            "event_name": "workflow_dispatch",
+            "ref": "refs/heads/master",
+            "inputs": {"calibrate_shortcuts": True},
+        },
+        {"calibrate-shortcuts"},
+    ),
 )
 
-GATED_JOBS = ("plan", "measure", "track", "noise", "render-reports")
+GATED_JOBS = (
+    "plan",
+    "measure",
+    "track",
+    "noise",
+    "render-reports",
+    "calibrate-shortcuts",
+)
 
 _EXPRESSION_TOKENS = (("&&", " and "), ("||", " or "), ("!", " not "))
 
@@ -273,9 +291,13 @@ def _evaluate(expression: str, context: dict[str, Any]) -> bool:
         body = body.replace(token, python)
     namespace = {
         "github": SimpleNamespace(event_name=context["event_name"], ref=context["ref"]),
-        "inputs": SimpleNamespace(**(context["inputs"] or {}))
-        if context["inputs"]
-        else SimpleNamespace(render_reports=None),
+        "inputs": SimpleNamespace(
+            **{
+                "render_reports": None,
+                "calibrate_shortcuts": None,
+                **(context["inputs"] or {}),
+            }
+        ),
         "startsWith": lambda value, prefix: str(value).startswith(prefix),
     }
     return bool(eval(body, {"__builtins__": {}}, namespace))  # noqa: S307
@@ -332,6 +354,38 @@ def test_the_manual_report_dispatch_survives(
     condition = str(benchmark_workflow["jobs"]["render-reports"]["if"])
     assert "inputs.render_reports" in condition
     assert "render_reports" in benchmark_workflow[True]["workflow_dispatch"]["inputs"]
+
+
+@pytest.mark.unit
+def test_shortcut_calibration_is_an_explicit_measurement_never_a_gate(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    # Ordering never changes an answer, so a stale calibration costs speed, not
+    # correctness: no job that runs on its own may fail on it.
+    for name, job in benchmark_workflow["jobs"].items():
+        if name != "calibrate-shortcuts":
+            assert "shortcut-calibration" not in json.dumps(job), name
+    job = benchmark_workflow["jobs"]["calibrate-shortcuts"]
+    scripts = "\n".join(str(step.get("run", "")) for step in job["steps"])
+    assert "make shortcut-calibration" in scripts
+    assert "assert_acceleration_path" in scripts
+    uploads = _steps_using(benchmark_workflow, "calibrate-shortcuts", UPLOAD_ACTION)
+    assert [step["with"]["name"] for step in uploads] == [
+        "shortcut-ordering-calibration"
+    ]
+
+
+@pytest.mark.unit
+def test_shortcut_calibration_pins_plain_clang_and_current_data() -> None:
+    recipe = _make_recipe("shortcut-calibration")
+    assert "$(BENCHMARK_ENV_PLAIN)" in recipe
+    assert "scripts.assert_acceleration_path" in recipe
+    target = (
+        MAKEFILE.read_text(encoding="utf-8")
+        .split("shortcut-calibration:", maxsplit=1)[1]
+        .splitlines()[0]
+    )
+    assert "check-data" in target
 
 
 @pytest.mark.unit

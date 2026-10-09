@@ -188,6 +188,7 @@ def test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts() -> Non
         ("publish_data.yml", "publish-data-pypi"),
         ("benchmark.yml", "measure"),
         ("benchmark.yml", "render-reports"),
+        ("benchmark.yml", "calibrate-shortcuts"),
     }
     assert {(path, job) for path, job, _ in callers} == expected, (
         f"the set of jobs reading the recorded run changed: {callers}"
