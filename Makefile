@@ -374,13 +374,14 @@ SHORTCUT_CALIBRATION_JSON := tmp/shortcut-ordering-calibration.json
 shortcut-calibration: check-data
 	@mkdir -p $(dir $(SHORTCUT_CALIBRATION_JSON))
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
-		--expect $(BENCHMARK_ACCELERATION_PATH)
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
 	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.calibrate_shortcut_ordering \
 		--backend $(BENCHMARK_ACCELERATION_PATH) --output=$(SHORTCUT_CALIBRATION_JSON)
 
 # Copy a reviewed run's summary (local, or the workflow artifact) into the model file.
 shortcut-calibration-record:
-	uv run python -m scripts.calibrate_shortcut_ordering --record=$(SHORTCUT_CALIBRATION_JSON)
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.calibrate_shortcut_ordering --record=$(SHORTCUT_CALIBRATION_JSON)
 
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:

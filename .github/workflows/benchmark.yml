@@ -242,9 +242,6 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Check shortcut-ordering calibration freshness
-        run: make shortcut-calibration-check
-
       # assert rather than assume: a numba dependency sneaking in via a
       # transitive dependency or a lockfile change would silently corrupt the
       # entire trend history instead of failing here
@@ -668,7 +665,8 @@ jobs:
         run: |
           set -euo pipefail
           uv run python -m scripts.assert_acceleration_path \
-            --expect "$(make -s print-benchmark-acceleration-path)"
+            --expect "$(make -s print-benchmark-acceleration-path)" \
+            --expect-interpreted "$(make -s print-benchmark-interpreted-path)"
 
       - name: Measure held-out model and ordering evidence
         run: make shortcut-calibration

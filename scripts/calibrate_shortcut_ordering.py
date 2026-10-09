@@ -8,18 +8,21 @@ to :class:`scripts.shortcut_ordering.CostCoefficients`.
 
 The fitted coefficients are proposals, never production input.  Changing the reviewed
 defaults still requires an ordinary source edit, regenerated shortcut data and the
-normal correctness/whole-query gates.
+normal correctness/whole-query gates.  Re-run it when the predicate path, the packed
+kernels or the boundary data change; ``--record`` copies a reviewed run's summary into
+the model file.
 """
 
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 from contextlib import contextmanager
+from datetime import date
 import hashlib
-import inspect
 import json
+import math
 import platform
+import random
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -30,7 +33,6 @@ import h3.api.numpy_int as h3
 import numpy as np
 from shapely import Polygon
 
-from benchmarks import candidate_comparison
 from benchmarks.candidate_comparison import compare_candidates
 from scripts.benchmark_utils import cpu_info, get_system_status
 from scripts.assert_acceleration_path import (
@@ -39,18 +41,9 @@ from scripts.assert_acceleration_path import (
     active_acceleration_path,
 )
 from scripts.shortcut_ordering import (
-    CELL_AREA_RTOL,
-    IMPROVEMENT_RTOL,
-    CellOptimizer,
-    CheckCost,
     DEFAULT_COST_COEFFICIENTS,
     CostCoefficients,
     ShortcutOrderer,
-    _cell_region,
-    cell_cap,
-    cell_region,
-    improves,
-    spherical_area,
 )
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -60,24 +53,16 @@ from tests.auxiliaries import (
     benchmark_fixture_provenance,
     load_benchmark_points,
 )
-from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
+from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import (
-    COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     POLYGON_BLOCK_SIZE,
     SHORTCUT_H3_RES,
-    SOURCE_COORD_STEP,
 )
 from timezonefinder.polygon_array import HoleArray, PolygonArray
-from timezonefinder.shortcut_index import (
-    ABSENT,
-    SLOT_DIGITS_SHIFT,
-    SLOT_MASK,
-    ShortcutIndex,
-    get_last_change_idx,
-)
+from timezonefinder.shortcut_index import ABSENT, get_last_change_idx
 
-SCHEMA_VERSION: Final[int] = 1
+SCHEMA_VERSION: Final[int] = 2
 MODEL_PATH = Path("benchmarks/shortcut_ordering_model.json")
 FEATURES: Final[tuple[str, ...]] = (
     "bbox",
@@ -94,30 +79,15 @@ STRATA: Final[dict[str, str]] = {
     "ambiguous_shortcut": AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     "unique_shortcut": UNIQUE_SHORTCUT_POINTS_FIXTURE,
 }
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_FINGERPRINT_PATHS = (
-    "timezonefinder/inside_poly_extension/inside_polygon_int.c",
-    "timezonefinder/inside_poly_extension/inside_polygon_int.h",
-)
-_LOCAL_FINGERPRINT_NAMES = (
-    "StageCounts",
-    "Observation",
-    "_bound_backend",
-    "_sum_counts",
-    "_PolygonProbe",
-    "_HoleProbe",
-    "trace_predicate",
-    "_minimum_predicate_ns",
-    "_validation_cell",
-    "collect_observations",
-    "collect_hole_hit_observations",
-    "_fit_nonnegative",
-    "_fit_report",
-    "_RuntimeHoles",
-    "_runtime_orderer",
-    "_ReorderedIndex",
-    "_ordering_report",
-    "measure",
+#: the area-only alternative: every candidate costs one check, so only coverage counts
+AREA_ONLY_COEFFICIENTS: Final = CostCoefficients(
+    bbox=1.0,
+    hole_union_probe=0.0,
+    hole_lookup=0.0,
+    hole_bbox=0.0,
+    pip_dispatch=0.0,
+    block_probe=0.0,
+    active_vertex=0.0,
 )
 
 
@@ -173,138 +143,40 @@ def _sum_counts(observations: Sequence[Observation]) -> dict[str, int]:
     return asdict(total)
 
 
-def model_input_fingerprint() -> dict[str, Any]:
-    """Hash the model, probes, kernels and fixture/data identity they measured."""
+def check_model(
+    path: Path = MODEL_PATH, *, require_record: bool = True
+) -> dict[str, Any]:
+    """Refuse a model file that does not describe the reviewed coefficients.
 
-    def callable_name(function: Any) -> str:
-        return f"{function.__module__}.{function.__qualname__}"
-
-    symbols = {
-        "scripts.shortcut_ordering.CostCoefficients": CostCoefficients,
-        "scripts.shortcut_ordering.CheckCost": CheckCost,
-        "scripts.shortcut_ordering.CellOptimizer": CellOptimizer,
-        "scripts.shortcut_ordering.spherical_area": spherical_area,
-        "scripts.shortcut_ordering._cell_region": _cell_region,
-        "scripts.shortcut_ordering.cell_region": cell_region,
-        "scripts.shortcut_ordering.cell_cap": cell_cap,
-        "scripts.shortcut_ordering.improves": improves,
-        "scripts.shortcut_ordering.ShortcutOrderer.geometry": ShortcutOrderer.geometry,
-        "scripts.shortcut_ordering.ShortcutOrderer.safe_to_reorder": ShortcutOrderer.safe_to_reorder,
-        "scripts.shortcut_ordering.ShortcutOrderer.bounds": ShortcutOrderer.bounds,
-        "scripts.shortcut_ordering.ShortcutOrderer.intersection": ShortcutOrderer.intersection,
-        "scripts.shortcut_ordering.ShortcutOrderer.add_pip": ShortcutOrderer.add_pip,
-        "scripts.shortcut_ordering.ShortcutOrderer.model": ShortcutOrderer.model,
-        "scripts.shortcut_ordering.ShortcutOrderer.order": ShortcutOrderer.order,
-        "timezonefinder.timezonefinder.TimezoneFinder.inside_of_polygon": TimezoneFinder.inside_of_polygon,
-        "timezonefinder.timezonefinder.TimezoneFinder.timezone_at": TimezoneFinder.timezone_at,
-        "timezonefinder.timezonefinder.TimezoneFinder._zone_id_among": TimezoneFinder._zone_id_among,
-        "timezonefinder.timezonefinder.TimezoneFinder._zone_id_in_ambiguous_cell": TimezoneFinder._zone_id_in_ambiguous_cell,
-        "timezonefinder.polygon_array.PolygonArray.outside_bbox": PolygonArray.outside_bbox,
-        "timezonefinder.polygon_array.PolygonArray._pip_at": PolygonArray._pip_at,
-        "timezonefinder.polygon_array.PolygonArray.pip_with_bbox_check": PolygonArray.pip_with_bbox_check,
-        "timezonefinder.polygon_array.PolygonArray.in_any_polygon": PolygonArray.in_any_polygon,
-        "timezonefinder.polygon_array.HoleArray.ids_of": HoleArray.ids_of,
-        "timezonefinder.polygon_array.HoleArray.any_contains": HoleArray.any_contains,
-        "timezonefinder.polygon_array.HoleArray._resolve": HoleArray._resolve,
-        "timezonefinder.polygon_array.HoleArray.pip": HoleArray.pip,
-        "timezonefinder.polygon_array.HoleArray._build_union_bounds": HoleArray._build_union_bounds,
-        "timezonefinder.shortcut_index.ShortcutIndex.entry_of": ShortcutIndex.entry_of,
-        "timezonefinder.shortcut_index.ShortcutIndex.candidates_of": ShortcutIndex.candidates_of,
-        "timezonefinder.shortcut_index.ShortcutIndex.stop_index_of": ShortcutIndex.stop_index_of,
-        "timezonefinder.shortcut_index.get_last_change_idx": get_last_change_idx,
-        "timezonefinder.utils.coord2int": utils.coord2int,
-        "timezonefinder.utils.validate_coordinates": utils.validate_coordinates,
-        "timezonefinder.utils_numba.pt_in_poly_packed": utils_numba.pt_in_poly_packed,
-        "timezonefinder.utils_numba._residual_at": utils_numba._residual_at,
-        "timezonefinder.utils_numba.packed_buffers_numba": utils_numba.packed_buffers_numba,
-        "timezonefinder.utils_clang.pt_in_poly_clang_packed": utils_clang.pt_in_poly_clang_packed,
-        "timezonefinder.utils_clang.packed_buffers_clang": utils_clang.packed_buffers_clang,
-        "scripts.assert_acceleration_path.active_acceleration_path": active_acceleration_path,
-        "benchmarks.candidate_comparison.CandidateComparison": candidate_comparison.CandidateComparison,
-        "benchmarks.candidate_comparison.compare_candidates": candidate_comparison.compare_candidates,
-    }
-    symbols.update(
-        {
-            f"scripts.calibrate_shortcut_ordering.{name}": globals()[name]
-            for name in _LOCAL_FINGERPRINT_NAMES
-        }
-    )
-    digest = hashlib.sha256()
-    for name, symbol in symbols.items():
-        digest.update(name.encode())
-        digest.update(b"\0")
-        digest.update(inspect.getsource(symbol).encode())
-        digest.update(b"\0")
-    for relative_path in _FINGERPRINT_PATHS:
-        digest.update(relative_path.encode())
-        digest.update(b"\0")
-        digest.update((_PROJECT_ROOT / relative_path).read_bytes())
-        digest.update(b"\0")
-    fixtures = benchmark_fixture_provenance()
-    constants = {
-        "COORD2INT_FACTOR": COORD2INT_FACTOR,
-        "INT2COORD_FACTOR": INT2COORD_FACTOR,
-        "POLYGON_BLOCK_SIZE": POLYGON_BLOCK_SIZE,
-        "SHORTCUT_H3_RES": SHORTCUT_H3_RES,
-        "SOURCE_COORD_STEP": SOURCE_COORD_STEP,
-        "CELL_AREA_RTOL": CELL_AREA_RTOL,
-        "IMPROVEMENT_RTOL": IMPROVEMENT_RTOL,
-        "ABSENT": ABSENT,
-        "SLOT_DIGITS_SHIFT": SLOT_DIGITS_SHIFT,
-        "SLOT_MASK": SLOT_MASK,
-        "FEATURES": list(FEATURES),
-        "STRATA": STRATA,
-        "candidate_comparison": {
-            "batch_size": candidate_comparison.DEFAULT_BATCH_SIZE,
-            "rounds": candidate_comparison.DEFAULT_ROUNDS,
-            "threshold": candidate_comparison.DEFAULT_THRESHOLD,
-            "win_margin": candidate_comparison.DEFAULT_WIN_MARGIN,
-        },
-        "production_coefficients": asdict(DEFAULT_COST_COEFFICIENTS),
-        "packed_acceleration_backends": {
-            name: callable_name(function)
-            for name, function in PACKED_ACCELERATION_IMPLEMENTATIONS.items()
-        },
-        "packed_buffer_backends": {
-            name: callable_name(function)
-            for name, function in PACKED_BUFFER_FACTORIES.items()
-        },
-    }
-    digest.update(json.dumps(fixtures, sort_keys=True).encode())
-    digest.update(json.dumps(constants, sort_keys=True).encode())
-    return {
-        "sha256": digest.hexdigest(),
-        "members": [*symbols, *_FINGERPRINT_PATHS],
-        "fixtures": fixtures,
-        "constants": constants,
-    }
-
-
-def check_model(path: Path = MODEL_PATH) -> dict[str, Any]:
-    """Refuse a reference model whose inputs or reviewed constants moved."""
+    Deliberately not a source fingerprint: ordering never changes an answer, so a
+    stale calibration costs at most a little speed, while a hash over predicate
+    source fails on every unrelated edit. What must agree is what a reviewer reads:
+    the coefficients in source, the ones the file maps, and the ones its recorded
+    run compared against.
+    """
     model = json.loads(path.read_text(encoding="utf-8"))
     if model.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(
             f"{path} has schema {model.get('schema_version')!r}, expected {SCHEMA_VERSION}"
         )
-    current_fingerprint = model_input_fingerprint()
-    recorded_fingerprint = model.get("model_inputs", {})
-    if recorded_fingerprint != current_fingerprint:
-        raise ValueError(
-            "shortcut ordering calibration is stale: a modeled runtime stage, block "
-            "size, or feature mapping changed. Re-run this command in every supported "
-            "environment and review the resulting artifact before updating the model."
-        )
     current_coefficients = asdict(DEFAULT_COST_COEFFICIENTS)
     if model.get("production_coefficients") != current_coefficients:
         raise ValueError(
-            "shortcut ordering calibration is stale: the reviewed production "
-            "coefficients differ from the reference model"
+            f"{path} does not record the production coefficients in "
+            "scripts/shortcut_ordering.py"
         )
     if set(model.get("feature_mapping", ())) != set(FEATURES):
         raise ValueError(
-            "shortcut ordering calibration is stale: the reference feature mapping "
-            "does not name exactly the fitted coefficient features"
+            f"{path}: the feature mapping does not name exactly the fitted features"
+        )
+    recorded = model.get("latest_recorded_validation", {})
+    if (
+        require_record
+        and recorded.get("production_coefficients") != current_coefficients
+    ):
+        raise ValueError(
+            "the recorded calibration run compared different production coefficients; "
+            "re-run `make shortcut-calibration` and `make shortcut-calibration-record`"
         )
     return model
 
@@ -596,107 +468,199 @@ class _ReorderedIndex:
         return self.base.stop_index_of(entry)
 
 
+def ambiguous_cells(finder: TimezoneFinder) -> dict[int, list[int]]:
+    """Every shortcut cell whose stored order the optimizer could change."""
+    cells = {}
+    for root in h3.get_res0_cells():
+        for child in h3.cell_to_children(root, SHORTCUT_H3_RES):
+            cell = int(child)
+            entry = finder.shortcuts.entry_of(cell)
+            if entry < ABSENT:
+                candidates = finder.shortcuts.candidates_of(entry).astype(int).tolist()
+                if len(candidates) > 1:
+                    cells[cell] = candidates
+    return cells
+
+
+def sample_cell_points(
+    cell: int, amount: int, rng: random.Random
+) -> list[tuple[float, float]]:
+    """Points uniform on the sphere inside one H3 cell, by rejection from its box."""
+    boundary = np.asarray(h3.cell_to_boundary(cell))
+    lats, lngs = boundary[:, 0], boundary[:, 1]
+    lat_low, lat_high = lats.min(), lats.max()
+    if int(h3.latlng_to_cell(90.0, 0.0, SHORTCUT_H3_RES)) == cell:
+        lat_high, lngs = 90.0, np.asarray([-180.0, 180.0])
+    elif int(h3.latlng_to_cell(-90.0, 0.0, SHORTCUT_H3_RES)) == cell:
+        lat_low, lngs = -90.0, np.asarray([-180.0, 180.0])
+    elif lngs.max() - lngs.min() > 180:
+        # the cell straddles the antimeridian: sample the box east of it, unwrapped
+        lngs = np.where(lngs < 0, lngs + 360, lngs)
+    low = math.sin(math.radians(lat_low))
+    high = math.sin(math.radians(lat_high))
+    points: list[tuple[float, float]] = []
+    while len(points) < amount:
+        lat = math.degrees(math.asin(rng.uniform(low, high)))
+        lng = rng.uniform(lngs.min(), lngs.max())
+        lng = lng - 360 if lng > 180 else lng
+        if int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)) == cell:
+            points.append((lng, lat))
+    return points
+
+
+def _query_counts(
+    finder: TimezoneFinder, index: Any, lng: float, lat: float
+) -> StageCounts:
+    """Stage counts of the real candidate walk one query makes under ``index``."""
+    entry = index.entry_of(int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)))
+    candidates = index.candidates_of(entry)
+    stop = index.stop_index_of(entry)
+    x, y = utils.coord2int(lng), utils.coord2int(lat)
+    total = StageCounts()
+    for polygon_id in candidates[:stop]:
+        matched, counts = trace_predicate(finder, int(polygon_id), x, y)
+        total.add(counts)
+        if matched:
+            break
+    return total
+
+
+def _modeled_ns(counts: StageCounts, coefficients: CostCoefficients) -> float:
+    return sum(getattr(counts, name) * getattr(coefficients, name) for name in FEATURES)
+
+
 def _ordering_report(
     finder: TimezoneFinder,
-    validation_points: Sequence[tuple[float, float]],
+    cells: dict[int, list[int]],
+    alternative: CostCoefficients,
     fitted: CostCoefficients,
+    *,
+    points_per_cell: int,
     rounds: int,
-    max_cells: int,
+    seeds: int,
+    rng: random.Random,
 ) -> dict[str, Any]:
+    """Re-order every eligible cell and measure the cells the alternative changes.
+
+    Every cell is evaluated, not a sample: the cells an order change touches are a
+    few percent of all ambiguous cells and rarely the most-visited ones, so a bounded
+    sample can show no change at all. The whole-query A/B runs on uniform points in
+    the changed cells only, where the effect lives; the per-stratum share of fixture
+    queries landing in those cells says how far it dilutes in a real workload.
+    """
     base_index = finder.shortcuts
-    cells: dict[int, list[int]] = {}
-    frequency: Counter[int] = Counter()
-    for lng, lat in validation_points:
-        cell = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        entry = base_index.entry_of(cell)
-        if entry < ABSENT:
-            frequency[cell] += 1
-            if cell not in cells:
-                cells[cell] = base_index.candidates_of(entry).astype(int).tolist()
-    richest = max(cells, key=lambda cell: (len(cells[cell]), -cell))
-    selected_cells = [richest]
-    selected_cells.extend(
-        cell
-        for cell, _ in sorted(frequency.items(), key=lambda item: (-item[1], item[0]))
-        if cell != richest
+    orderer = _runtime_orderer(finder, alternative)
+    changed = {}
+    for cell, candidates in cells.items():
+        order = orderer.order(cell, candidates)
+        if order != candidates:
+            changed[cell] = order
+    earth = sum(
+        h3.cell_area(int(child), "rads^2")
+        for root in h3.get_res0_cells()
+        for child in h3.cell_to_children(root, SHORTCUT_H3_RES)
     )
-    selected = {cell: cells[cell] for cell in selected_cells[:max_cells]}
-    fitted_orderer = _runtime_orderer(finder, fitted)
-    area_orderer = _runtime_orderer(
-        finder,
-        CostCoefficients(
-            bbox=1.0,
-            hole_union_probe=0.0,
-            hole_lookup=0.0,
-            hole_bbox=0.0,
-            pip_dispatch=0.0,
-            block_probe=0.0,
-            active_vertex=0.0,
-        ),
-    )
-    fitted_orders = {
-        cell: fitted_orderer.order(cell, ids) for cell, ids in selected.items()
-    }
-    area_orders = {
-        cell: area_orderer.order(cell, ids) for cell, ids in selected.items()
-    }
-    selected_cell_points = [
-        point
-        for point in validation_points
-        if int(h3.latlng_to_cell(point[1], point[0], SHORTCUT_H3_RES)) in selected
-    ]
-    if not selected_cell_points:
-        return {"cells": 0, "points": 0, "comparisons": {}}
-    # The aggregate includes every held-out query. Cells outside the bounded ordering
-    # sample delegate to the same base index on both arms, so they are the dilution a
-    # real mixed workload imposes rather than silently becoming training examples.
-    comparison_points = list(validation_points)
-
-    def compare(name: str, orders: dict[int, list[int]]) -> dict[str, Any]:
-        current = _ReorderedIndex(base_index, selected, finder.zone_ids)
-        alternative = _ReorderedIndex(base_index, orders, finder.zone_ids)
-
-        def baseline(point: tuple[float, float]) -> object:
-            finder.shortcuts = cast(Any, current)
-            return finder.timezone_at(lng=point[0], lat=point[1])
-
-        def challenger(point: tuple[float, float]) -> object:
-            finder.shortcuts = cast(Any, alternative)
-            return finder.timezone_at(lng=point[0], lat=point[1])
-
-        for point in comparison_points:
-            if baseline(point) != challenger(point):
-                raise AssertionError(f"{name} changed the lookup answer at {point}")
-        comparison = compare_candidates(
-            ("production", baseline),
-            (name, challenger),
-            comparison_points,
-            rounds=rounds,
-            batch_size=min(1_000, len(comparison_points)),
+    workload_share = {}
+    for stratum, fixture in STRATA.items():
+        points = load_benchmark_points(fixture)
+        hits = sum(
+            int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)) in changed
+            for lng, lat in points
         )
-        finder.shortcuts = base_index
-        return {
-            **asdict(comparison),
-            "best_round_change": comparison.best_round_change,
-            "win_share": comparison.win_share,
-            "verdict": comparison.verdict,
-            "changed_cells": sum(orders[cell] != selected[cell] for cell in selected),
-        }
-
+        workload_share[stratum] = hits / len(points)
+    report: dict[str, Any] = {
+        "eligible_cells": len(cells),
+        "changed_cells": len(changed),
+        "changed_area_share_of_sphere": sum(
+            h3.cell_area(cell, "rads^2") for cell in changed
+        )
+        / earth,
+        "fixture_query_share_in_changed_cells": workload_share,
+    }
+    if not changed:
+        return report
+    points = [
+        point
+        for cell in sorted(changed)
+        for point in sample_cell_points(cell, points_per_cell, rng)
+    ]
+    current = _ReorderedIndex(
+        base_index, {cell: cells[cell] for cell in changed}, finder.zone_ids
+    )
+    reordered = _ReorderedIndex(base_index, changed, finder.zone_ids)
+    current_counts, reordered_counts = StageCounts(), StageCounts()
+    modeled: dict[str, list[float]] = {"production": [], "fitted": []}
     try:
-        comparisons = {
-            "calibrated": compare("calibrated", fitted_orders),
-            "area_only": compare("area_only", area_orders),
-        }
+        for lng, lat in points:
+            finder.shortcuts = cast(Any, current)
+            expected = finder.timezone_at(lng=lng, lat=lat)
+            before = _query_counts(finder, current, lng, lat)
+            finder.shortcuts = cast(Any, reordered)
+            if finder.timezone_at(lng=lng, lat=lat) != expected:
+                raise AssertionError(f"reordering changed the answer at {lng}, {lat}")
+            after = _query_counts(finder, reordered, lng, lat)
+            current_counts.add(before)
+            reordered_counts.add(after)
+            for name, coefficients in (
+                ("production", DEFAULT_COST_COEFFICIENTS),
+                ("fitted", fitted),
+            ):
+                modeled[name].append(
+                    _modeled_ns(after, coefficients) - _modeled_ns(before, coefficients)
+                )
+
+        def lookup(index: Any):
+            def run(point: tuple[float, float]) -> object:
+                finder.shortcuts = index
+                return finder.timezone_at(lng=point[0], lat=point[1])
+
+            return run
+
+        comparisons = []
+        for seed in range(seeds):
+            comparison = compare_candidates(
+                ("production", lookup(current)),
+                ("alternative", lookup(reordered)),
+                points,
+                rounds=rounds,
+                batch_size=min(2_500, len(points)),
+                seed=seed,
+            )
+            comparisons.append(
+                {
+                    **asdict(comparison),
+                    "best_round_change": comparison.best_round_change,
+                    "win_share": comparison.win_share,
+                    "verdict": comparison.verdict,
+                }
+            )
     finally:
         finder.shortcuts = base_index
-    return {
-        "cells": len(selected),
-        "candidate_count_max": max(map(len, selected.values())),
-        "points": len(comparison_points),
-        "selected_cell_points": len(selected_cell_points),
-        "comparisons": comparisons,
-    }
+    changes = [c["best_round_change"] for c in comparisons]
+    verdicts = [c["verdict"] for c in comparisons]
+    report.update(
+        {
+            "points": len(points),
+            "points_per_cell": points_per_cell,
+            "answers_identical": True,
+            "stage_counts": {
+                "production_order": asdict(current_counts),
+                "alternative_order": asdict(reordered_counts),
+            },
+            # deterministic: the counted work difference, priced by each model
+            "modeled_change_ns_per_query": {
+                name: float(np.mean(values)) for name, values in modeled.items()
+            },
+            "whole_query": {
+                "seeds": seeds,
+                "median_best_round_change": float(np.median(changes)),
+                "best_round_change_range": [min(changes), max(changes)],
+                "verdicts": {v: verdicts.count(v) for v in sorted(set(verdicts))},
+                "comparisons": comparisons,
+            },
+        }
+    )
+    return report
 
 
 def measure(
@@ -704,16 +668,17 @@ def measure(
     points_per_stratum: int,
     repetitions: int,
     comparison_rounds: int,
-    max_order_cells: int,
+    comparison_seeds: int,
+    points_per_changed_cell: int,
     seed: int,
     in_memory: bool,
     backend: str,
 ) -> dict[str, Any]:
-    model = check_model()
+    # a run is how a stale record gets replaced, so it must not require a fresh one
+    model = check_model(require_record=False)
     all_observations: list[Observation] = []
     stage_counts: dict[str, dict[str, int]] = {}
     whole_query_ns: dict[str, float] = {}
-    validation_points: list[tuple[float, float]] = []
     with _bound_backend(backend):
         measured_backend = active_acceleration_path()
         finder = TimezoneFinder(in_memory=in_memory)
@@ -730,13 +695,6 @@ def measure(
             observations, counts = collect_observations(finder, points, repetitions)
             stage_counts[stratum] = asdict(counts)
             all_observations.extend(observations)
-            validation_points.extend(
-                point
-                for point in points
-                if _validation_cell(
-                    int(h3.latlng_to_cell(point[1], point[0], SHORTCUT_H3_RES))
-                )
-            )
         calibration = [o for o in all_observations if not _validation_cell(o.cell)]
         validation = [o for o in all_observations if _validation_cell(o.cell)]
         if not calibration or not validation:
@@ -746,13 +704,31 @@ def measure(
         fit = _fit_report(calibration, validation, seed)
         targeted_hole_hits = collect_hole_hit_observations(finder, repetitions)
         fitted = CostCoefficients(**fit["coefficients_ns"])
-        ordering = _ordering_report(
-            finder,
-            validation_points,
-            fitted,
-            comparison_rounds,
-            max_order_cells,
-        )
+        # The fit saw predicate timings from these cells; keep them out of the
+        # ordering evaluation so it only scores cells the coefficients never saw.
+        fit_cells = {o.cell for o in calibration}
+        cells = {
+            cell: candidates
+            for cell, candidates in ambiguous_cells(finder).items()
+            if cell not in fit_cells
+        }
+        rng = random.Random(seed)
+        ordering = {
+            name: _ordering_report(
+                finder,
+                cells,
+                coefficients,
+                fitted,
+                points_per_cell=points_per_changed_cell,
+                rounds=comparison_rounds,
+                seeds=comparison_seeds,
+                rng=rng,
+            )
+            for name, coefficients in (
+                ("calibrated", fitted),
+                ("area_only", AREA_ONLY_COEFFICIENTS),
+            )
+        }
     system = get_system_status()
     system["using_numba"] = measured_backend == "numba"
     system["using_clang_pip"] = measured_backend == "clang"
@@ -760,7 +736,7 @@ def measure(
         "schema_version": SCHEMA_VERSION,
         "reference_policy": model["reference_policy"],
         "provenance": {
-            "model_inputs": model_input_fingerprint(),
+            "date": date.today().isoformat(),
             "production_coefficients": asdict(DEFAULT_COST_COEFFICIENTS),
             "fixtures": benchmark_fixture_provenance(),
             "system": system,
@@ -771,8 +747,10 @@ def measure(
             "points_per_stratum": points_per_stratum,
             "candidate_repetitions": repetitions,
             "comparison_rounds": comparison_rounds,
-            "max_order_cells": max_order_cells,
+            "comparison_seeds": comparison_seeds,
+            "points_per_changed_cell": points_per_changed_cell,
             "cell_partition": "sha256(cell little-endian)[0] < 64 is held out",
+            "ordering_cells": "every ambiguous cell without a fit observation",
             "seed": seed,
         },
         "stage_counts": stage_counts,
@@ -783,19 +761,83 @@ def measure(
             "stage_counts": _sum_counts(targeted_hole_hits),
             "elapsed_ns": [o.elapsed_ns for o in targeted_hole_hits],
         },
-        "held_out_ordering": ordering,
+        "ordering": ordering,
         "limitations": model["structural_limitations"],
     }
 
 
+def summarize(report: dict[str, Any]) -> dict[str, Any]:
+    """The reviewable digest of one run that the model file keeps."""
+    provenance = report["provenance"]
+    fit = report["fit"]
+    summary: dict[str, Any] = {
+        "date": provenance["date"],
+        **provenance["fixtures"],
+        "acceleration_path": provenance["acceleration_path"],
+        "storage_mode": provenance["storage_mode"],
+        "cpu": provenance["cpu"].get("brand_raw", provenance["cpu"]),
+        "production_coefficients": provenance["production_coefficients"],
+        "fitted_coefficients_ns": fit["coefficients_ns"],
+        "calibration_observations": fit["calibration_observations"],
+        "held_out_observations": fit["validation_observations"],
+        "held_out_median_absolute_error_ns": fit["held_out_error_ns"][
+            "median_absolute"
+        ],
+        "held_out_p95_absolute_error_ns": fit["held_out_error_ns"]["p95_absolute"],
+        "ordering": {},
+        "reproduce": "make shortcut-calibration, or dispatch benchmark.yml with "
+        "calibrate_shortcuts=true; then make shortcut-calibration-record",
+    }
+    for name, ordering in report["ordering"].items():
+        digest = {
+            key: ordering[key]
+            for key in (
+                "eligible_cells",
+                "changed_cells",
+                "changed_area_share_of_sphere",
+                "fixture_query_share_in_changed_cells",
+            )
+        }
+        if "whole_query" in ordering:
+            whole_query = ordering["whole_query"]
+            digest |= {
+                "points": ordering["points"],
+                "modeled_change_ns_per_query": ordering["modeled_change_ns_per_query"],
+                "median_best_round_change": whole_query["median_best_round_change"],
+                "best_round_change_range": whole_query["best_round_change_range"],
+                "verdicts": whole_query["verdicts"],
+            }
+        summary["ordering"][name] = digest
+    return summary
+
+
+def record(report_path: Path, model_path: Path = MODEL_PATH) -> dict[str, Any]:
+    """Write a run's summary into the model file, keeping its reviewed decision."""
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    model = json.loads(model_path.read_text(encoding="utf-8"))
+    previous = model.get("latest_recorded_validation", {})
+    summary = summarize(report)
+    # The decision is a reviewer's sentence, not a measurement: carry it until edited.
+    summary["decision"] = previous.get("decision", "pending review")
+    model["latest_recorded_validation"] = summary
+    model_path.write_text(json.dumps(model, indent=2, sort_keys=True) + "\n")
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check-model", action="store_true")
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--record",
+        type=Path,
+        metavar="REPORT",
+        help="copy the summary of a finished run into the model file and exit",
+    )
     parser.add_argument("--points-per-stratum", type=int, default=1_000)
     parser.add_argument("--candidate-repetitions", type=int, default=7)
-    parser.add_argument("--comparison-rounds", type=int, default=15)
-    parser.add_argument("--max-order-cells", type=int, default=24)
+    parser.add_argument("--comparison-rounds", type=int, default=61)
+    parser.add_argument("--comparison-seeds", type=int, default=8)
+    parser.add_argument("--points-per-changed-cell", type=int, default=20)
     parser.add_argument("--seed", type=int, default=20260910)
     parser.add_argument("--in-memory", action="store_true")
     parser.add_argument(
@@ -804,36 +846,37 @@ def main() -> None:
         default="auto",
     )
     args = parser.parse_args()
-    if args.check_model:
-        check_model()
-        print(f"{MODEL_PATH}: current")
+    if args.record is not None:
+        summary = record(args.record)
+        print(json.dumps(summary["ordering"], indent=2))
+        print(f"Recorded {args.record} in {MODEL_PATH}; review its decision line")
         return
     if args.output is None:
-        parser.error("--output is required unless --check-model is used")
+        parser.error("--output is required unless --record is used")
     if (
         min(
             args.points_per_stratum,
             args.candidate_repetitions,
-            args.comparison_rounds,
-            args.max_order_cells,
+            args.comparison_seeds,
+            args.points_per_changed_cell,
         )
         < 1
+        or args.comparison_rounds < 2
     ):
-        parser.error("all measurement sizes must be positive")
+        parser.error("all measurement sizes must be positive, and rounds at least 2")
     report = measure(
         points_per_stratum=args.points_per_stratum,
         repetitions=args.candidate_repetitions,
         comparison_rounds=args.comparison_rounds,
-        max_order_cells=args.max_order_cells,
+        comparison_seeds=args.comparison_seeds,
+        points_per_changed_cell=args.points_per_changed_cell,
         seed=args.seed,
         in_memory=args.in_memory,
         backend=args.backend,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(report["fit"]["coefficients_ns"], indent=2))
-    for name, comparison in report["held_out_ordering"]["comparisons"].items():
-        print(f"{name}: {comparison['verdict']}")
+    print(json.dumps(summarize(report)["ordering"], indent=2))
     print(f"Wrote {args.output}")
 
 

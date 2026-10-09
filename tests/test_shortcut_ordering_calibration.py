@@ -1,20 +1,21 @@
 """Calibration artifact, counters and stale-input detection."""
 
 import json
+import random
 from dataclasses import asdict
 
 import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
-import scripts.calibrate_shortcut_ordering as calibration
 from scripts.calibrate_shortcut_ordering import (
     FEATURES,
     MODEL_PATH,
     StageCounts,
     _fit_nonnegative,
     check_model,
-    model_input_fingerprint,
+    record,
+    sample_cell_points,
     trace_predicate,
 )
 from scripts.shortcut_ordering import DEFAULT_COST_COEFFICIENTS
@@ -28,89 +29,95 @@ from timezonefinder.configs import SHORTCUT_H3_RES
 pytestmark = pytest.mark.unit
 
 
-def test_the_reference_model_matches_executable_inputs_and_coefficients():
+def test_the_model_records_the_reviewed_coefficients_and_a_run_against_them():
     model = check_model()
-    assert model["model_inputs"] == model_input_fingerprint()
-    assert model["model_inputs"]["fixtures"] == {
-        "data_version": "2026d",
-        "fixture_version": 3,
-    }
-    assert (
-        "timezonefinder/inside_poly_extension/inside_polygon_int.c"
-        in model["model_inputs"]["members"]
-    )
-    assert (
-        "benchmarks.candidate_comparison.CandidateComparison"
-        in model["model_inputs"]["members"]
-    )
-    assert (
-        "timezonefinder.shortcut_index.ShortcutIndex.candidates_of"
-        in model["model_inputs"]["members"]
-    )
-    assert "timezonefinder.utils.coord2int" in model["model_inputs"]["members"]
-    assert "timezonefinder/timezonefinder.py" not in model["model_inputs"]["members"]
     assert model["production_coefficients"] == asdict(DEFAULT_COST_COEFFICIENTS)
     assert set(model["feature_mapping"]) == set(FEATURES)
     assert model["structural_limitations"]
+    recorded = model["latest_recorded_validation"]
+    assert set(recorded["ordering"]) == {"calibrated", "area_only"}
+    assert recorded["decision"] != "pending review"
 
 
-@pytest.mark.parametrize(
-    "field", ["schema_version", "model_inputs", "production_coefficients"]
-)
-def test_a_stale_reference_model_is_refused(tmp_path, field):
+def _write(tmp_path, model):
+    path = tmp_path / "model.json"
+    path.write_text(json.dumps(model))
+    return path
+
+
+@pytest.mark.parametrize("field", ["schema_version", "production_coefficients"])
+def test_a_model_not_describing_the_reviewed_coefficients_is_refused(tmp_path, field):
     model = json.loads(MODEL_PATH.read_text())
     if field == "schema_version":
         model[field] += 1
-    elif field == "model_inputs":
-        model[field]["sha256"] = "0" * 64
     else:
         model[field]["bbox"] += 1
-    path = tmp_path / "model.json"
-    path.write_text(json.dumps(model))
-    with pytest.raises(ValueError, match="schema|stale"):
+    with pytest.raises(ValueError, match="schema|production coefficients"):
+        check_model(_write(tmp_path, model))
+
+
+def test_changed_coefficients_require_a_new_recorded_run_but_not_to_measure_one(
+    tmp_path,
+):
+    model = json.loads(MODEL_PATH.read_text())
+    model["latest_recorded_validation"]["production_coefficients"]["bbox"] += 1
+    path = _write(tmp_path, model)
+    with pytest.raises(ValueError, match="re-run"):
         check_model(path)
+    assert check_model(path, require_record=False)
 
 
-def test_a_new_fixture_or_data_version_makes_the_model_stale(monkeypatch):
-    monkeypatch.setattr(
-        calibration,
-        "benchmark_fixture_provenance",
-        lambda: {"fixture_version": 4, "data_version": "2027a"},
-    )
-    with pytest.raises(ValueError, match="stale"):
-        check_model()
+def test_recording_a_run_keeps_the_reviewed_decision(tmp_path):
+    model = json.loads(MODEL_PATH.read_text())
+    model_path = _write(tmp_path, model)
+    ordering = {
+        "eligible_cells": 3,
+        "changed_cells": 1,
+        "changed_area_share_of_sphere": 0.1,
+        "fixture_query_share_in_changed_cells": {"random": 0.0},
+        "points": 20,
+        "modeled_change_ns_per_query": {"production": 1.0, "fitted": -1.0},
+        "whole_query": {
+            "median_best_round_change": -0.02,
+            "best_round_change_range": [-0.03, -0.01],
+            "verdicts": {"unresolved": 1},
+        },
+    }
+    report = {
+        "provenance": {
+            "date": "2026-10-09",
+            "fixtures": {"data_version": "2099z", "fixture_version": 9},
+            "acceleration_path": "clang",
+            "storage_mode": "mapped",
+            "cpu": {"brand_raw": "test cpu"},
+            "production_coefficients": asdict(DEFAULT_COST_COEFFICIENTS),
+        },
+        "fit": {
+            "coefficients_ns": dict.fromkeys(FEATURES, 1.0),
+            "calibration_observations": 2,
+            "validation_observations": 1,
+            "held_out_error_ns": {"median_absolute": 1.0, "p95_absolute": 2.0},
+        },
+        "ordering": {"calibrated": ordering, "area_only": {**ordering, "points": 0}},
+    }
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(report))
+    record(report_path, model_path)
+    recorded = json.loads(model_path.read_text())["latest_recorded_validation"]
+    assert recorded["data_version"] == "2099z"
+    assert recorded["ordering"]["calibrated"]["verdicts"] == {"unresolved": 1}
+    assert recorded["decision"] == model["latest_recorded_validation"]["decision"]
+    assert check_model(model_path)
 
 
-def test_a_new_comparison_threshold_makes_the_model_stale(monkeypatch):
-    monkeypatch.setattr(calibration.candidate_comparison, "DEFAULT_THRESHOLD", 0.04)
-    with pytest.raises(ValueError, match="stale"):
-        check_model()
-
-
-def test_an_ordering_helper_or_shortcut_constant_makes_the_model_stale(monkeypatch):
-    original_improves = calibration.improves
-
-    def changed_improves(value, incumbent):
-        return original_improves(value, incumbent)
-
-    monkeypatch.setattr(calibration, "improves", changed_improves)
-    with pytest.raises(ValueError, match="stale"):
-        check_model()
-
-    monkeypatch.setattr(calibration, "improves", original_improves)
-    monkeypatch.setattr(calibration, "SLOT_MASK", calibration.SLOT_MASK ^ 1)
-    with pytest.raises(ValueError, match="stale"):
-        check_model()
-
-
-def test_a_misrouted_backend_mapping_makes_the_model_stale(monkeypatch):
-    monkeypatch.setitem(
-        calibration.PACKED_ACCELERATION_IMPLEMENTATIONS,
-        "clang",
-        calibration.PACKED_ACCELERATION_IMPLEMENTATIONS["numba"],
-    )
-    with pytest.raises(ValueError, match="stale"):
-        check_model()
+@pytest.mark.parametrize(
+    "lat, lng", [(0.0, 10.0), (0.0, 180.0), (89.99, 0.0), (-89.99, 0.0)]
+)
+def test_cell_samples_stay_inside_the_cell(lat, lng):
+    cell = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+    points = sample_cell_points(cell, 50, random.Random(0))
+    assert len(points) == 50
+    assert {int(h3.latlng_to_cell(y, x, SHORTCUT_H3_RES)) for x, y in points} == {cell}
 
 
 def test_nonnegative_fit_recovers_independent_features_without_scipy():

@@ -22,6 +22,7 @@ Timing and memory are measured in the same job and travel in the same two
 artifacts, so the counts pinned below cover both.
 """
 
+import json
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -356,14 +357,14 @@ def test_the_manual_report_dispatch_survives(
 
 
 @pytest.mark.unit
-def test_shortcut_calibration_has_a_fast_check_and_an_explicit_measurement(
+def test_shortcut_calibration_is_an_explicit_measurement_never_a_gate(
     benchmark_workflow: dict[Any, Any],
 ) -> None:
-    measure_scripts = "\n".join(
-        str(step.get("run", ""))
-        for step in benchmark_workflow["jobs"]["measure"]["steps"]
-    )
-    assert "make shortcut-calibration-check" in measure_scripts
+    # Ordering never changes an answer, so a stale calibration costs speed, not
+    # correctness: no job that runs on its own may fail on it.
+    for name, job in benchmark_workflow["jobs"].items():
+        if name != "calibrate-shortcuts":
+            assert "shortcut-calibration" not in json.dumps(job), name
     job = benchmark_workflow["jobs"]["calibrate-shortcuts"]
     scripts = "\n".join(str(step.get("run", "")) for step in job["steps"])
     assert "make shortcut-calibration" in scripts
