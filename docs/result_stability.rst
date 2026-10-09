@@ -115,7 +115,8 @@ channels** (all of them, and not only the first, are what the warning above is a
    reorder them and decide such a point differently. Zones with equal totals are ordered by their
    timezone identifier, so compiling the same dataset twice always yields the same order. Data
    compiled before that rule left such ties to chance, so the first release built with it can
-   decide a few of these points differently even where no boundary moved.
+   change answers even where no boundary moved: such a point here, and - because the tie can
+   decide which zone a cell tests last - every ``TimezoneFinderL`` answer in a few cells.
 3. **Shortcut composition and ordering.** The H3 shortcut index is regenerated for every dataset.
    Which cells exist, which candidates a cell holds and in which order they are tested are all
    outputs of that run - and the rules that run follows are code, so a code-side optimization

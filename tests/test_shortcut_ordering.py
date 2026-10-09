@@ -282,7 +282,7 @@ def test_hole_union_gate_skips_all_individual_hole_costs():
 def test_legacy_ordering_breaks_every_tie_independently_of_input_order():
     # zone 0 "Etc/UTC" and zone 1 "Antarctica/Rothera" tie on a vertex total of 5,
     # and their numeric ids sort opposite to their names; zone 2 is larger. Within
-    # zone 2, polygons 4 and 5 tie on 3 vertices.
+    # zone 2, polygons 3, 4 and 5 all tie on 3 vertices.
     data = SimpleNamespace(
         boundaries=SimpleNamespace(nr_vertices=np.array([5, 3, 2, 3, 3, 3])),
         poly_zone_ids=np.array([0, 1, 1, 2, 2, 2]),
