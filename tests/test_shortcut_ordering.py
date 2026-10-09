@@ -23,7 +23,7 @@ from scripts.shortcut_ordering import (
     cell_region,
     spherical_area,
 )
-from scripts.shortcuts import check_shortcut_sorting
+from scripts.shortcuts import check_shortcut_sorting, optimise_shortcut_ordering
 from timezonefinder.configs import COORD2INT_FACTOR, POLYGON_BLOCK_SIZE
 
 pytestmark = pytest.mark.unit
@@ -277,3 +277,18 @@ def test_hole_union_gate_skips_all_individual_hole_costs():
     assert model.integral(inside) / spherical_area(inside) == pytest.approx(
         BBOX + HOLE_UNION_PROBE + pip + HOLE_LOOKUP + 95 * (HOLE_BBOX + pip)
     )
+
+
+def test_legacy_ordering_breaks_every_tie_independently_of_input_order():
+    # zone 0 "Etc/UTC" and zone 1 "Antarctica/Rothera" tie on a vertex total of 5,
+    # and their numeric ids sort opposite to their names; zone 2 is larger. Within
+    # zone 2, polygons 4 and 5 tie on 3 vertices.
+    data = SimpleNamespace(
+        boundaries=SimpleNamespace(nr_vertices=np.array([5, 3, 2, 3, 3, 3])),
+        poly_zone_ids=np.array([0, 1, 1, 2, 2, 2]),
+        all_tz_names=["Etc/UTC", "Antarctica/Rothera", "Etc/GMT+1"],
+    )
+    # an equal total sorts by identifier, never by zone id; equal polygons by id
+    expected = [2, 1, 0, 3, 4, 5]
+    for poly_ids in itertools.permutations(range(6)):
+        assert optimise_shortcut_ordering(data, list(poly_ids)) == expected
