@@ -4,7 +4,6 @@
 |---|---|---|---|---|
 | [TOOL-7](items/data-pipeline-and-developer-tooling/tool-7-the-shortcut-ordering-leaves-its-ties-to-set-iteration-order.md) | The shortcut ordering leaves its ties to set iteration order | tooling / answer semantics | ~10 plus data | free — decided 2026-09-26; use the timezone identifier to break equal legacy zone-size totals, making the shortcut build reproducible before IDX-1 compares replacement indexes |
 | [PERF-8](items/lookup-geometry-and-data-format/perf-8-calibrate-shortcut-ordering-costs-against-runtime-benchmarks.md) | Calibrate shortcut ordering costs against runtime benchmarks | performance validation | M | free — links model assumptions and coefficients to held-out runtime evidence before further ordering tuning |
-| [TOOL-4](items/data-pipeline-and-developer-tooling/tool-4-three-small-lint-families-are-not-selected-at-all.md) | Three small lint families are not selected at all | tooling | ~15 | free — 7 sites; the item is the adopt-or-refuse judgement |
 | [TOOL-6](items/data-pipeline-and-developer-tooling/tool-6-the-ruff-version-is-pinned-below-0-16.md) | The ruff version is pinned below 0.16 | tooling | S | free — decided 2026-09-06; measured zero findings and zero reformats on 0.16.6, and a pass may now take dev-tool pins |
 | [DOC-7](items/data-pipeline-and-developer-tooling/doc-7-move-the-readme-to-markdown-with-semantic-line-breaks.md) | Move `README.rst` to Markdown, reflowing it in the same pass | docs | ~200 | free — decided 2026-09-05; changes the published PyPI page, and is the one Markdown move DOC-9 does not cover |
 | [DOC-8](items/data-pipeline-and-developer-tooling/doc-8-move-the-changelog-and-its-fragments-to-markdown.md) | Move `CHANGELOG.rst` and the `changelog.d/` fragments to Markdown | docs | M | free — decided 2026-09-05; narrow code coupling, but not while a release is in flight |
@@ -23,7 +22,7 @@
 | [LITE-1](items/lookup-geometry-and-data-format/lite-1-return-the-zone-covering-most-of-each-h3-cell.md) | Return the zone covering most of each H3 cell | approximate lookup | M | parked — resume only on evidenced demand for a more accurate `TimezoneFinderL` approximation |
 | [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | parked — resume only for a concrete repository-history size need |
 | [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | conditional — only if PyPI storage is exhausted |
-| [GH-505](items/lookup-geometry-and-data-format/gh-505-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
+| [API-3](items/lookup-geometry-and-data-format/api-3-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
 | [GH-318](items/adjacent-projects/gh-318-improve-the-timezonefinder-gui.md) | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
 
 ### Closed
