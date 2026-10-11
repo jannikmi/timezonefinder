@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791508456491,
+  "lastUpdate": 1791693410751,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13275,6 +13275,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5503",
             "unit": "lookups/sec",
             "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fd4533cbe0acd4fda5f87255ec0f07824ce2cdd0",
+          "message": "Calibrate shortcut ordering costs against runtime benchmarks (#703)\n\n* PERF-8: calibrate shortcut ordering costs\n\n* PERF-8: retire completed calibration item\n\n* PERF-8: evaluate every ambiguous cell and drop the source-fingerprint gate\n\nThe 24-cell ordering sample scored only the most-visited held-out cells and saw\nno order change; re-ordering every cell the fit never saw changes 646 of them,\nwhere the fitted order is 3.3-4.0% faster on all eight seeds. Record that run\nand the follow-up adoption as PERF-10, sequenced with TOOL-7's index rebuild.\n\nThe source hash failed ordinary tests and every benchmark job on unrelated\nedits and had no refresh path. Ordering never changes an answer, so only the\ncoefficient agreement stays tested; calibration remains an explicit dispatch\nand a `--record` step.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* PERF-10: ride the held index rebuild rather than the TOOL-7 item\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Write the ordering-calibration docs for users; move procedure to contributing\n\nThe methodology section told readers when to re-run the calibration and why CI\ndoes not gate on it. That is maintainer procedure: it now lives in the\nbenchmarking contributor guide, and the documentation rules say which tree\neach kind of sentence belongs in.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Guard that the calibration counters stay on the real predicate path\n\nA refactor that routes around a counting adapter keeps every answer intact, so\nthe answer-comparing probe test could not see it. Three tests now fail instead:\nevery kernel call must be a counted dispatch with no array method reached\nuncounted, every counter must fire, and timezone_at must walk exactly the\ncandidates the calibration traces. Each was checked against a mutation that\nbypasses its stage.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Keep calibration run figures out of the docs; route doc edits to their rules\n\nThe methodology section quoted a local run's changed-cell counts and speed-ups,\nwhich go stale on the next run. It now describes the method and links the\nrecorded run in benchmarks/shortcut_ordering_model.json.\n\nWhy it was missed, and the fixes:\n- CONTRIBUTING routed by task label, so a performance change that edited docs/\n  never reached the documentation rules. Rows now match by files touched too,\n  and the Documentation row names docs/, README.rst and CHANGELOG.rst.\n- The exact-figure rule named only generated pages, so a figure from a\n  measurement artifact read as permitted. It now covers any measured figure and\n  says where exact figures belong instead.\n- The benchmarking guide told maintainers to update the docs results after a\n  re-run; it now points at the recorded run instead.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Split the documentation rules into prose rules and markup mechanics\n\ndocumentation-maintenance-rules.md sat at its 2,000-word budget, so the next\nrule it owed could not fit. It now holds what docs prose may say and how it\nstays true; markup validity, links, toctrees and generated report pages move\nto documentation-markup-links-and-generated-pages.md, unchanged. Both are\nrequired by the Documentation route.\n\nTwo positional references were already dangling (\"the declare-once rule\nabove\", \"the don't-hand-edit corollary above\"); they now name the core\ncontract rules they meant. Referrers point at the half holding the fact they\ncite, and DOC-11's word-budget premise is rewritten with its old figure dated.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-11T04:35:51Z",
+          "tree_id": "babefe543891709377493daaea76a0df0bc12134",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fd4533cbe0acd4fda5f87255ec0f07824ce2cdd0"
+        },
+        "date": 1791693408717,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 564828.4062614214,
+            "range": "± 14162",
+            "unit": "lookups/sec",
+            "extra": "min of 186 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 743082.0546873688,
+            "range": "± 8571",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 192968.17784928973,
+            "range": "± 2745",
+            "unit": "lookups/sec",
+            "extra": "min of 71 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 902767.5965650966,
+            "range": "± 9514",
+            "unit": "lookups/sec",
+            "extra": "min of 292 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1474323.4771965952,
+            "range": "± 19294",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 231329.74630329892,
+            "range": "± 2887",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 890194.5074996506,
+            "range": "± 11103",
+            "unit": "lookups/sec",
+            "extra": "min of 278 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1420976.915948166,
+            "range": "± 26872",
+            "unit": "lookups/sec",
+            "extra": "min of 467 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 225348.86257415926,
+            "range": "± 3603",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
