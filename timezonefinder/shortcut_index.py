@@ -29,9 +29,7 @@ belongs here is why it is shaped that way:
 The four arrays live in **one** file rather than one file each, and in a raw layout rather than
 ``.npy``: they are a single structure with cross-references, four files load ~1.6x slower and four
 ``.npy`` files ~3x, and a ``.npy`` carries neither of the two markers that let a stale data
-directory be rejected.
-``contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md``
-records the measurement.
+directory be rejected. :func:`write_shortcuts_binary` records the measurement.
 
 Everything the layout assumes is checked where the data is produced -
 ``timezonefinder._data_integrity.validate_shortcut_index`` - and never when a finder is built. In
