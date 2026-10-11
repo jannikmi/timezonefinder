@@ -4,7 +4,7 @@
 
 - [PERF-7](perf-7-answer-a-fully-covered-ambiguous-cell-without-geometry.md) (withdrawn) — where this rule was decided, and the measurement showing it cannot be scoped to some cells: applied only in covered cells it split Abyei by H3 cell.
 - [Geometry decisions](../../decisions/geometry-data-format-and-validation-decisions.md) — answers never depend on the H3 index; the hole-dropping precedence relation is cyclic (GH-513), which is a different relation; a precedence *engine* of maintained political rules is refused.
-- `scripts/shortcut_ordering.py` — the ordering optimizer, which keeps the input zone order wherever candidates of different zones overlap. [PERF-8](perf-8-calibrate-shortcut-ordering-costs-against-runtime-benchmarks.md) calibrates that optimizer's *cost model*; this item changes the *constraint* it keeps, so the two are independent.
+- `scripts/shortcut_ordering.py` — the ordering optimizer, which keeps the input zone order wherever candidates of different zones overlap. The [committed calibration](../../../../docs/benchmarking_methodology.rst#calibrating-the-shortcut-ordering-model) validates that optimizer's *cost model*; this item changes the *constraint* it keeps, so the two are independent.
 
 ## The problem
 

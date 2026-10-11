@@ -416,6 +416,18 @@ the stage. Where a real win would have to come from is visible in the same ladde
 in two calls before any lookup logic runs.**
 
 
+Calibrating the shortcut-ordering model
+---------------------------------------
+
+When a point falls into a shortcut cell shared by several zones, ``timezone_at`` tests the cell's candidate polygons one after another and stops at the first one that contains the point. Candidates are only reordered where that cannot change which zone is returned, so the order decides how much work a lookup does, never its answer. The order is chosen when the data is built, by a cost model that estimates how often a query reaches each candidate and what testing it costs: the bounding-box check, the hole checks and the packed point-in-polygon kernel. Building the data never times the machine doing it, so the shipped order is the same wherever it is built.
+
+The model's cost per step is an engineering estimate, so it is checked against measured timings. ``make shortcut-calibration`` runs the real lookup code with counters attached, recording how many of each step every candidate test performs, and times the same tests. It fits one non-negative cost per step on three quarters of the cells and scores the prediction on the rest. Points that land inside a hole are rare in real workloads; they are measured from real packaged holes and reported separately, so oversampling them cannot skew the fit.
+
+A good prediction is not the same as a faster lookup, so the check also measures lookups directly. It re-orders every ambiguous cell the fit did not use, once with the fitted costs and once by polygon area alone. In the cells whose order changes, it samples points uniformly over the sphere and confirms every answer is identical under both orders. It then times complete ``timezone_at`` calls for both orders, alternating them as described in `Comparing two implementations of one stage`_, over several seeds. Finally it reports what share of each benchmark workload falls into those cells, because a gain there is diluted by every lookup elsewhere.
+
+The area-only order is a baseline: comparing against it shows how much of the ordering's benefit comes from pricing each test rather than from coverage alone. The reference run uses the C extension with memory-mapped data, which is what a plain installation uses. The latest recorded run, with its exact figures and the decision taken on it, is kept in `benchmarks/shortcut_ordering_model.json <https://github.com/jannikmi/timezonefinder/blob/master/benchmarks/shortcut_ordering_model.json>`__. Fitted costs are never applied automatically: they change the shipped order only through a reviewed source change and a data release, and the answers do not change either way.
+
+
 Memory is measured the same way
 -------------------------------
 

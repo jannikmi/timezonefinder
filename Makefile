@@ -26,6 +26,8 @@
 #                configuration, writing tmp/benchmark.json
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
+#   shortcut-calibration - fit ordering costs and validate them over every ambiguous cell
+#   shortcut-calibration-record - record a reviewed calibration run in the model file
 #   latency    - measure the per-query latency distribution (p50/p90/p99/p99.9)
 #   acceleration-paths - compare all three point-in-polygon paths (clang / numba /
 #                        pure Python), one environment per measurable pair
@@ -366,6 +368,21 @@ print-benchmark-acceleration-path:
 print-benchmark-interpreted-path:
 	@echo $(BENCHMARK_INTERPRETED_PATH)
 
+# Timed, reporting-only: fit the ordering costs and re-run the optimizer over every
+# ambiguous cell with them. Never rewrites a coefficient; nothing in CI depends on it.
+SHORTCUT_CALIBRATION_JSON := tmp/shortcut-ordering-calibration.json
+shortcut-calibration: check-data
+	@mkdir -p $(dir $(SHORTCUT_CALIBRATION_JSON))
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH) \
+		--expect-interpreted $(BENCHMARK_INTERPRETED_PATH)
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.calibrate_shortcut_ordering \
+		--backend $(BENCHMARK_ACCELERATION_PATH) --output=$(SHORTCUT_CALIBRATION_JSON)
+
+# Copy a reviewed run's summary (local, or the workflow artifact) into the model file.
+shortcut-calibration-record:
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.calibrate_shortcut_ordering --record=$(SHORTCUT_CALIBRATION_JSON)
+
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
@@ -535,6 +552,7 @@ docs:
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path print-benchmark-interpreted-path latency \
+	shortcut-calibration shortcut-calibration-record \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths batch-break-even
 
