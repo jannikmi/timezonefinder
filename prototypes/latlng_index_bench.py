@@ -94,7 +94,9 @@ What makes the comparison fair, and why each choice was made:
   for every candidate, never a per-point loop.
 * **The family is swept, not one point.** Equal-angle grids, equal-area banded grids,
   the quadtree ``node-geo-tz`` uses (world quadrants, subdivided to a depth), the same
-  quadtree under 7.5-degree root cells, and ``tzf-rs``'s preindex (exact Web Mercator
+  quadtree under 7.5-degree root cells, grid trees (an aligned dense grid whose
+  ambiguous cells refine into fixed blocks, addressed by arithmetic at every level, added
+  at the maintainer's request), and ``tzf-rs``'s preindex (exact Web Mercator
   tiles at zooms 3-10 probed coarsest first, over a 1-degree candidate grid), at several
   sizes each, plus the item's two-tier split. Alignment is a parameter of the sweep:
   7.5-degree columns follow the ocean zones' meridians, whole degrees follow many
@@ -739,6 +741,240 @@ def build_quadtree(
     return index
 
 
+class GridTree(ShortcutIndex):
+    """A dense aligned grid whose ambiguous cells refine into k x k child blocks.
+
+    A quadtree with its top levels flattened into a grid and its lower levels reached by
+    arithmetic rather than search. Level 0 is one ``int16`` per square root cell. A value
+    below ``ABSENT`` above the last level is the index of a block of k x k children on the
+    next level, one per cell any two zones can own; on the last level it is a candidate
+    list entry, the shipped tri-state. Every level is a whole number of coordinate units
+    wide, so a level's cell is one floor division per axis, and clamping the shifted
+    coordinate at 0 once covers -180 and -90 on every level.
+    """
+
+    __slots__ = (
+        "name",
+        "family",
+        "params",
+        "k",
+        "km",
+        "kk",
+        "levels",
+        "columns",
+        "w0",
+        "w1",
+        "w2",
+        "w3",
+        "b1",
+        "b2",
+        "b3",
+        "widths",
+        "_block_arrays",
+    )
+
+    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+        x = np.maximum((lngs * F).astype(np.int64) + KX, 0)
+        y = np.maximum((lats * F).astype(np.int64) + KY, 0)
+        w = self.widths[0]
+        v = self.table[(y // w) * self.columns + x // w].astype(np.int64)
+        for level in range(1, self.levels + 1):
+            todo = np.flatnonzero(v < ABSENT)
+            if not len(todo):
+                break
+            w = self.widths[level]
+            child = ((y[todo] // w) & self.km) * self.k + ((x[todo] // w) & self.km)
+            v[todo] = self._block_arrays[level - 1][(-2 - v[todo]) * self.kk + child]
+        return v
+
+    @property
+    def cells(self) -> int:
+        return len(self.table)
+
+    @property
+    def blocks(self) -> list[int]:
+        return [len(a) // self.kk for a in self._block_arrays]
+
+    @property
+    def payload_bytes(self) -> int:
+        return (
+            _HEADER_SIZE
+            + self.table.nbytes
+            + sum(a.nbytes for a in self._block_arrays)
+            + entries_file_bytes(self)
+        )
+
+    @property
+    def resident_bytes(self) -> int:
+        return (
+            self.table.nbytes
+            + sum(a.nbytes for a in self._block_arrays)
+            + entries_resident_bytes(self)
+        )
+
+    def edge_points(
+        self, rng: np.random.Generator, count: int
+    ) -> list[tuple[int, int]]:
+        """Integer points on the finest level's lines, which carry every cell edge."""
+        w = self.widths[-1]
+        points = []
+        for c in rng.integers(1, X_SPAN // w, count // 2).tolist():
+            points.append((c * w - X0, int(rng.integers(-Y0, Y0 + 1))))
+        for r in rng.integers(1, Y_SPAN // w, count // 2).tolist():
+            points.append((int(rng.integers(-X0, X0 + 1)), r * w - Y0))
+        return points
+
+
+# One lookup per depth, unrolled: a generic loop over the levels measured ~280 ns per
+# lookup more than these, enough to turn the tree from faster than a flat grid to slower.
+class GridTree1(GridTree):
+    __slots__ = ()
+
+    def cell_entry(self, lng: float, lat: float) -> int:
+        x = int(lng * F) + KX
+        y = int(lat * F) + KY
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        w = self.w0
+        v = int(self.table[(y // w) * self.columns + x // w])
+        if v >= -1:
+            return v
+        w = self.w1
+        km = self.km
+        return self.b1[(-2 - v) * self.kk + ((y // w) & km) * self.k + ((x // w) & km)]
+
+
+class GridTree2(GridTree):
+    __slots__ = ()
+
+    def cell_entry(self, lng: float, lat: float) -> int:
+        x = int(lng * F) + KX
+        y = int(lat * F) + KY
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        w = self.w0
+        v = int(self.table[(y // w) * self.columns + x // w])
+        if v >= -1:
+            return v
+        w = self.w1
+        km = self.km
+        k = self.k
+        v = self.b1[(-2 - v) * self.kk + ((y // w) & km) * k + ((x // w) & km)]
+        if v >= -1:
+            return v
+        w = self.w2
+        return self.b2[(-2 - v) * self.kk + ((y // w) & km) * k + ((x // w) & km)]
+
+
+class GridTree3(GridTree):
+    __slots__ = ()
+
+    def cell_entry(self, lng: float, lat: float) -> int:
+        x = int(lng * F) + KX
+        y = int(lat * F) + KY
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        w = self.w0
+        v = int(self.table[(y // w) * self.columns + x // w])
+        if v >= -1:
+            return v
+        w = self.w1
+        km = self.km
+        k = self.k
+        kk = self.kk
+        v = self.b1[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
+        if v >= -1:
+            return v
+        w = self.w2
+        v = self.b2[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
+        if v >= -1:
+            return v
+        w = self.w3
+        return self.b3[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
+
+
+def build_grid_tree(
+    name: str,
+    root_columns: int,
+    k: int,
+    levels: int,
+    polygons: np.ndarray,
+    data: OrderingInput,
+) -> GridTree:
+    """Evaluate level by level; refine every cell several zones can own, to ``levels``."""
+    if k & (k - 1) or not 1 <= levels <= 3:
+        raise ValueError(f"{name}: k must be a power of two and levels 1-3")
+    widths = []
+    for level in range(levels + 1):
+        n = root_columns * k**level
+        if X_SPAN % n:
+            raise ValueError(f"{name}: level {level} is not a whole number of units")
+        widths.append(X_SPAN // n)
+    packer = EntryPacker(data)
+    rows = root_columns // 2
+    gx = np.tile(np.arange(root_columns, dtype=np.int64), rows)
+    gy = np.repeat(np.arange(rows, dtype=np.int64), root_columns)
+    arrays: list[np.ndarray] = []
+    dy, dx = np.divmod(np.arange(k * k), k)
+    for level, w in enumerate(widths):
+        # cell g owns (g * w, (g + 1) * w] after the shift by -X0 / -Y0
+        ix0, ix1 = gx * w - X0 + 1, (gx + 1) * w - X0
+        iy0, iy1 = gy * w - Y0 + 1, (gy + 1) * w - Y0
+        values = np.full(len(gx), ABSENT, dtype=np.int64)
+        refine: list[int] = []
+        for cell, polys, single in grouped(
+            *owned_pairs(polygons, ix0, iy0, ix1, iy1), data.poly_zone_ids
+        ):
+            if single >= 0:
+                values[cell] = single
+            elif level == levels:
+                values[cell] = packer.list_value(polys)
+            else:
+                values[cell] = -(len(refine) + 2)
+                refine.append(cell)
+        arrays.append(values)
+        if level < levels:
+            cells = np.asarray(refine, dtype=np.int64)
+            gx = (gx[cells, None] * k + dx[None, :]).reshape(-1)
+            gy = (gy[cells, None] * k + dy[None, :]).reshape(-1)
+
+    def narrow(values: np.ndarray) -> np.ndarray:
+        dtype = (
+            np.int16 if values.min(initial=0) >= np.iinfo(np.int16).min else np.int32
+        )
+        array = values.astype(dtype)
+        array.flags.writeable = False
+        return array
+
+    bounds, payload, last = packer.arrays()
+    cls = {1: GridTree1, 2: GridTree2, 3: GridTree3}[levels]
+    tree = cls(narrow(arrays[0]), bounds[:-1], bounds[1:], last, payload)
+    tree.name = name
+    tree.family = "grid tree"
+    tree.params = {
+        "root_deg": 360 / root_columns,
+        "block": f"{k}x{k}",
+        "levels": levels,
+        "finest_deg": 360 / (root_columns * k**levels),
+    }
+    tree.k, tree.km, tree.kk, tree.levels = k, k - 1, k * k, levels
+    tree.columns = root_columns
+    tree.widths = widths
+    tree.w0, tree.w1 = widths[0], widths[1]
+    tree.w2 = widths[2] if levels >= 2 else 0
+    tree.w3 = widths[3] if levels >= 3 else 0
+    tree._block_arrays = [narrow(a) for a in arrays[1:]]
+    views = [memoryview(a) for a in tree._block_arrays] + [None, None]
+    tree.b1, tree.b2, tree.b3 = views[0], views[1], views[2]
+    return tree
+
+
 class TilePyramid:
     """``tzf-rs``'s preindex: exact Web Mercator tiles probed coarsest first, then a grid.
 
@@ -1256,6 +1492,16 @@ EQUAL_AREA = (
     ("0.3125", True),
     ("0.25", True),
 )
+GRID_TREES = (
+    # root columns (360 / root degrees), block side k, levels below the root
+    (192, 4, 1),
+    (192, 2, 3),
+    (384, 2, 1),
+    (384, 2, 2),
+    (384, 4, 1),
+    (192, 4, 2),
+    (384, 2, 3),
+)
 QUADTREES = (
     # family, roots (x, y), depths
     ("node-geo-tz quadtree", (2, 2), (8, 9, 10)),
@@ -1342,6 +1588,18 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             tree.params["build_seconds"] = round(time.perf_counter() - started, 1)
             print(f"built {name}: {tree.cells:,} leaves", flush=True)
             indexes.append(tree)
+    for root_columns, k, levels in GRID_TREES:
+        root = f"{360 / root_columns:g}".replace(".", "_")
+        name = f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
+        if not wanted(name):
+            continue
+        started = time.perf_counter()
+        tree = build_grid_tree(name, root_columns, k, levels, polygons, data)
+        tree.params["build_seconds"] = round(time.perf_counter() - started, 1)
+        print(
+            f"built {name}: {tree.cells:,} root cells, blocks {tree.blocks}", flush=True
+        )
+        indexes.append(tree)
     if wanted("tzf"):
         one_degree = build_grid(
             "equal_angle_1deg",
