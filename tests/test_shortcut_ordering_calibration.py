@@ -1,4 +1,4 @@
-"""Calibration artifact, counters and stale-input detection."""
+"""Calibration artifact, counters and the coefficient contract."""
 
 import json
 import random
@@ -7,12 +7,14 @@ from dataclasses import asdict
 import h3.api.numpy_int as h3
 import numpy as np
 import pytest
+from shapely import Polygon
 
 from scripts.calibrate_shortcut_ordering import (
     FEATURES,
     MODEL_PATH,
     StageCounts,
     _fit_nonnegative,
+    _query_counts,
     check_model,
     record,
     sample_cell_points,
@@ -23,7 +25,7 @@ from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     load_benchmark_points,
 )
-from timezonefinder import utils
+from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import SHORTCUT_H3_RES
 
 pytestmark = pytest.mark.unit
@@ -175,3 +177,77 @@ def test_probe_runs_the_real_early_exit_and_preserves_answers(tf):
             if saw_outer_rejection and saw_pip:
                 return
     pytest.fail("fixture did not exercise both an outer rejection and a packed PIP")
+
+
+# The counters are only evidence while the real predicate path still runs through
+# them. Each test below fails on a code change that would leave answers intact but
+# the counts incomplete - which no answer-comparing test can see.
+
+
+def _traced_queries(tf):
+    """Every candidate test of 300 ambiguous lookups, plus points inside real holes."""
+    queries = []
+    for lng, lat in load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:300]:
+        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        candidates = tf.shortcuts.candidates_of(entry)
+        stop = tf.shortcuts.stop_index_of(entry)
+        x, y = utils.coord2int(lng), utils.coord2int(lat)
+        for polygon_id in candidates[:stop]:
+            queries.append((int(polygon_id), x, y))
+            if tf.inside_of_polygon(int(polygon_id), x, y):
+                break
+    holed = [(pid, first) for pid, (n, first) in tf.holes.hole_registry.items() if n]
+    for polygon_id, first_hole_id in holed[:24]:
+        point = Polygon(tf.holes.coords_of(first_hole_id).T).representative_point()
+        queries.append((int(polygon_id), round(point.x), round(point.y)))
+    return queries
+
+
+def test_every_kernel_call_is_a_counted_dispatch_and_no_method_bypasses_a_counter(
+    tf, monkeypatch
+):
+    calls = [0]
+
+    def counting(kernel):
+        def wrapped(*args):
+            calls[0] += 1
+            return kernel(*args)
+
+        return wrapped
+
+    for array in (tf.boundaries, tf.holes):
+        monkeypatch.setattr(array, "pip_kernel", counting(array.pip_kernel))
+    unmodeled: set[str] = set()
+    for polygon_id, x, y in _traced_queries(tf):
+        calls[0] = 0
+        _, counts = trace_predicate(tf, polygon_id, x, y, unmodeled)
+        assert counts.pip_dispatch == calls[0], (polygon_id, x, y)
+    assert not unmodeled, f"the predicate path calls uncounted methods: {unmodeled}"
+
+
+def test_every_counter_still_fires_on_the_predicate_path(tf):
+    total = StageCounts()
+    for polygon_id, x, y in _traced_queries(tf):
+        total.add(trace_predicate(tf, polygon_id, x, y)[1])
+    silent = [name for name, value in asdict(total).items() if not value]
+    assert not silent, f"counters the real predicate path no longer reaches: {silent}"
+
+
+def test_a_lookup_walks_exactly_the_candidates_the_calibration_traces(tf, monkeypatch):
+    points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:300]
+    expected = [_query_counts(tf, tf.shortcuts, lng, lat).bbox for lng, lat in points]
+    calls = [0]
+    real = TimezoneFinder.inside_of_polygon
+
+    def counted(self, boundary_id, x, y):
+        calls[0] += 1
+        return real(self, boundary_id, x, y)
+
+    monkeypatch.setattr(TimezoneFinder, "inside_of_polygon", counted)
+    walked = []
+    for lng, lat in points:
+        calls[0] = 0
+        tf.timezone_at(lng=lng, lat=lat)
+        walked.append(calls[0])
+    assert walked == expected
+    assert max(walked) > 1

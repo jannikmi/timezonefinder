@@ -182,13 +182,34 @@ def check_model(
 
 
 class _PolygonProbe:
-    def __init__(self, array: PolygonArray, counts: StageCounts, *, hole: bool):
+    """Counts the modeled events and forwards everything else to the real array.
+
+    A method reached through ``__getattr__`` runs unchanged but uncounted, so each one
+    is recorded in ``unmodeled``: the predicate path calling a method no override
+    counts is how a code change would make the counts silently incomplete. Block and
+    vertex counts are derived from ``block_ranges`` by the model's own rule rather
+    than observed inside the kernel, so a kernel that skips work differently changes
+    the timings without changing them.
+    """
+
+    def __init__(
+        self,
+        array: PolygonArray,
+        counts: StageCounts,
+        *,
+        hole: bool,
+        unmodeled: set[str],
+    ):
         self._array = array
         self._counts = counts
         self._hole = hole
+        self._unmodeled = unmodeled
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._array, name)
+        value = getattr(self._array, name)
+        if callable(value):
+            self._unmodeled.add(f"{type(self._array).__name__}.{name}")
+        return value
 
     def outside_bbox(self, polygon_id: int, x: int, y: int) -> bool:
         if self._hole:
@@ -218,8 +239,8 @@ class _PolygonProbe:
 
 
 class _HoleProbe(_PolygonProbe):
-    def __init__(self, array: HoleArray, counts: StageCounts):
-        super().__init__(array, counts, hole=True)
+    def __init__(self, array: HoleArray, counts: StageCounts, *, unmodeled: set[str]):
+        super().__init__(array, counts, hole=True, unmodeled=unmodeled)
 
     def ids_of(self, boundary_id: int) -> range:
         self._counts.hole_lookup += 1
@@ -237,13 +258,24 @@ class _HoleProbe(_PolygonProbe):
 
 
 def trace_predicate(
-    finder: TimezoneFinder, polygon_id: int, x: int, y: int
+    finder: TimezoneFinder,
+    polygon_id: int,
+    x: int,
+    y: int,
+    unmodeled: set[str] | None = None,
 ) -> tuple[bool, StageCounts]:
-    """Run the real top-level predicate with counting adapters underneath it."""
+    """Run the real top-level predicate with counting adapters underneath it.
+
+    ``unmodeled`` collects the array methods the predicate reached without passing a
+    counter; the tests require it to stay empty.
+    """
     counts = StageCounts()
+    unmodeled = set() if unmodeled is None else unmodeled
     probe = SimpleNamespace(
-        boundaries=_PolygonProbe(finder.boundaries, counts, hole=False),
-        holes=_HoleProbe(finder.holes, counts),
+        boundaries=_PolygonProbe(
+            finder.boundaries, counts, hole=False, unmodeled=unmodeled
+        ),
+        holes=_HoleProbe(finder.holes, counts, unmodeled=unmodeled),
     )
     matched = TimezoneFinder.inside_of_polygon(cast(Any, probe), polygon_id, x, y)
     return matched, counts
