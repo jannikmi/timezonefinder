@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791695988932,
+  "lastUpdate": 1791695991008,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -25925,6 +25925,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2806 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4be6c62f2652fd13918c547be7ef66c0dd3f18d1",
+          "message": "TOOL-7: break shortcut ordering ties by timezone identifier; hold the data rebuild for IDX-1 (#707)\n\n* TOOL-7: break shortcut ordering ties by timezone identifier and polygon id\n\nThe converter's legacy zone precedence sorted set-ordered candidates with\nstable sorts, so tied vertex totals kept whatever order the set iterated in.\nEqual zone totals now fall back to the IANA identifier and equal polygons\nwithin a zone to the polygon id, so one boundary release always compiles to\nthe same shortcut index. Against published 2026d data this moves 3 cells, one\nof which changes TimezoneFinderL's fallback answer.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: retire the item; hold its data rebuild for IDX-1\n\nRecords the maintainer decision of 2026-10-09: the deterministic tie order\nis not published as its own post-release but rides one data release with\nwhatever IDX-1 decides. IDX-1 becomes eligible.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: name the TimezoneFinderL effect of the first deterministic build\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: explain why the tie rule moves answers the safety gate protects\n\nRecords which gate condition refused each moved cell: 84eeaa9 fails envelope\ncoverage only at an Etc/GMT+1 corner outside the cell, 84eeaa1 at sub-mm\nquantization gaps along the sector borders.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-11T05:19:02Z",
+          "tree_id": "ddc1f5e5f67d81b913641920276e8ea85f5aa322",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4be6c62f2652fd13918c547be7ef66c0dd3f18d1"
+        },
+        "date": 1791695990425,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0152225494384766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.275883674621582,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2766036987304688,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.861961364746094,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.8626823425293,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.5368 GHz"
           }
         ]
       }
