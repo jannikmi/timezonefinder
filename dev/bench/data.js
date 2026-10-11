@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791695991008,
+  "lastUpdate": 1791708263782,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13449,6 +13449,93 @@ window.BENCHMARK_DATA = {
             "range": "± 16118",
             "unit": "lookups/sec",
             "extra": "min of 125 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "87be6bef8ffda0bd394ce845d76cd457708a2b8d",
+          "message": "Point the shortcut file-layout citation at write_shortcuts_binary (#709)\n\nThe module docstring of timezonefinder/shortcut_index.py cited the\nquery-path decisions file for the one-file-vs-four-files/.npy load\nmeasurement, but that file never recorded it; the measurement lives in\nwrite_shortcuts_binary's docstring in the same module. Repoint the\ncitation there instead of copying the figures into contributor memory.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-11T08:43:29Z",
+          "tree_id": "ac5f45f9294de88f6969532aaa29cdfbd630b2be",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/87be6bef8ffda0bd394ce845d76cd457708a2b8d"
+        },
+        "date": 1791708262314,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 585070.544295754,
+            "range": "± 82645",
+            "unit": "lookups/sec",
+            "extra": "min of 192 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 765488.8243229863,
+            "range": "± 11008",
+            "unit": "lookups/sec",
+            "extra": "min of 269 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 196872.66976585134,
+            "range": "± 5004",
+            "unit": "lookups/sec",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 922885.5308143913,
+            "range": "± 19862",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1479482.5361885543,
+            "range": "± 23357",
+            "unit": "lookups/sec",
+            "extra": "min of 507 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 236336.310729681,
+            "range": "± 9290",
+            "unit": "lookups/sec",
+            "extra": "min of 77 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 900338.9596112072,
+            "range": "± 50193",
+            "unit": "lookups/sec",
+            "extra": "min of 280 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1438219.829021678,
+            "range": "± 23999",
+            "unit": "lookups/sec",
+            "extra": "min of 479 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 232304.1608556419,
+            "range": "± 6910",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2529 GHz"
           }
         ]
       }
