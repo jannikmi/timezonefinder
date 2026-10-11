@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791693412581,
+  "lastUpdate": 1791695988932,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13362,6 +13362,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3603",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4be6c62f2652fd13918c547be7ef66c0dd3f18d1",
+          "message": "TOOL-7: break shortcut ordering ties by timezone identifier; hold the data rebuild for IDX-1 (#707)\n\n* TOOL-7: break shortcut ordering ties by timezone identifier and polygon id\n\nThe converter's legacy zone precedence sorted set-ordered candidates with\nstable sorts, so tied vertex totals kept whatever order the set iterated in.\nEqual zone totals now fall back to the IANA identifier and equal polygons\nwithin a zone to the polygon id, so one boundary release always compiles to\nthe same shortcut index. Against published 2026d data this moves 3 cells, one\nof which changes TimezoneFinderL's fallback answer.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: retire the item; hold its data rebuild for IDX-1\n\nRecords the maintainer decision of 2026-10-09: the deterministic tie order\nis not published as its own post-release but rides one data release with\nwhatever IDX-1 decides. IDX-1 becomes eligible.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: name the TimezoneFinderL effect of the first deterministic build\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* TOOL-7: explain why the tie rule moves answers the safety gate protects\n\nRecords which gate condition refused each moved cell: 84eeaa9 fails envelope\ncoverage only at an Etc/GMT+1 corner outside the cell, 84eeaa1 at sub-mm\nquantization gaps along the sector borders.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-11T05:19:02Z",
+          "tree_id": "ddc1f5e5f67d81b913641920276e8ea85f5aa322",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4be6c62f2652fd13918c547be7ef66c0dd3f18d1"
+        },
+        "date": 1791695986773,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1040907.2380969706,
+            "range": "± 28299",
+            "unit": "lookups/sec",
+            "extra": "min of 293 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1342754.817264299,
+            "range": "± 12930",
+            "unit": "lookups/sec",
+            "extra": "min of 421 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 331742.20923328586,
+            "range": "± 7421",
+            "unit": "lookups/sec",
+            "extra": "min of 125 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1665584.0370436807,
+            "range": "± 85751",
+            "unit": "lookups/sec",
+            "extra": "min of 446 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 2639675.805566245,
+            "range": "± 80350",
+            "unit": "lookups/sec",
+            "extra": "min of 890 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 414598.6486076407,
+            "range": "± 5303",
+            "unit": "lookups/sec",
+            "extra": "min of 130 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1643098.0679829842,
+            "range": "± 81844",
+            "unit": "lookups/sec",
+            "extra": "min of 432 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 2596431.4645914417,
+            "range": "± 90487",
+            "unit": "lookups/sec",
+            "extra": "min of 820 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 440781.608052362,
+            "range": "± 16118",
+            "unit": "lookups/sec",
+            "extra": "min of 125 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5397 GHz"
           }
         ]
       }
