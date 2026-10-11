@@ -304,6 +304,7 @@ def owned_pairs(
     iy0: np.ndarray,
     ix1: np.ndarray,
     iy1: np.ndarray,
+    touching: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """``(cell, polygon)`` pairs where the polygon can own one of the cell's integer points.
 
@@ -313,7 +314,14 @@ def owned_pairs(
     ``[ix0 - 0.5, ix1] x [iy0 - 0.5, iy1]`` owns none of those points, and one whose
     interior meets it may. Pairs whose polygon reaches the box shrunk by a further quarter
     unit are interior without a ``touches`` test, which is the expensive one.
+
+    ``touching`` is the control the exact rule is measured against: every polygon that
+    meets the closed cell, edges included - what a plain ``intersects`` gives.
     """
+    if touching:
+        boxes = shapely.box(ix0 - 1, iy0 - 1, ix1, iy1)
+        poly_idx, cell_idx = STRtree(boxes).query(polygons, predicate="intersects")
+        return cell_idx, poly_idx
     outer = shapely.box(ix0 - 0.5, iy0 - 0.5, ix1, iy1)
     core = shapely.box(ix0 - 0.25, iy0 - 0.25, ix1 - 0.25, iy1 - 0.25)
     poly_idx, cell_idx = STRtree(outer).query(polygons, predicate="intersects")
@@ -464,6 +472,7 @@ def build_grid(
     column_counts: Sequence[int],
     polygons: np.ndarray,
     data: OrderingInput,
+    touching: bool = False,
 ) -> BandedGrid:
     if Y_SPAN % rows:
         raise ValueError(f"{rows} rows do not divide the latitude span")
@@ -481,7 +490,7 @@ def build_grid(
     values = np.full(len(ix0), ABSENT, dtype=np.int64)
     packer = EntryPacker(data)
     for cell, polys, single in grouped(
-        *owned_pairs(polygons, ix0, iy0, ix1, iy1), data.poly_zone_ids
+        *owned_pairs(polygons, ix0, iy0, ix1, iy1, touching), data.poly_zone_ids
     ):
         values[cell] = single if single >= 0 else packer.list_value(polys)
     bounds, payload, last = packer.arrays()
@@ -1041,17 +1050,27 @@ def gate(
     point (the antimeridian and the south pole line), so both answers are the "last
     remaining zone" fallback. ``control_wrong``: only the candidate's zone contains it.
     ``defect``: some zone contains the point and the candidate's does not.
+    ``scalar_differs``: the candidate's ``timezone_at`` disagrees with its own batch
+    answer, which would leave the scalar timing measuring an unverified path.
     """
     lngs = np.asarray([p[0] for p in points], dtype=np.float64)
     lats = np.asarray([p[1] for p in points], dtype=np.float64)
     expected = control.timezone_ids_at(lngs=lngs, lats=lats)
     actual = candidate.timezone_ids_at(lngs=lngs, lats=lats)
+    names = candidate.zone_names.names
+    scalar_differs = sum(
+        candidate.timezone_at(lng=lng, lat=lat) != names[zone]
+        for lng, lat, zone in zip(
+            lngs.tolist(), lats.tolist(), actual.tolist(), strict=True
+        )
+    )
     classes = {
         "points": len(points),
         "overlap": 0,
         "uncovered": 0,
         "control_wrong": 0,
         "defect": 0,
+        "scalar_differs": scalar_differs,
     }
     for i in np.flatnonzero(expected != actual).tolist():
         if expected[i] < 0 or actual[i] < 0:
@@ -1223,6 +1242,8 @@ EQUAL_ANGLE = (
     ("0.3", "7.5-degree"),
     ("0.25", "7.5-degree and whole-degree"),
 )
+# the exact rule's control: the same cells, every polygon meeting the closed cell
+TOUCHING = ("equal_angle_0_5deg", "equal_area_0_375deg_aligned")
 EQUAL_AREA = (
     # row height (degrees), columns a multiple of 48 (7.5-degree aligned) or not
     ("0.5", True),
@@ -1245,6 +1266,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
 
     indexes: list = []
     grids: dict[str, BandedGrid] = {}
+    specs: dict[str, tuple] = {}
     for width, aligns in EQUAL_ANGLE:
         name = f"equal_angle_{width.replace('.', '_')}deg"
         # the 0.5-degree grid is also the two-tier split's exact layer
@@ -1264,6 +1286,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         )
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
         grids[name] = grid
+        specs[name] = (grid.family, grid.params, rows, [columns] * rows)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
         if wanted(name):
             indexes.append(grid)
@@ -1276,21 +1299,35 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             continue
         rows = round(180 / float(height))
         started = time.perf_counter()
+        params = {
+            "row_height_deg": float(height),
+            "aligns_with": "7.5-degree" if aligned else "neither",
+        }
+        counts = equal_area_counts(rows, aligned)
         grid = build_grid(
-            name,
-            "equal-area banded grid",
-            {
-                "row_height_deg": float(height),
-                "aligns_with": "7.5-degree" if aligned else "neither",
-            },
-            rows,
-            equal_area_counts(rows, aligned),
-            polygons,
-            data,
+            name, "equal-area banded grid", params, rows, counts, polygons, data
         )
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
+        specs[name] = (grid.family, grid.params, rows, counts)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
         indexes.append(grid)
+    for base in TOUCHING:
+        name = f"{base}_touching"
+        if base not in specs or not wanted(name):
+            continue
+        family, params, rows, counts = specs[base]
+        control = build_grid(
+            name,
+            f"{family}, touch-inclusive control",
+            {k: v for k, v in params.items() if k != "build_seconds"},
+            rows,
+            counts,
+            polygons,
+            data,
+            touching=True,
+        )
+        print(f"built {name}: {control.cells:,} cells", flush=True)
+        indexes.append(control)
     for family, (rx, ry), depths in QUADTREES:
         for depth in depths:
             tag = "geo_tz" if rx == 2 else "aligned"
@@ -1498,6 +1535,12 @@ def main() -> None:
                 capture_output=True,
                 text=True,
             ).stdout.strip(),
+            # the branch commit disappears in a squash merge; its master base does not
+            "base_commit": subprocess.run(
+                ["git", "merge-base", "HEAD", "origin/master"],
+                capture_output=True,
+                text=True,
+            ).stdout.strip()[:8],
             "fixture": benchmark_fixture_provenance(),
         },
         "h3": h3_cost(),
@@ -1576,7 +1619,7 @@ def main() -> None:
             if not isinstance(index, TwoTier)
             and report["candidates"][index.name]["malacca_witness_offered"]
             and all(
-                checks[probe]["defect"] == 0
+                checks[probe]["defect"] == checks[probe]["scalar_differs"] == 0
                 for checks in report["candidates"][index.name]["gate"].values()
                 for probe in checks
             )
@@ -1628,6 +1671,9 @@ def main() -> None:
 
     report["elapsed_seconds"] = round(time.perf_counter() - started, 1)
     rendered = json.dumps(report, indent=1) + "\n"
+    for path in (args.output, args.compact_output):
+        if path:
+            path.parent.mkdir(parents=True, exist_ok=True)
     if args.output:
         args.output.write_text(rendered)
         print(f"wrote {args.output}")
