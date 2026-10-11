@@ -1,0 +1,2363 @@
+{
+  "candidates": {
+    "equal_angle_0_25deg": {
+      "cells": 1036800,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.2368,
+          "lite_agreement": 0.9361,
+          "tests_per_query": 0.1201,
+          "unique_share": 0.8849
+        },
+        "random": {
+          "candidates_per_query": 0.0996,
+          "lite_agreement": 0.9749,
+          "tests_per_query": 0.0508,
+          "unique_share": 0.9515
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree and whole-degree",
+        "width_deg": 0.25
+      },
+      "payload_bytes": 2094804,
+      "resident_bytes": 2094764,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.6431,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.3053,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7508,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.3201,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.6178,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.289,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.732,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.327,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_3125deg": {
+      "cells": 663552,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.2864,
+          "lite_agreement": 0.924,
+          "tests_per_query": 0.1449,
+          "unique_share": 0.8612
+        },
+        "random": {
+          "candidates_per_query": 0.1268,
+          "lite_agreement": 0.969,
+          "tests_per_query": 0.0644,
+          "unique_share": 0.9381
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.3125
+      },
+      "payload_bytes": 1348693,
+      "resident_bytes": 1348653,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5887,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2671,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7361,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.303,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.546,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2375,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7159,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.3032,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_36deg": {
+      "cells": 500000,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3245,
+          "lite_agreement": 0.9136,
+          "tests_per_query": 0.1643,
+          "unique_share": 0.8438
+        },
+        "random": {
+          "candidates_per_query": 0.1719,
+          "lite_agreement": 0.9568,
+          "tests_per_query": 0.0867,
+          "unique_share": 0.9163
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "neither",
+        "width_deg": 0.36
+      },
+      "payload_bytes": 1023783,
+      "resident_bytes": 1023743,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5487,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2501,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6696,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2713,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.5058,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2411,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6367,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2547,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_375deg": {
+      "cells": 460800,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3309,
+          "lite_agreement": 0.9134,
+          "tests_per_query": 0.168,
+          "unique_share": 0.8411
+        },
+        "random": {
+          "candidates_per_query": 0.1454,
+          "lite_agreement": 0.9655,
+          "tests_per_query": 0.0736,
+          "unique_share": 0.93
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.375
+      },
+      "payload_bytes": 943109,
+      "resident_bytes": 943069,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.55,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2341,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.694,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2983,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.5226,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2101,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.668,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2935,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_3deg": {
+      "cells": 720000,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.283,
+          "lite_agreement": 0.9251,
+          "tests_per_query": 0.1436,
+          "unique_share": 0.8632
+        },
+        "random": {
+          "candidates_per_query": 0.1203,
+          "lite_agreement": 0.9704,
+          "tests_per_query": 0.0614,
+          "unique_share": 0.9422
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.3
+      },
+      "payload_bytes": 1461642,
+      "resident_bytes": 1461602,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5806,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2682,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7294,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.311,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.5589,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2625,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7047,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2934,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_45deg": {
+      "cells": 320000,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3954,
+          "lite_agreement": 0.9007,
+          "tests_per_query": 0.201,
+          "unique_share": 0.8113
+        },
+        "random": {
+          "candidates_per_query": 0.2029,
+          "lite_agreement": 0.9536,
+          "tests_per_query": 0.1034,
+          "unique_share": 0.9029
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "neither",
+        "width_deg": 0.45
+      },
+      "payload_bytes": 662960,
+      "resident_bytes": 662920,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.443,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1949,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6314,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.244,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3921,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1817,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5992,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2336,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_46875deg": {
+      "cells": 294912,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4054,
+          "lite_agreement": 0.8971,
+          "tests_per_query": 0.2059,
+          "unique_share": 0.8072
+        },
+        "random": {
+          "candidates_per_query": 0.1851,
+          "lite_agreement": 0.9565,
+          "tests_per_query": 0.0948,
+          "unique_share": 0.9117
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.46875
+      },
+      "payload_bytes": 611439,
+      "resident_bytes": 611399,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4483,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1968,
+            30,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6488,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2673,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3862,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1741,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6029,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2485,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_48deg": {
+      "cells": 281250,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4132,
+          "lite_agreement": 0.8936,
+          "tests_per_query": 0.2098,
+          "unique_share": 0.8042
+        },
+        "random": {
+          "candidates_per_query": 0.2191,
+          "lite_agreement": 0.9511,
+          "tests_per_query": 0.1106,
+          "unique_share": 0.8944
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "neither",
+        "width_deg": 0.48
+      },
+      "payload_bytes": 585986,
+      "resident_bytes": 585946,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4295,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1647,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6378,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2356,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3753,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1534,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5995,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.226,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_5deg": {
+      "cells": 259200,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.415,
+          "lite_agreement": 0.8945,
+          "tests_per_query": 0.2114,
+          "unique_share": 0.803
+        },
+        "random": {
+          "candidates_per_query": 0.1914,
+          "lite_agreement": 0.9557,
+          "tests_per_query": 0.0974,
+          "unique_share": 0.91
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree and whole-degree",
+        "width_deg": 0.5
+      },
+      "payload_bytes": 539238,
+      "resident_bytes": 539198,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4522,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1564,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.643,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2615,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3889,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1372,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6083,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2547,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_625deg": {
+      "cells": 165888,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.5122,
+          "lite_agreement": 0.8743,
+          "tests_per_query": 0.2601,
+          "unique_share": 0.7617
+        },
+        "random": {
+          "candidates_per_query": 0.2314,
+          "lite_agreement": 0.9484,
+          "tests_per_query": 0.1179,
+          "unique_share": 0.8926
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.625
+      },
+      "payload_bytes": 352911,
+      "resident_bytes": 352871,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.3553,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1181,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5642,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2223,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.312,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0608,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5179,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.208,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_75deg": {
+      "cells": 115200,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.5962,
+          "lite_agreement": 0.8562,
+          "tests_per_query": 0.3062,
+          "unique_share": 0.7244
+        },
+        "random": {
+          "candidates_per_query": 0.2826,
+          "lite_agreement": 0.9393,
+          "tests_per_query": 0.1442,
+          "unique_share": 0.87
+        }
+      },
+      "family": "equal-angle grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "width_deg": 0.75
+      },
+      "payload_bytes": 251083,
+      "resident_bytes": 251043,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.2517,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0288,
+            29,
+            "unresolved"
+          ],
+          "random_batch_256": [
+            -0.5195,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1821,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.1774,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0065,
+            17,
+            "no difference"
+          ],
+          "random_batch_256": [
+            -0.4728,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1661,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_25deg_aligned": {
+      "cells": 665664,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.2731,
+          "lite_agreement": 0.9279,
+          "tests_per_query": 0.1384,
+          "unique_share": 0.868
+        },
+        "random": {
+          "candidates_per_query": 0.1138,
+          "lite_agreement": 0.9715,
+          "tests_per_query": 0.0579,
+          "unique_share": 0.9447
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.25
+      },
+      "payload_bytes": 1354006,
+      "resident_bytes": 1358286,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.6109,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2423,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7371,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2737,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.5745,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2476,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7213,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2771,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_3125deg_aligned": {
+      "cells": 426336,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.326,
+          "lite_agreement": 0.9153,
+          "tests_per_query": 0.1656,
+          "unique_share": 0.8427
+        },
+        "random": {
+          "candidates_per_query": 0.1421,
+          "lite_agreement": 0.966,
+          "tests_per_query": 0.0722,
+          "unique_share": 0.9311
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.3125
+      },
+      "payload_bytes": 875417,
+      "resident_bytes": 878833,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5388,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.2082,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.7033,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2508,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.4973,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1981,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6698,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2214,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_375deg_aligned": {
+      "cells": 296832,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3711,
+          "lite_agreement": 0.904,
+          "tests_per_query": 0.1887,
+          "unique_share": 0.8224
+        },
+        "random": {
+          "candidates_per_query": 0.163,
+          "lite_agreement": 0.9618,
+          "tests_per_query": 0.0826,
+          "unique_share": 0.9221
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.375
+      },
+      "payload_bytes": 616151,
+      "resident_bytes": 618991,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5013,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1762,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6662,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2452,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.4583,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1586,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6372,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2406,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_375deg_unaligned": {
+      "cells": 298042,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3831,
+          "lite_agreement": 0.9013,
+          "tests_per_query": 0.1955,
+          "unique_share": 0.8167
+        },
+        "random": {
+          "candidates_per_query": 0.203,
+          "lite_agreement": 0.9507,
+          "tests_per_query": 0.1021,
+          "unique_share": 0.9016
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "neither",
+        "row_height_deg": 0.375
+      },
+      "payload_bytes": 620564,
+      "resident_bytes": 623404,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4859,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1731,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6304,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2137,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.4392,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1581,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6032,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2054,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_46875deg_aligned": {
+      "cells": 189120,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4607,
+          "lite_agreement": 0.8848,
+          "tests_per_query": 0.234,
+          "unique_share": 0.7814
+        },
+        "random": {
+          "candidates_per_query": 0.21,
+          "lite_agreement": 0.9513,
+          "tests_per_query": 0.1081,
+          "unique_share": 0.901
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.46875
+      },
+      "payload_bytes": 400259,
+      "resident_bytes": 402523,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4036,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1009,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6138,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1991,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3486,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0845,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5694,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.199,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_5deg_aligned": {
+      "cells": 167040,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4786,
+          "lite_agreement": 0.8821,
+          "tests_per_query": 0.2438,
+          "unique_share": 0.7742
+        },
+        "random": {
+          "candidates_per_query": 0.2194,
+          "lite_agreement": 0.9505,
+          "tests_per_query": 0.1124,
+          "unique_share": 0.8974
+        }
+      },
+      "family": "equal-area banded grid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.5
+      },
+      "payload_bytes": 355672,
+      "resident_bytes": 357792,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.3694,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0824,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.6115,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.2011,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3261,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.0706,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5756,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1906,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "quadtree_aligned_depth4": {
+      "cells": 53478,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4054,
+          "lite_agreement": 0.8971,
+          "tests_per_query": 0.2059,
+          "unique_share": 0.8072
+        },
+        "random": {
+          "candidates_per_query": 0.1851,
+          "lite_agreement": 0.9565,
+          "tests_per_query": 0.0948,
+          "unique_share": 0.9117
+        }
+      },
+      "family": "7.5-degree-rooted quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41980,
+          "uncovered": 4
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41980,
+          "uncovered": 4
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 4,
+        "roots": [
+          48,
+          24
+        ]
+      },
+      "payload_bytes": 347095,
+      "resident_bytes": 347119,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.3875,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.3017,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.5652,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.1878,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.353,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.3089,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.545,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.2099,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "quadtree_aligned_depth5": {
+      "cells": 121797,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.2286,
+          "lite_agreement": 0.9374,
+          "tests_per_query": 0.1153,
+          "unique_share": 0.888
+        },
+        "random": {
+          "candidates_per_query": 0.095,
+          "lite_agreement": 0.9763,
+          "tests_per_query": 0.048,
+          "unique_share": 0.9536
+        }
+      },
+      "family": "7.5-degree-rooted quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 5,
+        "roots": [
+          48,
+          24
+        ]
+      },
+      "payload_bytes": 757301,
+      "resident_bytes": 757389,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5874,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.1859,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.6891,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.1574,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.57,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.1414,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.6868,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.1203,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "quadtree_aligned_depth6": {
+      "cells": 267171,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.1346,
+          "lite_agreement": 0.9621,
+          "tests_per_query": 0.0676,
+          "unique_share": 0.9332
+        },
+        "random": {
+          "candidates_per_query": 0.0519,
+          "lite_agreement": 0.9862,
+          "tests_per_query": 0.0262,
+          "unique_share": 0.9744
+        }
+      },
+      "family": "7.5-degree-rooted quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 6,
+        "roots": [
+          48,
+          24
+        ]
+      },
+      "payload_bytes": 1629733,
+      "resident_bytes": 1629949,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.7152,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.1035,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.7456,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.0916,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.7075,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.0232,
+            3,
+            "unresolved"
+          ],
+          "random_batch_256": [
+            -0.7393,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.0787,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "quadtree_geo_tz_depth10": {
+      "cells": 309418,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.1466,
+          "lite_agreement": 0.9593,
+          "tests_per_query": 0.0736,
+          "unique_share": 0.9274
+        },
+        "random": {
+          "candidates_per_query": 0.0641,
+          "lite_agreement": 0.9836,
+          "tests_per_query": 0.0324,
+          "unique_share": 0.9685
+        }
+      },
+      "family": "node-geo-tz quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 10,
+        "roots": [
+          2,
+          2
+        ]
+      },
+      "payload_bytes": 1880197,
+      "resident_bytes": 1884253,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.6939,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.2956,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.725,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.4516,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.6871,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.2461,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.7202,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.4302,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "quadtree_geo_tz_depth8": {
+      "cells": 62263,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4378,
+          "lite_agreement": 0.8887,
+          "tests_per_query": 0.2221,
+          "unique_share": 0.7925
+        },
+        "random": {
+          "candidates_per_query": 0.238,
+          "lite_agreement": 0.9438,
+          "tests_per_query": 0.1207,
+          "unique_share": 0.8863
+        }
+      },
+      "family": "node-geo-tz quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41980,
+          "uncovered": 7
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41980,
+          "uncovered": 7
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 8,
+        "roots": [
+          2,
+          2
+        ]
+      },
+      "payload_bytes": 396652,
+      "resident_bytes": 397636,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.3285,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.4985,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.5043,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.5252,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.2964,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.5039,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.4627,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.5255,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "quadtree_geo_tz_depth9": {
+      "cells": 141571,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.2512,
+          "lite_agreement": 0.9327,
+          "tests_per_query": 0.1272,
+          "unique_share": 0.878
+        },
+        "random": {
+          "candidates_per_query": 0.1243,
+          "lite_agreement": 0.9719,
+          "tests_per_query": 0.0629,
+          "unique_share": 0.9392
+        }
+      },
+      "family": "node-geo-tz quadtree",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41983,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "depth": 9,
+        "roots": [
+          2,
+          2
+        ]
+      },
+      "payload_bytes": 872944,
+      "resident_bytes": 874952,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.5604,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.3597,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.6643,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.4704,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.5423,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            0.3189,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.6497,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            0.431,
+            0,
+            "slower"
+          ]
+        }
+      }
+    },
+    "two_tier_0_5deg_exact_plus_1_875deg": {
+      "cells": 259200,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.5283,
+          "lite_agreement": 0.8846,
+          "tests_per_query": 0.2818,
+          "unique_share": 0.806
+        },
+        "random": {
+          "candidates_per_query": 0.2493,
+          "lite_agreement": 0.9511,
+          "tests_per_query": 0.131,
+          "unique_share": 0.9113
+        }
+      },
+      "family": "two-tier split",
+      "gate_disagreements": {},
+      "malacca_witness_offered": true,
+      "params": {
+        "exact": "equal_angle_0_5deg",
+        "fallback": "equal_angle_1_875deg"
+      },
+      "payload_bytes": 572522,
+      "resident_bytes": 572482,
+      "timing_against_control": {}
+    },
+    "tzf_pyramid_z3_z10_plus_1deg": {
+      "cells": 91517,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3129,
+          "lite_agreement": 0.9223,
+          "tests_per_query": 0.1621,
+          "unique_share": 0.8667
+        },
+        "random": {
+          "candidates_per_query": 0.1816,
+          "lite_agreement": 0.9593,
+          "tests_per_query": 0.0956,
+          "unique_share": 0.9212
+        }
+      },
+      "family": "tzf-rs tile pyramid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "fallback": "equal_angle_1deg",
+        "zooms": [
+          3,
+          10
+        ]
+      },
+      "payload_bytes": 700123,
+      "resident_bytes": 700019,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.1486,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            1.5763,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.1176,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            1.6746,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.1685,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            1.4576,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.1182,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            1.5829,
+            0,
+            "slower"
+          ]
+        }
+      },
+      "tzf_layout_payload_bytes": 1066127
+    },
+    "tzf_pyramid_z3_z11_plus_1deg": {
+      "cells": 203791,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.1885,
+          "lite_agreement": 0.9527,
+          "tests_per_query": 0.0977,
+          "unique_share": 0.921
+        },
+        "random": {
+          "candidates_per_query": 0.0958,
+          "lite_agreement": 0.9768,
+          "tests_per_query": 0.0504,
+          "unique_share": 0.959
+        }
+      },
+      "family": "tzf-rs tile pyramid",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "fallback": "equal_angle_1deg",
+        "zooms": [
+          3,
+          11
+        ]
+      },
+      "payload_bytes": 1373775,
+      "resident_bytes": 1373663,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.2501,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            1.525,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.1704,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            1.6272,
+            0,
+            "slower"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.2718,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            1.3658,
+            0,
+            "slower"
+          ],
+          "random_batch_256": [
+            -0.1926,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            1.557,
+            0,
+            "slower"
+          ]
+        }
+      },
+      "tzf_layout_payload_bytes": 2188867
+    }
+  },
+  "command": "uv run python -m prototypes.latlng_index_bench --output /private/tmp/claude-502/-Users-Jannik-Kissinger-github-timezonefinder--claude-worktrees-improvement-pass-28d0e8/ae51506f-0dbc-49a1-9006-6a5b38b47844/scratchpad/final.json --compact-output contributing/improvements/measurements/latlng-index-2026-10-11.json",
+  "created": "2026-10-11T07:46:17+0200",
+  "elapsed_seconds": 60.7,
+  "environment": {
+    "commit": "5cbb2038",
+    "cpu": "Apple M1 Pro",
+    "fixture": {
+      "data_version": "2026d",
+      "fixture_version": 3
+    },
+    "machine": "arm64",
+    "paths": [
+      "clang",
+      "numba"
+    ],
+    "python": "3.14.2",
+    "versions": {
+      "h3": "4.5.0",
+      "numba": "0.67.0",
+      "numpy": "2.5.2",
+      "shapely": "2.1.2"
+    }
+  },
+  "file_size_model": {
+    "reproduces_shipped_file": true,
+    "shipped_bytes": 617109
+  },
+  "h3": {
+    "import_ms_best_of_5": 20.38,
+    "installed_bytes": 2255969
+  },
+  "h3_indexes": {
+    "h3_control": {
+      "answers_differing_from_shipped": {
+        "control_wrong": 0,
+        "defect": 0,
+        "overlap": 0,
+        "points": 30000,
+        "uncovered": 0
+      },
+      "cells": 288122,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3919,
+          "lite_agreement": 0.8997,
+          "tests_per_query": 0.2001,
+          "unique_share": 0.8123
+        },
+        "random": {
+          "candidates_per_query": 0.2191,
+          "lite_agreement": 0.948,
+          "tests_per_query": 0.1115,
+          "unique_share": 0.894
+        }
+      },
+      "payload_bytes": 610259,
+      "resident_bytes": 1023799
+    },
+    "shipped_h3": {
+      "cells": 288122,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3919,
+          "lite_agreement": 0.9002,
+          "tests_per_query": 0.1963,
+          "unique_share": 0.8123
+        },
+        "random": {
+          "candidates_per_query": 0.2191,
+          "lite_agreement": 0.958,
+          "tests_per_query": 0.1103,
+          "unique_share": 0.894
+        }
+      },
+      "payload_bytes": 617109,
+      "resident_bytes": 1030649,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            0.0193,
+            27,
+            "unresolved"
+          ],
+          "on_land_scalar": [
+            -0.0209,
+            28,
+            "unresolved"
+          ],
+          "random_batch_256": [
+            0.0237,
+            27,
+            "unresolved"
+          ],
+          "random_scalar": [
+            -0.0124,
+            29,
+            "unresolved"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            0.0048,
+            28,
+            "unresolved"
+          ],
+          "on_land_scalar": [
+            -0.0179,
+            30,
+            "unresolved"
+          ],
+          "random_batch_256": [
+            0.0177,
+            20,
+            "unresolved"
+          ],
+          "random_scalar": [
+            -0.0135,
+            28,
+            "unresolved"
+          ]
+        }
+      }
+    }
+  },
+  "methodology": {
+    "counts": "every point of the 10,000-point random and on_land fixtures",
+    "gate": "30,000 fixture points, own cell edges and 7.5-degree/whole-degree border lines, each with its neighbours one unit across, on both kernels",
+    "timing": "paired and order-alternated against the H3 control: 31 rounds x 2,000 scalar calls, and 31 rounds x 8 batch calls of 256 points",
+    "timing_value": "[best_round_change, challenger_wins_of_31, verdict]"
+  },
+  "schema": 2
+}

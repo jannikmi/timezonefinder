@@ -1,0 +1,27 @@
+# IDX-2 — replace the H3 shortcut index with a longitude/latitude-aligned grid
+
+## Related memory
+
+- [Shortcut index cell shape and resolution decisions](../../decisions/shortcut-index-cell-shape-and-resolution-decisions.md) — the measurement this item would adopt, what it trades away and leaves unpriced, and the variants refused.
+- [Data-format version-marker and release-batching decisions](../../decisions/data-format-version-marker-and-release-batching-decisions.md) — the held shortcut-index rebuild, which rides this item's format bump if it is adopted and publishes as a post-release if it is refused.
+- [Benchmarking, tooling and dependency decisions](../../decisions/benchmarking-tooling-and-dependency-decisions.md) — `h3` is the one runtime dependency reopened for removal, and this is why.
+- [Data pipeline and release order](../../../development/data-pipeline-format-versioning-and-release-order.md)
+
+## Why it is recorded
+
+Measured 2026-10-11: a dense grid whose cells follow longitude and latitude, computed exactly from the integer coordinates the kernel reads and aligned with the 7.5° meridians the ocean zones share, beats the resolution-4 H3 index at H3's file size. Whole `timezone_at` calls are about a quarter faster on random points and a sixth faster on land, 256-point batches two to three times faster, and the resident index is ~40 % smaller, on both kernels. The decision record holds the numbers, the instrument and the refused variants. What remains is whether to adopt it, which only the maintainer can decide: it changes the data format, the published dependencies and `TimezoneFinderL`'s answers, and undoing it takes another format release.
+
+## What adopting it changes
+
+- **Runtime:** `timezonefinder/shortcut_index.py` reads a grid table instead of the H3 slot table, and every `h3.latlng_to_cell` call in `timezonefinder/timezonefinder.py` becomes the grid's integer arithmetic, scalar and vectorised. `UniformGrid` and `BandedGrid` in `prototypes/latlng_index_bench.py` are the reference lookups. `timezonefinder/_data_integrity.py` stops checking H3's bit layout.
+- **Converter:** `scripts/shortcuts.py` and `scripts/hex_utils.py` compute candidates as the prototype's `owned_pairs` does, and the work optimizer in `scripts/shortcut_ordering.py` takes a rectangle where it takes an H3 cell (`cell_region`, `cell_cap`).
+- **Format and release:** a new shortcut layout, `DATA_FORMAT_VERSION` 4 and the ordered two-distribution release, carrying the held tie-order rebuild and PERF-10's costs with it.
+- **Dependencies:** `h3` leaves the runtime dependencies once nothing above imports it, which changes the published metadata.
+- **A test pinning the kernel's edge convention**, because the grid's exactness rests on it: a polygon owns a point on its east or north boundary, never its west or south.
+- **Elsewhere:** `TimezoneFinderL` answers move cell by cell; GH-657 closes as moot; GEOM-3 is re-scoped to rectangle predicates; half of PERF-7's reopening condition is met; FT-3 is moot once `h3` is gone; LITE-1 is phrased in H3 cells and needs rephrasing; `docs/data_format.rst` and every page describing the H3 index change.
+
+## Decision needed
+
+- **Decision needed:** should the resolution-4 H3 shortcut index be replaced by a dense longitude/latitude-aligned grid, and if so which grid? Every grid option below is faster than H3 on scalar and batch lookups on both kernels, holds at most H3's file size at ~40 % less resident memory, and agreed with H3's answers on every sampled point that any zone owns. Adopting one costs a format bump with an ordered two-distribution release, moves `TimezoneFinderL` answers cell by cell, and lets `h3` leave the runtime dependencies. **(a) Equal-area grid with 0.375° rows and column counts a multiple of 48** (296,832 cells, 616 KB): the most selective at H3's size, with 26 % and 6 % fewer polygon tests per random and on-land query than the H3 control and `TimezoneFinderL` agreement above the shipped index's. Its per-row column widths cost about two points of scalar time against (b), and the format carries one width per row. **(b) Equal-angle 0.46875° grid** (294,912 cells, 611 KB): the simplest lookup and the fastest scalar call at H3's size, 25–27 % and 17–20 % faster. It makes 3 % more polygon tests on land than the H3 control, and its `TimezoneFinderL` agreement is 0.2–0.3 points below the shipped index's. **(c) Equal-angle 0.5° grid** (259,200 cells, 539 KB): 12 % smaller than H3 on disk and aligned with whole degrees too, but 6 % more polygon tests on land and agreement 0.2–0.6 points lower. **(d) Keep H3:** the held tie-order rebuild publishes as a post-release, and GH-657, GEOM-3 and FT-3 stay as they are. **Recommendation: (a)**, the only option no worse than H3 on any measured axis, counts included, and counts are what survive a change of machine; (b) if one uniform layout is worth more than that selectivity. **Reversibility:** low, since undoing it is another format bump and data release. **Unpriced:** loading and construction time, `make memory`, the page residency of a mapped grid table, a second machine class, and the rectangle port of the work optimizer, which buys the shipped H3 index one point of `TimezoneFinderL` agreement on random points.
+- **Size:** L — refine into slices when taken; the format change itself is one atomic migration.
+- **Status:** needs — whether to replace H3 with an aligned grid, and which grid.
