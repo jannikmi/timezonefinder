@@ -5,46 +5,49 @@
 FINDINGS (2026-10-11, Apple M1 Pro, Python 3.14.2, data 2026d, fixture set v3)
 ==============================================================================
 
-**A dense grid aligned with longitude and latitude beats the resolution-4 H3 index on
-every axis measured, at H3's file size.** Against an H3 control ordered by the same
+**A dense grid aligned with longitude and latitude beats the resolution-4 H3 index at
+H3's file size on every axis measured here.** Against an H3 control ordered by the same
 converter rule, the equal-area grid of 0.375-degree rows whose columns divide 7.5 degrees
-(296,832 cells; 616 KB on disk against H3's 610-617 KB, 619 KB resident against 1,024 KB)
-answers 92.2 % of random and 82.2 % of on-land queries without geometry (H3 89.4 / 81.2 %),
-tests 26 % and 6 % fewer polygons per query, and agrees with the full lookup as
-``TimezoneFinderL`` on 96.2 / 90.4 % of points (shipped H3 95.8 / 90.0 %). Whole
-``timezone_at`` calls are 24-25 % faster on random points and 16-18 % on land, 256-point
-``timezone_ids_at`` batches 64-67 % and 46-50 %, every round won on clang and numba alike.
-The equal-angle 0.46875-degree grid at the same size is a point or two faster per scalar
-call, since it reads no per-row table, and slightly less selective on land. The scalar
-win is the removed ``h3.latlng_to_cell`` call; the batch win is that a grid cell
-vectorises and an H3 cell does not.
+(296,832 cells; 616 KB on disk against H3's 610-617 KB, 619 KB of index arrays resident
+against 1,024 KB) answers 92.2 % of random and 82.2 % of on-land queries without
+geometry (H3 89.4 / 81.2 %), tests 26 % and 6 % fewer polygons per query, and agrees
+with the full lookup as ``TimezoneFinderL`` on 96.2 / 90.4 % of points (shipped H3
+95.8 / 90.0 %). Whole ``timezone_at`` calls are 25 % faster on random points and 17-18 %
+on land, 256-point ``timezone_ids_at`` batches 64-67 % and 46-50 %, every round won on
+clang and numba alike. The equal-angle 0.46875-degree grid at the same size is a point
+or two faster per random scalar call, since it reads no per-row table, level on land,
+and less selective there. The scalar win is the removed ``h3.latlng_to_cell`` call; the
+batch win is that a grid cell vectorises and an H3 cell does not.
 
 **What makes it work is exactness, then alignment.** Cells follow the kernel's own
 edge rule (a polygon owns its east and north boundary, never its west or south), so a
-zone across a cell edge is not a candidate. That is worth most on the ocean meridians:
-unaligned twins of the 7.5-degree-aligned grids test 17-24 % more polygons per random
-query at the same size (0.48 against 0.46875 degrees, and the two equal-area grids). The retained 2026-09-26 run touched every neighbour across an edge, sized
-grids to H3's padded slot table rather than its cells, and read per-row tables for
-uniform grids; it priced the same 0.5-degree grid 7-9 % slower than H3 per scalar call
-where this one measures 14-26 % faster.
+zone across a cell edge is not a candidate. Against the same control in this run, the
+same 0.5-degree grid counting every polygon that touches a cell edge tests 50 % more
+polygons per random query and gives up about 8 points of random scalar speed (under 2
+on land); its counts equal those of a 2026-09-26
+run that used such cells and judged the grid slower than H3, a timing taken with a
+per-row lookup and never paired with a control. Alignment pays most on the ocean
+meridians: unaligned grids of the same size test 14-24 % more polygons per random query.
 
 **What does not carry.** Quadtrees - ``node-geo-tz``'s world quadrants and a
 7.5-degree-rooted variant - buy the most selectivity per byte (the rooted one at depth 5
 tests 57 / 42 % fewer polygons at 757 KB), but their leaf search is a ``bisect`` that
-costs more than the H3 call it replaces: scalar calls 8-52 % slower (one configuration
-unresolved, on land under numba), batches much faster.
-``tzf-rs``'s tile pyramid probes one binary search per zoom and is 2.4-2.7x slower per
-scalar call; its Mercator edges cannot follow the integer grid either. The item's
-two-tier split is dominated by the grid it splits: larger, and a third more polygons
-tested (counted, not timed).
+costs more than the H3 call it replaces: scalar calls 6-51 % slower, batches 28-74 %
+faster. ``tzf-rs``'s tile pyramid probes one binary search per zoom and is 2.3-2.7x
+slower per scalar call; its Mercator edges cannot follow the integer grid either. The
+item's two-tier split is dominated by the grid it splits: larger, and a third more
+polygons tested (counted, not timed). Grids larger than H3's file win more - the
+equal-angle 0.375-degree grid is 30 % faster per random scalar call at 943 KB on disk
+and 943 KB resident - and whether H3's footprint bounds disk or memory is IDX-2's call.
 
-**Correctness.** All 25 timed candidates gave the control's answer for the 30,000 fixture
-points, for points on and one unit either side of their own cell edges, and on the
-7.5-degree and whole-degree lines borders follow, on both kernels. The only
-disagreements are points on the -180 meridian and the -90 parallel, which no polygon
-owns, so both indexes answer the "last remaining zone" fallback there. Every candidate
-offers the Strait of Malacca witness's polygon. The verdict, with what it trades away
-and leaves unpriced, is in
+**Correctness.** All 27 gated grids, quadtrees, pyramids and controls gave the control's
+answer for the 30,000 fixture points (289 of them in two overlapping zones), for points
+on and one unit either side of their own cell edges, and on the 7.5-degree and
+whole-degree lines borders follow, on both kernels, through both the scalar and the
+batch path. The only disagreements are points on the -180 meridian and the -90
+parallel, which no polygon owns, so both indexes answer the "last remaining zone"
+fallback there. Every candidate offers the Strait of Malacca witness's polygon. The
+verdict, with what it trades away and leaves unpriced, is in
 ``contributing/improvements/decisions/shortcut-index-cell-shape-and-resolution-decisions.md``;
 the compact numbers are ``contributing/improvements/measurements/latlng-index-2026-10-11.json``.
 

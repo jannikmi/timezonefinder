@@ -23,6 +23,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -30,6 +31,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -43,44 +45,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.6431,
+            -0.6451,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.3053,
+            -0.317,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7508,
+            -0.7502,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.3201,
+            -0.3267,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.6178,
+            -0.6127,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.289,
+            -0.3059,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.732,
+            -0.7322,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.327,
+            -0.3216,
             31,
             "faster"
           ]
@@ -110,6 +112,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -117,6 +120,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -130,44 +134,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5887,
+            -0.5767,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2671,
+            -0.2676,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7361,
+            -0.7388,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.303,
+            -0.3093,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.546,
+            -0.545,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2375,
+            -0.2601,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7159,
+            -0.7156,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.3032,
+            -0.3005,
             31,
             "faster"
           ]
@@ -197,6 +201,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -204,6 +209,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -217,44 +223,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5487,
+            -0.5449,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2501,
+            -0.261,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6696,
+            -0.6658,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2713,
+            -0.2701,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.5058,
+            -0.5095,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2411,
+            -0.2443,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6367,
+            -0.6404,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2547,
+            -0.2721,
             31,
             "faster"
           ]
@@ -284,6 +290,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -291,6 +298,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -304,44 +312,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.55,
+            -0.549,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2341,
+            -0.2407,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.694,
+            -0.6939,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2983,
+            -0.3038,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.5226,
+            -0.5214,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2101,
+            -0.2244,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.668,
+            -0.6668,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2935,
+            -0.2957,
             31,
             "faster"
           ]
@@ -371,6 +379,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -378,6 +387,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -391,44 +401,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5806,
+            -0.5773,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2682,
+            -0.2785,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7294,
+            -0.7261,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.311,
+            -0.3119,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.5589,
+            -0.5505,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2625,
+            -0.267,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7047,
+            -0.7065,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2934,
+            -0.3038,
             31,
             "faster"
           ]
@@ -458,6 +468,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -465,6 +476,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -478,44 +490,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.443,
+            -0.4383,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1949,
+            -0.1905,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6314,
+            -0.6263,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.244,
+            -0.2486,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3921,
+            -0.3917,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1817,
+            -0.1728,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5992,
+            -0.599,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2336,
+            -0.2352,
             31,
             "faster"
           ]
@@ -545,6 +557,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -552,6 +565,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -565,44 +579,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.4483,
+            -0.4424,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1968,
-            30,
+            -0.1788,
+            31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6488,
+            -0.6484,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2673,
+            -0.265,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3862,
+            -0.4055,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1741,
+            -0.1626,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6029,
+            -0.6178,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2485,
+            -0.2618,
             31,
             "faster"
           ]
@@ -632,6 +646,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -639,6 +654,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -652,44 +668,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.4295,
+            -0.4281,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1647,
+            -0.1755,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6378,
+            -0.6302,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2356,
+            -0.2422,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3753,
+            -0.3775,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1534,
+            -0.1557,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5995,
+            -0.602,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.226,
+            -0.2305,
             31,
             "faster"
           ]
@@ -719,6 +735,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -726,6 +743,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -739,44 +757,133 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.4522,
+            -0.445,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1564,
+            -0.1638,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.643,
+            -0.6403,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2615,
+            -0.2632,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3889,
+            -0.3937,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1372,
+            -0.1365,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6083,
+            -0.6089,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2547,
+            -0.2522,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_angle_0_5deg_touching": {
+      "cells": 259200,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.4445,
+          "lite_agreement": 0.8872,
+          "tests_per_query": 0.2261,
+          "unique_share": 0.7905
+        },
+        "random": {
+          "candidates_per_query": 0.2882,
+          "lite_agreement": 0.9317,
+          "tests_per_query": 0.1462,
+          "unique_share": 0.8633
+        }
+      },
+      "family": "equal-angle grid, touch-inclusive control",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "scalar_differs": 0,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "scalar_differs": 0,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree and whole-degree",
+        "width_deg": 0.5
+      },
+      "payload_bytes": 542333,
+      "resident_bytes": 542293,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4216,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1474,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.533,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1872,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.3752,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1209,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.4969,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1659,
             31,
             "faster"
           ]
@@ -806,6 +913,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -813,6 +921,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -826,44 +935,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.3553,
+            -0.3523,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1181,
+            -0.0912,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5642,
+            -0.5602,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2223,
+            -0.2234,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.312,
+            -0.287,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0608,
+            -0.0781,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5179,
+            -0.523,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.208,
+            -0.2075,
             31,
             "faster"
           ]
@@ -893,6 +1002,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -900,6 +1010,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -913,44 +1024,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.2517,
+            -0.249,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0288,
-            29,
-            "unresolved"
+            -0.0559,
+            31,
+            "faster"
           ],
           "random_batch_256": [
-            -0.5195,
+            -0.5181,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.1821,
+            -0.1743,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.1774,
+            -0.1763,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0065,
+            -0.0159,
             17,
             "no difference"
           ],
           "random_batch_256": [
-            -0.4728,
+            -0.4741,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.1661,
+            -0.1662,
             31,
             "faster"
           ]
@@ -980,6 +1091,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -987,6 +1099,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1000,44 +1113,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.6109,
+            -0.6139,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2423,
+            -0.2521,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7371,
+            -0.7385,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2737,
+            -0.2802,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.5745,
+            -0.5796,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2476,
+            -0.2375,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7213,
+            -0.719,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2771,
+            -0.2657,
             31,
             "faster"
           ]
@@ -1067,6 +1180,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1074,6 +1188,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1087,44 +1202,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5388,
+            -0.5469,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.2082,
+            -0.2075,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.7033,
+            -0.7006,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2508,
+            -0.255,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.4973,
+            -0.5016,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1981,
+            -0.203,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6698,
+            -0.6747,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2214,
+            -0.249,
             31,
             "faster"
           ]
@@ -1154,6 +1269,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1161,6 +1277,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1174,44 +1291,133 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5013,
+            -0.5032,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1762,
+            -0.1808,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6662,
+            -0.668,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2452,
+            -0.2508,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.4583,
+            -0.4581,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1586,
+            -0.1695,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6372,
+            -0.6385,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2406,
+            -0.2464,
+            31,
+            "faster"
+          ]
+        }
+      }
+    },
+    "equal_area_0_375deg_aligned_touching": {
+      "cells": 296832,
+      "counts": {
+        "on_land": {
+          "candidates_per_query": 0.3865,
+          "lite_agreement": 0.9012,
+          "tests_per_query": 0.1964,
+          "unique_share": 0.8163
+        },
+        "random": {
+          "candidates_per_query": 0.2607,
+          "lite_agreement": 0.9383,
+          "tests_per_query": 0.1319,
+          "unique_share": 0.8743
+        }
+      },
+      "family": "equal-area banded grid, touch-inclusive control",
+      "gate_disagreements": {
+        "clang": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "scalar_differs": 0,
+          "uncovered": 3
+        },
+        "numba": {
+          "control_wrong": 0,
+          "defect": 0,
+          "overlap": 0,
+          "points": 41984,
+          "scalar_differs": 0,
+          "uncovered": 3
+        }
+      },
+      "malacca_witness_offered": true,
+      "params": {
+        "aligns_with": "7.5-degree",
+        "row_height_deg": 0.375
+      },
+      "payload_bytes": 618592,
+      "resident_bytes": 621432,
+      "timing_against_control": {
+        "clang": {
+          "on_land_batch_256": [
+            -0.4881,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1795,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5706,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1892,
+            31,
+            "faster"
+          ]
+        },
+        "numba": {
+          "on_land_batch_256": [
+            -0.4419,
+            31,
+            "faster"
+          ],
+          "on_land_scalar": [
+            -0.1589,
+            31,
+            "faster"
+          ],
+          "random_batch_256": [
+            -0.5368,
+            31,
+            "faster"
+          ],
+          "random_scalar": [
+            -0.1674,
             31,
             "faster"
           ]
@@ -1241,6 +1447,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1248,6 +1455,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1261,44 +1469,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.4859,
+            -0.4906,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1731,
+            -0.1761,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6304,
+            -0.6315,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2137,
+            -0.2275,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.4392,
+            -0.4434,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1581,
+            -0.1642,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6032,
+            -0.603,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2054,
+            -0.2121,
             31,
             "faster"
           ]
@@ -1328,6 +1536,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1335,6 +1544,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1348,44 +1558,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.4036,
+            -0.3978,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.1009,
+            -0.1001,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6138,
+            -0.6178,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.1991,
+            -0.2147,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3486,
+            -0.3479,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0845,
+            -0.0927,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5694,
+            -0.5793,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.199,
+            -0.2053,
             31,
             "faster"
           ]
@@ -1415,6 +1625,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1422,6 +1633,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1435,44 +1647,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.3694,
+            -0.3713,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0824,
+            -0.0856,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.6115,
+            -0.6138,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.2011,
+            -0.206,
             31,
             "faster"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.3261,
+            -0.3126,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            -0.0706,
+            -0.0571,
             31,
             "faster"
           ],
           "random_batch_256": [
-            -0.5756,
+            -0.576,
             31,
             "faster"
           ],
           "random_scalar": [
-            -0.1906,
+            -0.1921,
             31,
             "faster"
           ]
@@ -1501,15 +1713,17 @@
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41980,
-          "uncovered": 4
+          "points": 41978,
+          "scalar_differs": 0,
+          "uncovered": 6
         },
         "numba": {
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41980,
-          "uncovered": 4
+          "points": 41978,
+          "scalar_differs": 0,
+          "uncovered": 6
         }
       },
       "malacca_witness_offered": true,
@@ -1525,44 +1739,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.3875,
+            -0.3878,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.3017,
+            0.2982,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.5652,
+            -0.584,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.1878,
+            0.1882,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.353,
+            -0.3511,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.3089,
+            0.2965,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.545,
+            -0.5432,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.2099,
+            0.1879,
             0,
             "slower"
           ]
@@ -1591,14 +1805,16 @@
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41983,
+          "points": 41982,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41983,
+          "points": 41982,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1615,44 +1831,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5874,
+            -0.5869,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.1859,
+            0.188,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.6891,
+            -0.6892,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.1574,
+            0.1371,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.57,
+            -0.5711,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.1414,
+            0.1346,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.6868,
+            -0.6783,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.1203,
+            0.1112,
             0,
             "slower"
           ]
@@ -1682,6 +1898,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41983,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1689,6 +1906,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41983,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1705,44 +1923,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.7152,
+            -0.7095,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.1035,
+            0.1249,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.7456,
+            -0.7424,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.0916,
+            0.1148,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.7075,
+            -0.7091,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.0232,
-            3,
-            "unresolved"
+            0.0616,
+            1,
+            "slower"
           ],
           "random_batch_256": [
-            -0.7393,
+            -0.7416,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.0787,
+            0.0775,
             0,
             "slower"
           ]
@@ -1772,6 +1990,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -1779,6 +1998,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -1795,44 +2015,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.6939,
+            -0.6948,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.2956,
+            0.2895,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.725,
+            -0.7223,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.4516,
+            0.4455,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.6871,
+            -0.6853,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.2461,
+            0.2328,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.7202,
+            -0.7212,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.4302,
+            0.4038,
             0,
             "slower"
           ]
@@ -1861,15 +2081,17 @@
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41980,
-          "uncovered": 7
+          "points": 41976,
+          "scalar_differs": 0,
+          "uncovered": 8
         },
         "numba": {
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41980,
-          "uncovered": 7
+          "points": 41976,
+          "scalar_differs": 0,
+          "uncovered": 8
         }
       },
       "malacca_witness_offered": true,
@@ -1885,44 +2107,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.3285,
+            -0.329,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.4985,
+            0.4771,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.5043,
+            -0.4987,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.5252,
+            0.5119,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.2964,
+            -0.2816,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.5039,
+            0.4277,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.4627,
+            -0.4668,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.5255,
+            0.5056,
             0,
             "slower"
           ]
@@ -1951,15 +2173,17 @@
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41983,
-          "uncovered": 3
+          "points": 41982,
+          "scalar_differs": 0,
+          "uncovered": 5
         },
         "numba": {
           "control_wrong": 0,
           "defect": 0,
           "overlap": 0,
-          "points": 41983,
-          "uncovered": 3
+          "points": 41982,
+          "scalar_differs": 0,
+          "uncovered": 5
         }
       },
       "malacca_witness_offered": true,
@@ -1975,44 +2199,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.5604,
+            -0.5633,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.3597,
+            0.3478,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.6643,
+            -0.6619,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.4704,
+            0.4858,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.5423,
+            -0.5425,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            0.3189,
+            0.32,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.6497,
+            -0.6556,
             31,
             "faster"
           ],
           "random_scalar": [
-            0.431,
+            0.4487,
             0,
             "slower"
           ]
@@ -2069,6 +2293,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -2076,6 +2301,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -2092,44 +2318,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.1486,
+            -0.1467,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            1.5763,
+            1.5303,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.1176,
-            31,
+            -0.1011,
+            30,
             "faster"
           ],
           "random_scalar": [
-            1.6746,
+            1.6681,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.1685,
+            -0.1541,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            1.4576,
+            1.4317,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.1182,
+            -0.1135,
             31,
             "faster"
           ],
           "random_scalar": [
-            1.5829,
+            1.6165,
             0,
             "slower"
           ]
@@ -2160,6 +2386,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         },
         "numba": {
@@ -2167,6 +2394,7 @@
           "defect": 0,
           "overlap": 0,
           "points": 41984,
+          "scalar_differs": 0,
           "uncovered": 3
         }
       },
@@ -2183,44 +2411,44 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            -0.2501,
+            -0.2522,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            1.525,
+            1.4747,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.1704,
+            -0.1495,
             31,
             "faster"
           ],
           "random_scalar": [
-            1.6272,
+            1.6305,
             0,
             "slower"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            -0.2718,
+            -0.2787,
             31,
             "faster"
           ],
           "on_land_scalar": [
-            1.3658,
+            1.3485,
             0,
             "slower"
           ],
           "random_batch_256": [
-            -0.1926,
+            -0.1717,
             31,
             "faster"
           ],
           "random_scalar": [
-            1.557,
+            1.532,
             0,
             "slower"
           ]
@@ -2229,11 +2457,12 @@
       "tzf_layout_payload_bytes": 2188867
     }
   },
-  "command": "uv run python -m prototypes.latlng_index_bench --output /private/tmp/claude-502/-Users-Jannik-Kissinger-github-timezonefinder--claude-worktrees-improvement-pass-28d0e8/ae51506f-0dbc-49a1-9006-6a5b38b47844/scratchpad/final.json --compact-output contributing/improvements/measurements/latlng-index-2026-10-11.json",
-  "created": "2026-10-11T07:46:17+0200",
-  "elapsed_seconds": 60.7,
+  "command": "uv run python -m prototypes.latlng_index_bench --output tmp/latlng-index-full.json --compact-output contributing/improvements/measurements/latlng-index-2026-10-11.json",
+  "created": "2026-10-11T08:18:50+0200",
+  "elapsed_seconds": 66.9,
   "environment": {
-    "commit": "5cbb2038",
+    "base_commit": "4be6c62f",
+    "commit": "124a4d04",
     "cpu": "Apple M1 Pro",
     "fixture": {
       "data_version": "2026d",
@@ -2257,7 +2486,7 @@
     "shipped_bytes": 617109
   },
   "h3": {
-    "import_ms_best_of_5": 20.38,
+    "import_ms_best_of_5": 20.341,
     "installed_bytes": 2255969
   },
   "h3_indexes": {
@@ -2267,6 +2496,7 @@
         "defect": 0,
         "overlap": 0,
         "points": 30000,
+        "scalar_differs": 0,
         "uncovered": 0
       },
       "cells": 288122,
@@ -2308,45 +2538,45 @@
       "timing_against_control": {
         "clang": {
           "on_land_batch_256": [
-            0.0193,
-            27,
+            0.0035,
+            29,
             "unresolved"
           ],
           "on_land_scalar": [
-            -0.0209,
-            28,
+            -0.0174,
+            30,
             "unresolved"
           ],
           "random_batch_256": [
-            0.0237,
-            27,
+            0.0223,
+            28,
             "unresolved"
           ],
           "random_scalar": [
-            -0.0124,
-            29,
+            -0.0099,
+            31,
             "unresolved"
           ]
         },
         "numba": {
           "on_land_batch_256": [
-            0.0048,
+            0.0284,
             28,
             "unresolved"
           ],
           "on_land_scalar": [
-            -0.0179,
-            30,
+            -0.013,
+            31,
             "unresolved"
           ],
           "random_batch_256": [
-            0.0177,
-            20,
+            0.0162,
+            30,
             "unresolved"
           ],
           "random_scalar": [
-            -0.0135,
-            28,
+            -0.0103,
+            31,
             "unresolved"
           ]
         }
