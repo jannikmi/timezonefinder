@@ -1296,9 +1296,101 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
     return indexes
 
 
+def compact(report: dict) -> dict:
+    """What the decision record cites, in the committed measurement file's shape.
+
+    Timing values are ``[best_round_change, challenger_wins, verdict]`` against the H3
+    control; gate values are the disagreements summed over every probe set, per kernel.
+    """
+
+    def counts(strata: dict) -> dict:
+        return {
+            label: {k: round(v, 4) for k, v in strata[label].items() if k != "points"}
+            for label in RANKING_STRATA
+        }
+
+    def timing(name: str) -> dict:
+        return {
+            path: {
+                f"{label}_{kind}": [
+                    round(c["best_challenger"] / c["best_baseline"] - 1, 4),
+                    c["challenger_wins"],
+                    c["verdict"],
+                ]
+                for label, kinds in rows[name].items()
+                for kind, c in kinds.items()
+            }
+            for path, rows in report.get("timing", {}).items()
+            if name in rows
+        }
+
+    def gate_totals(row: dict) -> dict:
+        totals = {}
+        for path, checks in row.get("gate", {}).items():
+            summed: dict[str, int] = {}
+            for check in checks.values():
+                for key, value in check.items():
+                    summed[key] = summed.get(key, 0) + value
+            totals[path] = summed
+        return totals
+
+    rows = {
+        name: {
+            "cells": report[name]["cells"],
+            "payload_bytes": report[name]["payload_bytes"],
+            "resident_bytes": report[name]["resident_bytes"],
+            "counts": counts(report[name]["strata"]),
+        }
+        for name in ("shipped_h3", "h3_control")
+    }
+    rows["shipped_h3"]["timing_against_control"] = timing("shipped_h3")
+    rows["h3_control"]["answers_differing_from_shipped"] = report["h3_control"][
+        "gate_against_shipped"
+    ]
+    candidates = {}
+    for name, row in report["candidates"].items():
+        candidates[name] = {
+            "family": row["family"],
+            "params": {k: v for k, v in row["params"].items() if k != "build_seconds"},
+            "cells": row["cells"],
+            "payload_bytes": row["payload_bytes"],
+            "resident_bytes": row["resident_bytes"],
+            "counts": counts(row["strata"]),
+            "malacca_witness_offered": row["malacca_witness_offered"],
+            "gate_disagreements": gate_totals(row),
+            "timing_against_control": timing(name),
+        }
+        if "tzf_layout_payload_bytes" in row:
+            candidates[name]["tzf_layout_payload_bytes"] = row[
+                "tzf_layout_payload_bytes"
+            ]
+    return {
+        "schema": 2,
+        "created": report["created"],
+        "command": report["command"],
+        "environment": report["environment"],
+        "h3": report["h3"],
+        "methodology": {
+            "counts": "every point of the 10,000-point random and on_land fixtures",
+            "gate": "30,000 fixture points, own cell edges and 7.5-degree/whole-degree "
+            "border lines, each with its neighbours one unit across, on both kernels",
+            "timing": "paired and order-alternated against the H3 control: 31 rounds "
+            "x 2,000 scalar calls, and 31 rounds x 8 batch calls of 256 points",
+            "timing_value": "[best_round_change, challenger_wins_of_31, verdict]",
+        },
+        "file_size_model": report["file_size_model"],
+        "h3_indexes": rows,
+        "candidates": candidates,
+        "elapsed_seconds": report["elapsed_seconds"],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("--output", type=Path, help="the full report")
+    parser.add_argument(
+        "--compact-output", type=Path, help="the summary the decision record cites"
+    )
     parser.add_argument("--rounds", type=int, default=31)
     parser.add_argument("--points", type=int, default=2_000)
     parser.add_argument("--probes", type=int, default=6_000)
@@ -1498,7 +1590,14 @@ def main() -> None:
     if args.output:
         args.output.write_text(rendered)
         print(f"wrote {args.output}")
-    else:
+    if args.compact_output:
+        # the pretty-format-json hook's own form, so committing it changes nothing
+        args.compact_output.write_text(
+            json.dumps(compact(report), indent=2, sort_keys=True, ensure_ascii=False)
+            + "\n"
+        )
+        print(f"wrote {args.compact_output}")
+    if not args.output and not args.compact_output:
         print(rendered)
     reference.cleanup()
 
