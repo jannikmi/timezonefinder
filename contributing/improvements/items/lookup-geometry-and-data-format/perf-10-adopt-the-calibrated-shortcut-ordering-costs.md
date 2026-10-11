@@ -12,3 +12,4 @@
 
 - [Benchmarking methodology: calibrating the shortcut-ordering model](../../../../docs/benchmarking_methodology.rst#calibrating-the-shortcut-ordering-model)
 - [Shortcut ordering and fallback semantics](../../decisions/shortcut-ordering-and-fallback-semantics.md)
+- [Release-batching decisions: the held shortcut-index rebuild](../../decisions/data-format-version-marker-and-release-batching-decisions.md)

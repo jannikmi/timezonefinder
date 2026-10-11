@@ -8,6 +8,7 @@
 - [Cell-local geometry findings](../../decisions/cell-local-geometry-findings.md)
 - [Measured baseline](../../query-performance-measurement-baseline.md)
 - [Improvement sequencing and preconditions](../../improvement-sequencing-and-preconditions.md)
+- [Data-format version-marker and release-batching decisions](../../decisions/data-format-version-marker-and-release-batching-decisions.md)
 
 ## Why it is recorded
 
@@ -32,7 +33,7 @@ Constraints already decided that still apply:
 - **Replace, never add.** The raster fast-path in front of H3 was dropped for spending storage; a candidate is only viable if it replaces the H3 table at no larger footprint in total.
 - **The edge-crossing check.** Any new cell shape must re-run the edge-crossing class that caught the Strait of Malacca defect at resolution 4 before being timed.
 
-If adopted later, the consequences to carry: a `DATA_FORMAT_VERSION` bump and the ordered two-distribution release; `TimezoneFinderL` shares the index; GH-657 closes as moot, GEOM-3 is re-scoped to rectangle predicates, half of PERF-7's reopening condition is met, and FT-3 ceases to depend on an upstream release; LITE-1 is phrased in H3 cells and would need rephrasing.
+If adopted later, the consequences to carry: a `DATA_FORMAT_VERSION` bump and the ordered two-distribution release, which also publishes the rebuild with deterministic shortcut tie order, held for it by the [release-batching decisions](../../decisions/data-format-version-marker-and-release-batching-decisions.md) (a refusal publishes that rebuild instead); `TimezoneFinderL` shares the index; GH-657 closes as moot, GEOM-3 is re-scoped to rectangle predicates, half of PERF-7's reopening condition is met, and FT-3 ceases to depend on an upstream release; LITE-1 is phrased in H3 cells and would need rephrasing.
 
 - **Size:** M for the prototype and its recorded verdict; the migration it may justify is L and is not this item.
 - **Status:** open — the measurement is the item; nothing in `timezonefinder/` changes.

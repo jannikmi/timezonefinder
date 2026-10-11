@@ -44,6 +44,11 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     The work optimizer runs after candidate compilation, against the packed
     geometry the runtime will use. This order preserves the old zone precedence
     wherever that optimizer cannot establish safe coverage and disjointness.
+
+    ``poly_ids`` arrive in set iteration order, so every key is a total order:
+    equal zone vertex totals fall back to the timezone identifier, which does
+    not depend on how the data is laid out or indexed, and equal polygon vertex
+    counts fall back to the polygon id, which never changes a zone answer.
     """
     if len(poly_ids) <= 1:
         return poly_ids
@@ -59,12 +64,15 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
         zone_buckets[zone_id].append(poly_id)
         zone_sizes[zone_id] += int(nr_vertices[poly_id])
 
-    zone_ids_sorted = sorted(zone_buckets, key=zone_sizes.__getitem__)
+    tz_names = data.all_tz_names
+    zone_ids_sorted = sorted(
+        zone_buckets, key=lambda zone_id: (zone_sizes[zone_id], tz_names[zone_id])
+    )
     poly_ids_sorted: list[int] = []
 
     for zone_id in zone_ids_sorted:
         zone_poly_ids = zone_buckets[zone_id]
-        zone_poly_ids.sort(key=nr_vertices.__getitem__)
+        zone_poly_ids.sort(key=lambda poly_id: (int(nr_vertices[poly_id]), poly_id))
         poly_ids_sorted.extend(zone_poly_ids)
 
     return poly_ids_sorted

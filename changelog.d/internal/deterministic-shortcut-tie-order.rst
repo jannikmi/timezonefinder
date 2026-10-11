@@ -1,0 +1,1 @@
+The data converter orders shortcut candidates deterministically: zones with equal per-cell vertex totals are ordered by timezone identifier and equal polygons within a zone by polygon id, so compiling one boundary release twice yields byte-identical shortcut indexes. The packaged data adopts the revised order with its next release.
