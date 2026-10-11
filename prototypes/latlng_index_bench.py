@@ -175,6 +175,12 @@ STRATA = {
     "h3_ambiguous": AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
 }
 RANKING_STRATA = ("random", "on_land")
+# Pairs timed against each other rather than each against the H3 control, for the
+# claims a recommendation makes between two candidates: (challenger, baseline).
+HEAD_TO_HEAD = (
+    ("grid_tree_0_9375deg_4x4_1levels", "equal_area_0_375deg_aligned"),
+    ("grid_tree_0_9375deg_4x4_1levels", "grid_tree_0_9375deg_2x2_2levels"),
+)
 MALACCA_WITNESS = (100.3055, 3.4804)
 WEB_MERCATOR_LIMIT = 85.0511287798066
 
@@ -1720,6 +1726,21 @@ def compact(report: dict) -> dict:
         "file_size_model": report["file_size_model"],
         "h3_indexes": rows,
         "candidates": candidates,
+        "head_to_head": {
+            path: {
+                pair: {
+                    f"{label}_{kind}": [
+                        round(c["best_challenger"] / c["best_baseline"] - 1, 4),
+                        c["challenger_wins"],
+                        c["verdict"],
+                    ]
+                    for label, kinds in result.items()
+                    for kind, c in kinds.items()
+                }
+                for pair, result in pairs.items()
+            }
+            for path, pairs in report.get("head_to_head", {}).items()
+        },
         "elapsed_seconds": report["elapsed_seconds"],
     }
 
@@ -1929,6 +1950,41 @@ def main() -> None:
             finally:
                 control.cleanup()
                 shipped_finder.cleanup()
+        by_name = {index.name: index for index in timed}
+        report["head_to_head"] = {}
+        for path in paths:
+            pairs = {}
+            for challenger, baseline in HEAD_TO_HEAD:
+                if challenger not in by_name or baseline not in by_name:
+                    continue
+                a = finder_on(path, by_name[challenger], IndexFinder)
+                base = finder_on(path, by_name[baseline], IndexFinder)
+                result = {}
+                for label in RANKING_STRATA:
+                    points = fixtures[label][: args.points]
+                    scalar = compare_candidates(
+                        (baseline, scalar_call(base)),
+                        (challenger, scalar_call(a)),
+                        points,
+                        rounds=args.rounds,
+                        batch_size=len(points),
+                    )
+                    batch_inputs = batches(points)
+                    batch = compare_candidates(
+                        (baseline, batch_call(base)),
+                        (challenger, batch_call(a)),
+                        batch_inputs,
+                        rounds=args.rounds,
+                        batch_size=min(len(batch_inputs), 8),
+                    )
+                    result[label] = {
+                        "scalar": comparison(scalar),
+                        "batch_256": comparison(batch),
+                    }
+                pairs[f"{challenger} vs {baseline}"] = result
+                a.cleanup()
+                base.cleanup()
+            report["head_to_head"][path] = pairs
 
     report["elapsed_seconds"] = round(time.perf_counter() - started, 1)
     rendered = json.dumps(report, indent=1) + "\n"
