@@ -19,3 +19,4 @@
 
 - [Documentation source format decisions](../../decisions/documentation-source-format-decisions.md)
 - [Documentation maintenance rules](../../../development/documentation-maintenance-rules.md)
+- [Documentation markup, links and generated pages](../../../development/documentation-markup-links-and-generated-pages.md)

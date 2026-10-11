@@ -1,0 +1,120 @@
+{
+  "feature_mapping": {
+    "active_vertex": "one modeled vertex slot in a latitude-active packed block",
+    "bbox": "one outer PolygonArray.outside_bbox call",
+    "block_probe": "one packed latitude-block range visited by a kernel call",
+    "hole_bbox": "one visited individual-hole bounding box",
+    "hole_lookup": "one HoleArray.ids_of registry lookup after the union box survives",
+    "hole_union_probe": "one HoleArray.any_contains union-box chain",
+    "pip_dispatch": "one outer or hole packed-kernel call"
+  },
+  "latest_recorded_validation": {
+    "acceleration_path": "clang",
+    "calibration_observations": 1016,
+    "cpu": "Apple M1 Pro",
+    "data_version": "2026d",
+    "date": "2026-10-09",
+    "decision": "retain the production coefficients in this change; the fitted order is faster on every seed in the cells it changes, but those cells take 0.2-1.8% of fixture queries, so adoption waits for the next shortcut-index rebuild (PERF-10)",
+    "fitted_coefficients_ns": {
+      "active_vertex": 1.143124838799024,
+      "bbox": 133.7607681468201,
+      "block_probe": 0.5160658056604961,
+      "hole_bbox": 100.24162201961808,
+      "hole_lookup": 258.3551341105951,
+      "hole_union_probe": 54.306183060667244,
+      "pip_dispatch": 446.2685200264443
+    },
+    "fixture_version": 3,
+    "held_out_median_absolute_error_ns": 32.20364801718824,
+    "held_out_observations": 359,
+    "held_out_p95_absolute_error_ns": 109.28555337080921,
+    "ordering": {
+      "area_only": {
+        "best_round_change_range": [
+          0.44230300296921565,
+          0.46120242409677803
+        ],
+        "changed_area_share_of_sphere": 0.0027427219529230786,
+        "changed_cells": 788,
+        "eligible_cells": 30439,
+        "fixture_query_share_in_changed_cells": {
+          "ambiguous_shortcut": 0.025,
+          "on_land": 0.0047,
+          "random": 0.0026,
+          "unique_shortcut": 0.0
+        },
+        "median_best_round_change": 0.4551014367322541,
+        "modeled_change_ns_per_query": {
+          "fitted": 1002.685117001811,
+          "production": 1205.415228426396
+        },
+        "points": 15760,
+        "verdicts": {
+          "slower": 8
+        }
+      },
+      "calibrated": {
+        "best_round_change_range": [
+          -0.040077324156838956,
+          -0.03318641423253865
+        ],
+        "changed_area_share_of_sphere": 0.0022617232414136163,
+        "changed_cells": 646,
+        "eligible_cells": 30439,
+        "fixture_query_share_in_changed_cells": {
+          "ambiguous_shortcut": 0.0176,
+          "on_land": 0.0042,
+          "random": 0.0024,
+          "unique_shortcut": 0.0
+        },
+        "median_best_round_change": -0.034514455907521835,
+        "modeled_change_ns_per_query": {
+          "fitted": -71.52503059034818,
+          "production": 84.21950464396285
+        },
+        "points": 12920,
+        "verdicts": {
+          "faster": 8
+        }
+      }
+    },
+    "production_coefficients": {
+      "active_vertex": 1,
+      "bbox": 160,
+      "block_probe": 1,
+      "hole_bbox": 120,
+      "hole_lookup": 120,
+      "hole_union_probe": 80,
+      "pip_dispatch": 700
+    },
+    "reproduce": "make shortcut-calibration, or dispatch benchmark.yml with calibrate_shortcuts=true; then make shortcut-calibration-record",
+    "storage_mode": "mapped"
+  },
+  "production_coefficients": {
+    "active_vertex": 1,
+    "bbox": 160,
+    "block_probe": 1,
+    "hole_bbox": 120,
+    "hole_lookup": 120,
+    "hole_union_probe": 80,
+    "pip_dispatch": 700
+  },
+  "reference_policy": {
+    "primary_environment": "clang C extension with mapped polygon data on GitHub ubuntu-latest",
+    "production_updates": "reviewed source changes only; calibration artifacts never rewrite coefficients",
+    "supporting_environments": [
+      "clang C extension with in-memory polygon data",
+      "numba with mapped and in-memory polygon data",
+      "pure-Python fallback with mapped polygon data"
+    ],
+    "validation": "fit on a deterministic 75% cell partition; re-order every ambiguous cell the fit never saw, and compare whole public calls on uniform points in the cells that change",
+    "when_to_rerun": "after a change to the predicate path, the packed kernels or the coefficients, and after a boundary data update; ordering never changes an answer, so CI does not gate on it"
+  },
+  "schema_version": 2,
+  "structural_limitations": [
+    "The geometric proxy conservatively charges the outer PIP on points that terminate successfully inside a hole; the runtime does not.",
+    "The geometric proxy charges every individual hole in a surviving union box; runtime traversal stops after the first matching hole.",
+    "One constant set cannot represent backend, storage, cache, branch, or early kernel termination effects; reports retain residuals and environment provenance instead of forcing those effects into coefficients.",
+    "The active_vertex feature uses POLYGON_BLOCK_SIZE slots for a latitude-active block, including a ragged final block, matching the production proxy rather than claiming an exact edge count."
+  ]
+}
