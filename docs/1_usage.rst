@@ -394,9 +394,7 @@ Roughly 1 % of points on land fall in two zones.
     Where *no* candidate polygon contains the point, this returns the one zone
     ``timezone_at()`` answers there - which that method returns without testing it - rather
     than an empty list, so the two still agree.
-    The packaged data's ocean zones make that unreachable except exactly on a polygon edge
-    or at the poles; custom data leaving areas uncovered reaches it everywhere those areas
-    are.
+    The packaged data's ocean zones make that unreachable except on the ``lng=-180.0`` meridian and at the exact South Pole, where no polygon contains a point, and in any sliver the stored boundaries of two neighbouring zones leave between them; custom data leaving areas uncovered reaches it everywhere those areas are.
     ``certain_timezone_at()`` is the lookup that reports "none" in that case.
 
 
@@ -463,13 +461,7 @@ Using a TimezoneFinder instance:
 
 .. note::
 
-    A coordinate exactly on the edge of a timezone polygon has no guaranteed
-    answer. The point-in-polygon test may assign either neighbouring zone or no
-    polygon, so ``certain_timezone_at()`` may return ``None`` even though the
-    packaged data otherwise covers the globe. The exact South Pole
-    (``lat=-90.0``, at any longitude) is a reproducible example because polygon
-    vertices meet there. The same ambiguity applies at ``lng=+-180.0``, where
-    the dataset is cropped at the antimeridian.
+    A coordinate exactly on the edge of a timezone polygon has no guaranteed answer. On a border two zones share, the point-in-polygon test gives the point to one of them, which need not be the zone you expect. On the ``lng=-180.0`` meridian, where the dataset is cropped at the antimeridian, and at the exact South Pole (``lat=-90.0``, at any longitude) it gives the point to no polygon at all, so ``certain_timezone_at()`` returns ``None`` there even though the packaged data otherwise covers the globe. ``lng=180.0`` and ``lat=90.0`` have no such gap.
 
     Such a point is still answered deterministically - the same input gives the
     same output - it is simply not guaranteed to be the zone you expect. See

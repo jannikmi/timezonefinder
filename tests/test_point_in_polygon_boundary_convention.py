@@ -39,7 +39,7 @@ import numpy as np
 import pytest
 from shapely import Point, Polygon
 
-from timezonefinder import utils, utils_clang, utils_numba
+from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder._block_index import block_latitude_ranges
 from timezonefinder.block_payload import (
     block_vertex_counts,
@@ -140,7 +140,9 @@ def _python(function: Callable) -> Callable:
     """The interpreted form of a ``utils_numba`` kernel, whether or not numba compiled it.
 
     It is the backend of an install with neither numba nor the C extension, and the one
-    whose integer arithmetic numba does not cast - so it is tested in its own right.
+    whose integer arithmetic numba does not cast - so it is tested in its own right. With
+    numba installed the helpers it calls stay compiled; the test environments without
+    numba run it wholly interpreted.
     """
     return getattr(function, "py_func", function)
 
@@ -318,3 +320,33 @@ def test_polygons_sharing_a_boundary_never_both_own_a_point_on_it(kernel_name: s
         f"{kernel_name}: lattice points of the tiled square owned by the wrong number "
         f"of tiles, first {wrong[:5]}"
     )
+
+
+# The ocean zones are 15° sectors bordering each other along these meridians; at these
+# latitudes two of them meet along a straight north-south line far from any land.
+SECTOR_BORDERS = [-172.5, -97.5, -37.5, -7.5, 7.5, 82.5, 142.5, 172.5]
+OPEN_OCEAN_LATITUDES = [-50.0, -40.0]
+# far enough off a border to be in one zone, and well inside the coordinate grid
+OFF_BORDER = 1e-6
+
+
+@pytest.fixture(scope="module")
+def finder() -> TimezoneFinder:
+    return TimezoneFinder(in_memory=True)
+
+
+@pytest.mark.parametrize("lat", OPEN_OCEAN_LATITUDES)
+@pytest.mark.parametrize("lng", [*SECTOR_BORDERS, 180.0])
+def test_a_lookup_gives_a_point_on_a_zone_border_to_the_zone_west_of_it(
+    finder: TimezoneFinder, lng: float, lat: float
+):
+    """The rule through the whole lookup rather than one kernel: the shortcut index has to
+    offer the western zone, the bounding-box filter keep it, and the kernel the lookup is
+    bound to own the point - on borders the packaged data really has, and on +180°."""
+    west = finder.certain_timezone_at(lng=lng - OFF_BORDER, lat=lat)
+    assert west is not None
+    assert finder.certain_timezone_at(lng=lng, lat=lat) == west
+    assert finder.timezone_at(lng=lng, lat=lat) == west
+    if lng < 180.0:
+        # otherwise the meridian is no border here, and the assertions above say nothing
+        assert finder.certain_timezone_at(lng=lng + OFF_BORDER, lat=lat) != west
