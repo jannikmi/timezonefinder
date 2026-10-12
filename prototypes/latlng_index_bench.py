@@ -5,107 +5,69 @@
 FINDINGS (2026-10-11, Apple M1 Pro, Python 3.14.2, data 2026d, fixture set v3)
 ==============================================================================
 
-**An aligned grid tree beats the resolution-4 H3 index on every axis measured here, at
-less than H3's footprint.** The recommended shape - a dense grid of 0.9375-degree root
-cells whose cells several zones can own refine into one level of 4x4 blocks - takes
-507 KB on disk and in memory against H3's 617 KB and 1,031 KB, tests 57 % and 42 %
-fewer polygons per random and on-land query than an H3 control ordered by the same
-converter rule, and agrees with the full lookup as ``TimezoneFinderL`` on 97.6 / 93.7 %
-of points (shipped H3 95.8 / 90.0 %). Whole ``timezone_at`` calls are 29-30 % faster on
-random points and 26-28 % on land, 256-point batches 71-72 % and 59-61 %, every round
-won on clang and numba alike; timed head to head it is also 6.5-12 % faster per call
-than the flat equal-area grid of H3's size. The scalar win is the removed ``h3.latlng_to_cell`` call, the
-batch win that a grid cell vectorises and an H3 cell does not.
+**An aligned grid tree beats the resolution-4 H3 index on every axis measured, at less
+than H3's footprint; adopting it is IDX-2, decided 2026-10-12.** The chosen shape - a
+dense grid of 0.9375-degree root cells whose cells several zones can own refine into one
+level of 4x4 blocks - takes 507 KB on disk and in memory against H3's 617 KB and
+1,031 KB, tests 57 % and 42 % fewer polygons per random and on-land query than an H3
+control ordered by the same converter rule, and agrees with the full lookup as
+``TimezoneFinderL`` on 97.6 / 93.7 % of points (shipped H3 95.8 / 90.0 %). Whole
+``timezone_at`` calls are 29-30 % faster on random points and 26-28 % on land, 256-point
+batches 71-72 % and 59-61 %, every round won on clang and numba alike; head to head it
+is 6.5-12 % faster per call than the flat equal-area grid of H3's size. The scalar win is
+the removed ``h3.latlng_to_cell`` call, the batch win that a grid cell vectorises.
 
-**What makes it work: exact cells, alignment, then spending bytes only at borders.**
-Cells follow the kernel's own edge rule (a polygon owns its east and north boundary,
-never its west or south), so a zone across a cell edge is not a candidate; a
-touch-inclusive control loses about 8 points of random scalar speed to it. Alignment
-pays most on the ocean meridians: unaligned grids of the same size test 14-24 % more
-polygons per random query. A flat grid then pays 2 bytes for every cell, ocean
-included, while the tree reaches 0.234-degree cells where borders are. The tree's
-lookup has to be unrolled per depth: a generic loop over its levels cost ~280 ns more
-per lookup and lost to a flat grid.
+**What makes it work: exact cells, alignment, bytes only at borders, an unrolled
+lookup.** Cells follow the kernel's own edge rule (a polygon owns its east and north
+boundary, never its west or south), so a zone across a cell edge is not a candidate; a
+touch-inclusive control gives up about 8 points of random scalar speed. Unaligned grids
+of the same size test 14-24 % more polygons per random query. A flat grid pays 2 bytes
+for every cell, ocean included; the tree reaches 0.234-degree cells only where borders
+are. A generic loop over the tree's levels cost ~280 ns more per lookup than the
+unrolled one and lost to a flat grid.
 
-**What does not carry.** Linear quadtrees - ``node-geo-tz``'s world quadrants and a
-7.5-degree-rooted variant - find a leaf by ``bisect``, which costs more than the H3 call:
-the rooted one at depth 5 makes exactly the recommended tree's polygon tests at 757 KB
-and is 10-16 % slower per scalar call than H3. ``tzf-rs``'s tile pyramid probes one
-binary search per zoom and is 2.4-2.7x slower per scalar call. The item's two-tier split
-is larger than the grid it splits and tests a third more polygons. A 2026-09-26 run
-that used touch-inclusive flat grids and a slower lookup judged them slower than H3.
-
-**Correctness.** All 34 gated candidates and controls gave the control's answer for the
-30,000 fixture points (289 of them in two overlapping zones), for points on and one
+**Correctness.** All 34 candidates gated in the 2026-10-11 run gave the control's answer
+for 30,000 fixture points (289 of them in two overlapping zones), for points on and one
 unit either side of their own cell edges, and on the 7.5-degree and whole-degree lines
-borders follow, on both kernels, through both the scalar and the batch path. The only
-disagreements are points on the -180 meridian and the -90 parallel, which no polygon
-owns, so both indexes answer the "last remaining zone" fallback there. Every candidate
-offers the Strait of Malacca witness's polygon. The verdict, with what it trades away
-and leaves unpriced, is in
-``contributing/improvements/decisions/shortcut-index-cell-shape-and-resolution-decisions.md``.
-No measurement file is committed: ``--compact-output`` writes every candidate's numbers
-in about 80 s, the counts exactly and the times for the machine it runs on.
+borders follow, on both kernels and both the scalar and the batch path, except points on
+the -180 meridian and the -90 parallel, which no polygon owns.
+
+That run also priced linear quadtrees, ``tzf-rs``'s tile pyramid, a two-tier split and
+three-level trees; their code has since been dropped from this script, and their
+numbers and refusals are in
+``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``.
+``--output`` writes every remaining candidate's numbers in about a minute: the counts
+exactly, the times for the machine it runs on.
 
 METHOD
 ======
 
 Every candidate is compiled from the packaged boundaries and answers through the real
 ``TimezoneFinder`` query path: :class:`IndexFinder` replaces only the two H3 lines of
-``timezone_at`` and of the batch prologue with the candidate's cell lookup, and inherits
-everything else, including the candidate loop and its stop index.
+``timezone_at`` and of the batch prologue with the candidate's cell lookup.
 
-What makes the comparison fair, and why each choice was made:
+* **One ordering policy, the converter's own.** Candidate lists are ordered by
+  ``scripts.shortcuts.optimise_shortcut_ordering`` itself, called on a sorted input. The
+  baseline is an **H3 control**: the shipped candidate sets re-ordered by that policy and
+  written and read back through the real shortcut file functions, because the shipped
+  index also carries the converter's H3-specific work optimizer.
+* **Exact cells.** A cell is computed from the truncated integer coordinates the kernel
+  reads and owns its east and north edges, the kernel's own convention. A polygon is a
+  candidate only if it can own one of the cell's integer points: an interior
+  intersection with the cell's box shifted half a unit south-west. The gate's boundary
+  probes test exactly this, on both kernels.
+* **The shipped layout's sizes.** One ``int16`` per cell, distinct candidate lists once
+  each in the narrowest widths, and the 40-byte header; the same arithmetic reproduces
+  the shipped ``shortcuts.bin`` to the byte.
+* **The family is swept**, equal-angle and equal-area grids, aligned and not, and grid
+  trees of several shapes, with the recommendation also timed head to head against its
+  rivals.
 
-* **One ordering policy for every index, the converter's own.** Candidate lists are
-  ordered by ``scripts.shortcuts.optimise_shortcut_ordering`` itself (zone vertex totals,
-  ties by timezone identifier), called on a sorted input, never by a copy of it. The
-  shipped H3 index additionally carries the converter's geometric work optimizer, which
-  is H3-specific, so it is **not** the baseline: the baseline is an **H3 control** that is
-  the shipped candidate sets re-ordered by that same policy and written and read back
-  through the real shortcut file functions. The shipped index is measured against the
-  control separately, which states what the work optimizer adds and therefore what a
-  grid would still have to gain from a port of it.
-* **Cells are exact, not padded.** A cell is computed from the same truncated integer
-  coordinates the point-in-polygon kernel reads, and owns its east and north edges,
-  because that is the kernel's own convention: a point on a shared vertical edge is
-  inside the polygon to its west, on a shared horizontal edge inside the one to its
-  south, and no polygon ever contains a point on its own south or west boundary. A
-  polygon is a candidate of a cell only if it can own one of the cell's integer points,
-  which reduces to an interior intersection with the cell's box shifted half a unit
-  south-west. So a cell bordered by an ocean meridian or a surveyed parallel is not made
-  ambiguous by the zone on the far side of that line, which is the whole value of
-  aligning an index with longitude and latitude. The boundary probes in the correctness
-  gate test exactly this claim, on both kernels.
-* **Sizes are the shipped layout's.** One ``int16`` per cell, distinct candidate lists
-  once each in the narrowest offset and stop-index widths, and the 40-byte header: the
-  same arithmetic reproduces the shipped ``shortcuts.bin`` to the byte before any
-  candidate is priced. H3 stores ``122 * 7**4`` cells on disk and ``122 * 8**4`` resident;
-  a dense grid stores the same cells in both, so a grid with H3's cell count is H3's
-  file size at about half its resident table.
-* **Each lookup is the cheapest correct form of its own structure** in this Python
-  reader: grids are integer arithmetic and one table read; sparse structures probe a
-  ``memoryview`` with ``bisect``, the mapped-capable form (a scalar ``np.searchsorted``
-  costs tens of microseconds and a Python list is not mapped). Batches are vectorised
-  for every candidate, never a per-point loop.
-* **The family is swept, not one point.** Equal-angle grids, equal-area banded grids,
-  the quadtree ``node-geo-tz`` uses (world quadrants, subdivided to a depth), the same
-  quadtree under 7.5-degree root cells, grid trees (an aligned dense grid whose
-  ambiguous cells refine into fixed blocks, addressed by arithmetic at every level, added
-  at the maintainer's request), and ``tzf-rs``'s preindex (exact Web Mercator
-  tiles at zooms 3-10 probed coarsest first, over a 1-degree candidate grid), at several
-  sizes each, plus the item's two-tier split. Alignment is a parameter of the sweep:
-  7.5-degree columns follow the ocean zones' meridians, whole degrees follow many
-  surveyed land borders, and the controls follow neither.
-
-What it does not do: certify coverage beyond the sampled gate; time a native reader for
-the sparse structures (their Python probe cost is the cost this package would pay); time
-``TimezoneFinderL`` (its agreement with the full lookup is counted); or measure loading,
-construction or ``make memory``.
+It does not certify coverage beyond the sampled gate, time ``TimezoneFinderL``, or
+measure loading, construction or ``make memory``.
 """
 
 import argparse
-import bisect
 import json
 import math
 import platform
@@ -178,7 +140,6 @@ HEAD_TO_HEAD = (
     ("grid_tree_0_9375deg_4x4_1levels", "grid_tree_0_9375deg_2x2_2levels"),
 )
 MALACCA_WITNESS = (100.3055, 3.4804)
-WEB_MERCATOR_LIMIT = 85.0511287798066
 
 F = float(COORD2INT_FACTOR)
 SCALE = int(COORD2INT_FACTOR)
@@ -191,7 +152,6 @@ KX = X0 - 1
 KY = Y0 - 1
 OCEAN_MERIDIAN = 75 * SCALE // 10  # 7.5 degrees, where the Etc/GMT ocean zones meet
 DEGREE = SCALE
-MISS = -2  # two-tier exact layer: "ask the fallback"
 
 
 # --- the converter's ordering, on the finder's arrays ---------------------------------
@@ -524,225 +484,6 @@ def build_grid(
     return index
 
 
-class LinearQuadtree(ShortcutIndex):
-    """A quadtree under a grid of root cells, its leaves one sorted array of keys.
-
-    A leaf at any depth covers a contiguous run of Morton codes at the maximum depth, so
-    the leaves of a root partition its code range and one ``bisect`` finds the leaf. The
-    key is ``root << 2 * depth | code``; ``directory`` gives each root's leaf range, and
-    a root that is a single leaf - most of the ocean - needs no search at all. ``table``
-    holds one value per leaf, in the H3 table's tri-state.
-    """
-
-    __slots__ = (
-        "name",
-        "family",
-        "params",
-        "roots_x",
-        "depth",
-        "nx",
-        "ny",
-        "keys",
-        "_keys_view",
-        "_directory",
-        "_directory_array",
-        "_spread",
-        "_spread_array",
-        "_mask",
-    )
-
-    def cell_entry(self, lng: float, lat: float) -> int:
-        col = ((int(lng * F) + X0) * self.nx - 1) // X_SPAN
-        row = ((int(lat * F) + Y0) * self.ny - 1) // Y_SPAN
-        if col < 0:
-            col = 0
-        if row < 0:
-            row = 0
-        depth = self.depth
-        root = (row >> depth) * self.roots_x + (col >> depth)
-        lo = self._directory[root]
-        hi = self._directory[root + 1]
-        if hi - lo == 1:
-            return int(self.table[lo])
-        mask = self._mask
-        spread = self._spread
-        key = (root << (2 * depth)) | spread[col & mask] | (spread[row & mask] << 1)
-        return int(self.table[bisect.bisect_right(self._keys_view, key, lo, hi) - 1])
-
-    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
-        cols = (((lngs * F).astype(np.int64) + X0) * self.nx - 1) // X_SPAN
-        rows = (((lats * F).astype(np.int64) + Y0) * self.ny - 1) // Y_SPAN
-        np.maximum(cols, 0, out=cols)
-        np.maximum(rows, 0, out=rows)
-        depth = self.depth
-        roots = (rows >> depth) * self.roots_x + (cols >> depth)
-        keys = (
-            (roots << (2 * depth))
-            | self._spread_array[cols & self._mask]
-            | (self._spread_array[rows & self._mask] << 1)
-        )
-        leaves = np.searchsorted(self.keys, keys.astype(self.keys.dtype), "right") - 1
-        return self.table[leaves]
-
-    @property
-    def cells(self) -> int:
-        return len(self.table)
-
-    @property
-    def payload_bytes(self) -> int:
-        return (
-            _HEADER_SIZE
-            + self.table.nbytes
-            + self.keys.nbytes
-            + self._directory_array.nbytes
-            + entries_file_bytes(self)
-        )
-
-    @property
-    def resident_bytes(self) -> int:
-        return (
-            self.table.nbytes
-            + self.keys.nbytes
-            + self._directory_array.nbytes
-            + self._spread_array.nbytes
-            + entries_resident_bytes(self)
-        )
-
-    def edge_points(
-        self, rng: np.random.Generator, count: int
-    ) -> list[tuple[int, int]]:
-        """Integer points on the edges of randomly chosen leaves (any leaf, any depth)."""
-        first_x, last_x = ranges(self.nx, X_SPAN, X0)
-        first_y, last_y = ranges(self.ny, Y_SPAN, Y0)
-        keys = self.keys.astype(np.int64)
-        points = []
-        for leaf in rng.integers(0, len(keys), count // 2).tolist():
-            root, code = divmod(int(keys[leaf]), 1 << (2 * self.depth))
-            col = row = 0
-            for bit in range(self.depth):
-                col |= ((code >> (2 * bit)) & 1) << bit
-                row |= ((code >> (2 * bit + 1)) & 1) << bit
-            col += (root % self.roots_x) << self.depth
-            row += (root // self.roots_x) << self.depth
-            # the leaf's south-west depth-D cell: probe its west and south edges
-            points.append(
-                (
-                    int(first_x[col]) - 1,
-                    int(rng.integers(first_y[row], last_y[row] + 1)),
-                )
-            )
-            points.append(
-                (
-                    int(rng.integers(first_x[col], last_x[col] + 1)),
-                    int(first_y[row]) - 1,
-                )
-            )
-        return points
-
-
-def _spread_bits(depth: int) -> np.ndarray:
-    """Each ``depth``-bit value with a zero bit after every bit: half a Morton code."""
-    values = np.arange(1 << depth, dtype=np.int64)
-    spread = np.zeros_like(values)
-    for bit in range(depth):
-        spread |= ((values >> bit) & 1) << (2 * bit)
-    return spread.astype(np.uint32)
-
-
-def build_quadtree(
-    name: str,
-    family: str,
-    roots_x: int,
-    roots_y: int,
-    depth: int,
-    polygons: np.ndarray,
-    data: OrderingInput,
-) -> LinearQuadtree:
-    """Subdivide a node while it has candidates from several zones that it can separate.
-
-    A node is a leaf when one zone (or none) can own its points, when every candidate
-    covers the whole node - an overlap no subdivision can resolve - or at ``depth``.
-    """
-    spread = _spread_bits(depth)
-    packer = EntryPacker(data)
-    leaf_keys: list[int] = []
-    leaf_values: list[int] = []
-    gx = np.repeat(np.arange(roots_x, dtype=np.int64), roots_y)
-    gy = np.tile(np.arange(roots_y, dtype=np.int64), roots_x)
-    for level in range(depth + 1):
-        nx = roots_x << level
-        ny = roots_y << level
-        first_x, last_x = ranges(nx, X_SPAN, X0)
-        first_y, last_y = ranges(ny, Y_SPAN, Y0)
-        ix0, ix1 = first_x[gx], last_x[gx]
-        iy0, iy1 = first_y[gy], last_y[gy]
-        cell_idx, poly_idx = owned_pairs(polygons, ix0, iy0, ix1, iy1)
-        split = np.zeros(len(gx), dtype=bool)
-        values = np.full(len(gx), ABSENT, dtype=np.int64)
-        multi: dict[int, np.ndarray] = {}
-        for cell, polys, single in grouped(cell_idx, poly_idx, data.poly_zone_ids):
-            if single >= 0:
-                values[cell] = single
-            else:
-                multi[cell] = polys
-        if multi and level < depth:
-            cells = np.fromiter(multi, dtype=np.int64, count=len(multi))
-            lengths = [len(multi[c]) for c in cells.tolist()]
-            pair_cells = np.repeat(cells, lengths)
-            pair_polys = np.concatenate([multi[c] for c in cells.tolist()])
-            boxes = shapely.box(ix0 - 0.5, iy0 - 0.5, ix1, iy1)
-            covers = shapely.covers(polygons[pair_polys], boxes[pair_cells])
-            all_cover = np.logical_and.reduceat(
-                covers, np.r_[0, np.cumsum(lengths)[:-1]]
-            )
-            split[cells[~all_cover]] = True
-        for cell, polys in multi.items():
-            if not split[cell]:
-                values[cell] = packer.list_value(polys)
-        shift = depth - level
-        for cell in np.flatnonzero(~split).tolist():
-            col = int(gx[cell]) << shift
-            row = int(gy[cell]) << shift
-            root = (row >> depth) * roots_x + (col >> depth)
-            mask = (1 << depth) - 1
-            code = int(spread[col & mask]) | (int(spread[row & mask]) << 1)
-            leaf_keys.append((root << (2 * depth)) | code)
-            leaf_values.append(int(values[cell]))
-        children_x = gx[split]
-        children_y = gy[split]
-        gx = np.concatenate([2 * children_x + dx for dx in (0, 1) for _ in (0, 1)])
-        gy = np.concatenate([2 * children_y + dy for _ in (0, 1) for dy in (0, 1)])
-    order = np.argsort(leaf_keys, kind="stable")
-    keys = np.asarray(leaf_keys, dtype=np.int64)[order]
-    key_dtype = narrowest_dtype_for(int(keys[-1]), what="leaf key")
-    keys = keys.astype(key_dtype)
-    table = table_value(np.asarray(leaf_values, dtype=np.int64)[order])
-    roots = (keys.astype(np.int64) >> (2 * depth)).astype(np.int64)
-    directory = np.searchsorted(roots, np.arange(roots_x * roots_y + 1)).astype(
-        np.uint32
-    )
-    bounds, payload, last = packer.arrays()
-    index = LinearQuadtree(table, bounds[:-1], bounds[1:], last, payload)
-    index.name = name
-    index.family = family
-    index.params = {"roots": [roots_x, roots_y], "depth": depth}
-    index.roots_x = roots_x
-    index.depth = depth
-    index.nx = roots_x << depth
-    index.ny = roots_y << depth
-    keys.flags.writeable = False
-    index.keys = keys
-    index._keys_view = memoryview(keys)
-    for array in (directory, spread):
-        array.flags.writeable = False
-    index._directory = memoryview(directory)
-    index._directory_array = directory
-    index._spread = memoryview(spread)
-    index._spread_array = spread
-    index._mask = (1 << depth) - 1
-    return index
-
-
 class GridTree(ShortcutIndex):
     """A dense aligned grid whose ambiguous cells refine into k x k child blocks.
 
@@ -767,10 +508,8 @@ class GridTree(ShortcutIndex):
         "w0",
         "w1",
         "w2",
-        "w3",
         "b1",
         "b2",
-        "b3",
         "widths",
         "_block_arrays",
     )
@@ -872,35 +611,6 @@ class GridTree2(GridTree):
         return self.b2[(-2 - v) * self.kk + ((y // w) & km) * k + ((x // w) & km)]
 
 
-class GridTree3(GridTree):
-    __slots__ = ()
-
-    def cell_entry(self, lng: float, lat: float) -> int:
-        x = int(lng * F) + KX
-        y = int(lat * F) + KY
-        if x < 0:
-            x = 0
-        if y < 0:
-            y = 0
-        w = self.w0
-        v = int(self.table[(y // w) * self.columns + x // w])
-        if v >= -1:
-            return v
-        w = self.w1
-        km = self.km
-        k = self.k
-        kk = self.kk
-        v = self.b1[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
-        if v >= -1:
-            return v
-        w = self.w2
-        v = self.b2[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
-        if v >= -1:
-            return v
-        w = self.w3
-        return self.b3[(-2 - v) * kk + ((y // w) & km) * k + ((x // w) & km)]
-
-
 def build_grid_tree(
     name: str,
     root_columns: int,
@@ -910,8 +620,8 @@ def build_grid_tree(
     data: OrderingInput,
 ) -> GridTree:
     """Evaluate level by level; refine every cell several zones can own, to ``levels``."""
-    if k & (k - 1) or not 1 <= levels <= 3:
-        raise ValueError(f"{name}: k must be a power of two and levels 1-3")
+    if k & (k - 1) or not 1 <= levels <= 2:
+        raise ValueError(f"{name}: k must be a power of two and levels 1-2")
     widths = []
     for level in range(levels + 1):
         n = root_columns * k**level
@@ -955,7 +665,7 @@ def build_grid_tree(
         return array
 
     bounds, payload, last = packer.arrays()
-    cls = {1: GridTree1, 2: GridTree2, 3: GridTree3}[levels]
+    cls = {1: GridTree1, 2: GridTree2}[levels]
     tree = cls(narrow(arrays[0]), bounds[:-1], bounds[1:], last, payload)
     tree.name = name
     tree.family = "grid tree"
@@ -970,205 +680,10 @@ def build_grid_tree(
     tree.widths = widths
     tree.w0, tree.w1 = widths[0], widths[1]
     tree.w2 = widths[2] if levels >= 2 else 0
-    tree.w3 = widths[3] if levels >= 3 else 0
     tree._block_arrays = [narrow(a) for a in arrays[1:]]
-    views = [memoryview(a) for a in tree._block_arrays] + [None, None]
-    tree.b1, tree.b2, tree.b3 = views[0], views[1], views[2]
+    views = [memoryview(a) for a in tree._block_arrays] + [None]
+    tree.b1, tree.b2 = views[0], views[1]
     return tree
-
-
-class TilePyramid:
-    """``tzf-rs``'s preindex: exact Web Mercator tiles probed coarsest first, then a grid.
-
-    Its embedded finder's layout: one sorted key array, each zoom a contiguous range,
-    one binary search per zoom until a hit. Tiles are found from the float coordinates
-    as ``tzf``'s ``tile_xy`` does, so their edges cannot follow the integer grid and are
-    built conservatively (padded two units, touching counts). Only exact tiles are kept;
-    every miss and everything beyond the Mercator limit goes to the fallback grid, whose
-    candidate lists are polygons owning a point of the cell - more selective than
-    ``tzf``'s zones-by-bounding-box, which flatters the scheme.
-    """
-
-    def __init__(self, name, family, params, zooms, keys, values, fallback):
-        self.name = name
-        self.family = family
-        self.params = params
-        self.fallback = fallback
-        self.max_zoom = zooms[-1]
-        self.keys = keys
-        self.values = values
-        self._keys_view = memoryview(keys)
-        self.bits = self.max_zoom
-        self.levels = []
-        for zoom in zooms:
-            lo, hi = np.searchsorted(keys >> (2 * self.bits), [zoom, zoom + 1])
-            self.levels.append((zoom, self.max_zoom - zoom, int(lo), int(hi)))
-        # the slots TimezoneFinder reaches through `shortcuts`
-        self.candidates_of = fallback.candidates_of
-        self.stop_index_of = fallback.stop_index_of
-
-    def _tile(self, lng: float, lat: float) -> tuple[int, int]:
-        n = 1 << self.max_zoom
-        tx = int((lng / 360.0 + 0.5) * n)
-        if tx >= n:
-            tx = n - 1
-        siny = math.sin(lat * (math.pi / 180.0))
-        ty = int((0.5 - math.log((1.0 + siny) / (1.0 - siny)) / (4.0 * math.pi)) * n)
-        if ty >= n:
-            ty = n - 1
-        return tx, ty
-
-    def cell_entry(self, lng: float, lat: float) -> int:
-        if -WEB_MERCATOR_LIMIT <= lat <= WEB_MERCATOR_LIMIT:
-            tx, ty = self._tile(lng, lat)
-            keys = self._keys_view
-            bits = self.bits
-            for zoom, shift, lo, hi in self.levels:
-                key = (zoom << (2 * bits)) | ((tx >> shift) << bits) | (ty >> shift)
-                i = bisect.bisect_left(keys, key, lo, hi)
-                if i < hi and keys[i] == key:
-                    return int(self.values[i])
-        return self.fallback.cell_entry(lng, lat)
-
-    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
-        out = self.fallback.cell_entries(lngs, lats).copy()
-        inside = np.flatnonzero(np.abs(lats) <= WEB_MERCATOR_LIMIT)
-        n = 1 << self.max_zoom
-        tx = np.minimum(((lngs[inside] / 360.0 + 0.5) * n).astype(np.int64), n - 1)
-        siny = np.sin(np.radians(lats[inside]))
-        ty = ((0.5 - np.log((1.0 + siny) / (1.0 - siny)) / (4.0 * np.pi)) * n).astype(
-            np.int64
-        )
-        np.clip(ty, 0, n - 1, out=ty)
-        open_ = np.ones(len(inside), dtype=bool)
-        for zoom, shift, lo, hi in self.levels:
-            todo = np.flatnonzero(open_)
-            if not len(todo) or lo == hi:
-                continue
-            bits = self.bits
-            key = (
-                (zoom << (2 * bits))
-                | ((tx[todo] >> shift) << bits)
-                | (ty[todo] >> shift)
-            )
-            level = self.keys[lo:hi]
-            pos = np.searchsorted(level, key.astype(level.dtype))
-            pos_c = np.minimum(pos, len(level) - 1)
-            hit = level[pos_c] == key
-            out[inside[todo[hit]]] = self.values[lo + pos_c[hit]]
-            open_[todo[hit]] = False
-        return out
-
-    @property
-    def cells(self) -> int:
-        return len(self.keys)
-
-    @property
-    def payload_bytes(self) -> int:
-        # narrowest form: the key fits uint32 (zoom 3-11 needs 26 bits) beside int16
-        # values; tzf-rs's own file spends a uint64 key per tile
-        return (
-            len(self.keys) * (4 + 2)
-            + 8 * len(self.levels)
-            + self.fallback.payload_bytes
-        )
-
-    @property
-    def tzf_layout_payload_bytes(self) -> int:
-        return len(self.keys) * (8 + 2) + self.fallback.payload_bytes
-
-    @property
-    def resident_bytes(self) -> int:
-        return self.keys.nbytes + self.values.nbytes + self.fallback.resident_bytes
-
-    def edge_points(
-        self, rng: np.random.Generator, count: int
-    ) -> list[tuple[int, int]]:
-        return self.fallback.edge_points(rng, count)
-
-
-def build_pyramid(
-    name: str,
-    min_zoom: int,
-    max_zoom: int,
-    polygons: np.ndarray,
-    data: OrderingInput,
-    fallback: BandedGrid,
-) -> TilePyramid:
-    tiles = np.array(
-        [(x, y) for x in range(1 << min_zoom) for y in range(1 << min_zoom)],
-        dtype=np.int64,
-    )
-    keys: list[int] = []
-    values: list[int] = []
-    bits = max_zoom
-    for zoom in range(min_zoom, max_zoom + 1):
-        n = 1 << zoom
-        x, y = tiles[:, 0], tiles[:, 1]
-        west = (x / n * 360.0 - 180.0) * F
-        east = ((x + 1) / n * 360.0 - 180.0) * F
-        north = np.degrees(np.arctan(np.sinh(np.pi * (1 - 2 * y / n)))) * F
-        south = np.degrees(np.arctan(np.sinh(np.pi * (1 - 2 * (y + 1) / n)))) * F
-        boxes = shapely.box(west - 2, south - 2, east + 2, north + 2)
-        poly_idx, cell_idx = STRtree(boxes).query(polygons, predicate="intersects")
-        exact = np.zeros(len(tiles), dtype=bool)
-        for cell, _polys, single in grouped(cell_idx, poly_idx, data.poly_zone_ids):
-            if single >= 0:
-                exact[cell] = True
-                keys.append(
-                    (zoom << (2 * bits)) | (int(x[cell]) << bits) | int(y[cell])
-                )
-                values.append(single)
-        if zoom < max_zoom:
-            parents = tiles[~exact]
-            tiles = np.concatenate(
-                [parents * 2 + np.array([dx, dy]) for dx in (0, 1) for dy in (0, 1)]
-            )
-    order = np.argsort(keys)
-    key_array = np.asarray(keys, dtype=np.uint32)[order]
-    value_array = table_value(np.asarray(values, dtype=np.int64)[order])
-    key_array.flags.writeable = False
-    return TilePyramid(
-        name,
-        "tzf-rs tile pyramid",
-        {"zooms": [min_zoom, max_zoom], "fallback": fallback.name},
-        list(range(min_zoom, max_zoom + 1)),
-        key_array,
-        value_array,
-        fallback,
-    )
-
-
-class TwoTier:
-    """The item's split, independent of cell shape: an exact layer before a coarse grid."""
-
-    def __init__(self, name, exact_table, exact: BandedGrid, fallback: BandedGrid):
-        self.name = name
-        self.family = "two-tier split"
-        self.params = {"exact": exact.name, "fallback": fallback.name}
-        self.exact = exact
-        self.exact_table = exact_table
-        self.fallback = fallback
-        self.candidates_of = fallback.candidates_of
-        self.stop_index_of = fallback.stop_index_of
-
-    def cell_entry(self, lng: float, lat: float) -> int:
-        row = (int(lat * F) + KY) // self.exact.row_height
-        col = (int(lng * F) + KX) // self.exact.width
-        value = int(self.exact_table[max(row, 0) * self.exact.columns + max(col, 0)])
-        return value if value != MISS else self.fallback.cell_entry(lng, lat)
-
-    @property
-    def cells(self) -> int:
-        return len(self.exact_table)
-
-    @property
-    def payload_bytes(self) -> int:
-        return self.exact_table.nbytes + self.fallback.payload_bytes
-
-    @property
-    def resident_bytes(self) -> int:
-        return self.exact_table.nbytes + self.fallback.resident_bytes
 
 
 # --- the query path with the H3 prologue swapped out ------------------------------------
@@ -1365,14 +880,9 @@ def edge_probes(
     index, count: int, rng: np.random.Generator
 ) -> list[tuple[float, float]]:
     on_edges = index.edge_points(rng, count // 3)
-    # edge_points lists vertical-edge points first, then horizontal ones, half each;
-    # the quadtree interleaves them, one of each per leaf
-    if isinstance(index, LinearQuadtree):
-        vertical = [i % 2 == 0 for i in range(len(on_edges))]
-    else:
-        half = len(on_edges) // 2
-        vertical = [i < half for i in range(len(on_edges))]
-    return probes(on_edges, vertical)
+    # edge_points lists vertical-edge points first, then horizontal ones, half each
+    half = len(on_edges) // 2
+    return probes(on_edges, [i < half for i in range(len(on_edges))])
 
 
 def border_probes(count: int, rng: np.random.Generator) -> list[tuple[float, float]]:
@@ -1497,17 +1007,10 @@ EQUAL_AREA = (
 GRID_TREES = (
     # root columns (360 / root degrees), block side k, levels below the root
     (192, 4, 1),
-    (192, 2, 3),
     (384, 2, 1),
     (384, 2, 2),
     (384, 4, 1),
     (192, 4, 2),
-    (384, 2, 3),
-)
-QUADTREES = (
-    # family, roots (x, y), depths
-    ("node-geo-tz quadtree", (2, 2), (8, 9, 10)),
-    ("7.5-degree-rooted quadtree", (48, 24), (4, 5, 6)),
 )
 
 
@@ -1516,12 +1019,11 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         return not only or any(o in name for o in only)
 
     indexes: list = []
-    grids: dict[str, BandedGrid] = {}
     specs: dict[str, tuple] = {}
     for width, aligns in EQUAL_ANGLE:
         name = f"equal_angle_{width.replace('.', '_')}deg"
-        # the 0.5-degree grid is also the two-tier split's exact layer
-        if not wanted(name) and width != "0.5":
+        # also built when only its touch-inclusive control is wanted
+        if not (wanted(name) or wanted(f"{name}_touching")):
             continue
         columns = round(360 / float(width))
         rows = round(180 / float(width))
@@ -1536,7 +1038,6 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             data,
         )
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
-        grids[name] = grid
         specs[name] = (grid.family, grid.params, rows, [columns] * rows)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
         if wanted(name):
@@ -1546,7 +1047,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             f"equal_area_{height.replace('.', '_')}deg"
             f"{'_aligned' if aligned else '_unaligned'}"
         )
-        if not wanted(name):
+        if not (wanted(name) or wanted(f"{name}_touching")):
             continue
         rows = round(180 / float(height))
         started = time.perf_counter()
@@ -1561,7 +1062,8 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
         specs[name] = (grid.family, grid.params, rows, counts)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
-        indexes.append(grid)
+        if wanted(name):
+            indexes.append(grid)
     for base in TOUCHING:
         name = f"{base}_touching"
         if base not in specs or not wanted(name):
@@ -1579,17 +1081,6 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         )
         print(f"built {name}: {control.cells:,} cells", flush=True)
         indexes.append(control)
-    for family, (rx, ry), depths in QUADTREES:
-        for depth in depths:
-            tag = "geo_tz" if rx == 2 else "aligned"
-            name = f"quadtree_{tag}_depth{depth}"
-            if not wanted(name):
-                continue
-            started = time.perf_counter()
-            tree = build_quadtree(name, family, rx, ry, depth, polygons, data)
-            tree.params["build_seconds"] = round(time.perf_counter() - started, 1)
-            print(f"built {name}: {tree.cells:,} leaves", flush=True)
-            indexes.append(tree)
     for root_columns, k, levels in GRID_TREES:
         root = f"{360 / root_columns:g}".replace(".", "_")
         name = f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
@@ -1602,151 +1093,12 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             f"built {name}: {tree.cells:,} root cells, blocks {tree.blocks}", flush=True
         )
         indexes.append(tree)
-    if wanted("tzf"):
-        one_degree = build_grid(
-            "equal_angle_1deg",
-            "equal-angle grid",
-            {"width_deg": 1.0, "aligns_with": "whole-degree"},
-            180,
-            [360] * 180,
-            polygons,
-            data,
-        )
-        for max_zoom in (10, 11):
-            name = f"tzf_pyramid_z3_z{max_zoom}_plus_1deg"
-            started = time.perf_counter()
-            pyramid = build_pyramid(name, 3, max_zoom, polygons, data, one_degree)
-            pyramid.params["build_seconds"] = round(time.perf_counter() - started, 1)
-            print(f"built {name}: {pyramid.cells:,} exact tiles", flush=True)
-            indexes.append(pyramid)
-    if wanted("two_tier") and "equal_angle_0_5deg" in grids:
-        exact = grids["equal_angle_0_5deg"]
-        table = np.where(exact.table < ABSENT, MISS, exact.table).astype(TABLE_DTYPE)
-        coarse = build_grid(
-            "equal_angle_1_875deg",
-            "equal-angle grid",
-            {"width_deg": 1.875, "aligns_with": "7.5-degree"},
-            96,
-            [192] * 96,
-            polygons,
-            data,
-        )
-        indexes.append(
-            TwoTier("two_tier_0_5deg_exact_plus_1_875deg", table, exact, coarse)
-        )
     return indexes
-
-
-def compact(report: dict) -> dict:
-    """Every candidate's counts, gate and timings, small enough to read and diff.
-
-    Timing values are ``[best_round_change, challenger_wins, verdict]`` against the H3
-    control; gate values are the disagreements summed over every probe set, per kernel.
-    """
-
-    def counts(strata: dict) -> dict:
-        return {
-            label: {k: round(v, 4) for k, v in strata[label].items() if k != "points"}
-            for label in RANKING_STRATA
-        }
-
-    def timing(name: str) -> dict:
-        return {
-            path: {
-                f"{label}_{kind}": [
-                    round(c["best_challenger"] / c["best_baseline"] - 1, 4),
-                    c["challenger_wins"],
-                    c["verdict"],
-                ]
-                for label, kinds in rows[name].items()
-                for kind, c in kinds.items()
-            }
-            for path, rows in report.get("timing", {}).items()
-            if name in rows
-        }
-
-    def gate_totals(row: dict) -> dict:
-        totals = {}
-        for path, checks in row.get("gate", {}).items():
-            summed: dict[str, int] = {}
-            for check in checks.values():
-                for key, value in check.items():
-                    summed[key] = summed.get(key, 0) + value
-            totals[path] = summed
-        return totals
-
-    rows = {
-        name: {
-            "cells": report[name]["cells"],
-            "payload_bytes": report[name]["payload_bytes"],
-            "resident_bytes": report[name]["resident_bytes"],
-            "counts": counts(report[name]["strata"]),
-        }
-        for name in ("shipped_h3", "h3_control")
-    }
-    rows["shipped_h3"]["timing_against_control"] = timing("shipped_h3")
-    rows["h3_control"]["answers_differing_from_shipped"] = report["h3_control"][
-        "gate_against_shipped"
-    ]
-    candidates = {}
-    for name, row in report["candidates"].items():
-        candidates[name] = {
-            "family": row["family"],
-            "params": {k: v for k, v in row["params"].items() if k != "build_seconds"},
-            "cells": row["cells"],
-            "payload_bytes": row["payload_bytes"],
-            "resident_bytes": row["resident_bytes"],
-            "counts": counts(row["strata"]),
-            "malacca_witness_offered": row["malacca_witness_offered"],
-            "gate_disagreements": gate_totals(row),
-            "timing_against_control": timing(name),
-        }
-        if "tzf_layout_payload_bytes" in row:
-            candidates[name]["tzf_layout_payload_bytes"] = row[
-                "tzf_layout_payload_bytes"
-            ]
-    return {
-        "schema": 2,
-        "created": report["created"],
-        "command": report["command"],
-        "environment": report["environment"],
-        "h3": report["h3"],
-        "methodology": {
-            "counts": "every point of the 10,000-point random and on_land fixtures",
-            "gate": "30,000 fixture points, own cell edges and 7.5-degree/whole-degree "
-            "border lines, each with its neighbours one unit across, on both kernels",
-            "timing": "paired and order-alternated against the H3 control: 31 rounds "
-            "x 2,000 scalar calls, and 31 rounds x 8 batch calls of 256 points",
-            "timing_value": "[best_round_change, challenger_wins_of_31, verdict]",
-        },
-        "file_size_model": report["file_size_model"],
-        "h3_indexes": rows,
-        "candidates": candidates,
-        "head_to_head": {
-            path: {
-                pair: {
-                    f"{label}_{kind}": [
-                        round(c["best_challenger"] / c["best_baseline"] - 1, 4),
-                        c["challenger_wins"],
-                        c["verdict"],
-                    ]
-                    for label, kinds in result.items()
-                    for kind, c in kinds.items()
-                }
-                for pair, result in pairs.items()
-            }
-            for path, pairs in report.get("head_to_head", {}).items()
-        },
-        "elapsed_seconds": report["elapsed_seconds"],
-    }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--output", type=Path, help="the full report")
-    parser.add_argument(
-        "--compact-output", type=Path, help="a compact summary of every candidate"
-    )
+    parser.add_argument("--output", type=Path, help="the report, as JSON")
     parser.add_argument("--rounds", type=int, default=31)
     parser.add_argument("--points", type=int, default=2_000)
     parser.add_argument("--probes", type=int, default=6_000)
@@ -1857,8 +1209,6 @@ def main() -> None:
                 for label, points in fixtures.items()
             },
         }
-        if isinstance(index, TilePyramid):
-            row["tzf_layout_payload_bytes"] = index.tzf_layout_payload_bytes
         entry = index.cell_entry(*MALACCA_WITNESS)
         offered = set(index.candidates_of(entry).tolist()) if entry < ABSENT else set()
         row["malacca_witness_offered"] = bool(
@@ -1868,25 +1218,24 @@ def main() -> None:
             )
             or offered & malacca_polygons
         )
-        if not isinstance(index, TwoTier):
-            own_probes = edge_probes(index, args.probes, rng)
-            row["gate"] = {}
-            for path in paths:
-                control = finder_on(path, control_index)
-                candidate = finder_on(path, index, IndexFinder)
-                try:
-                    row["gate"][path] = {
-                        "fixtures": gate(
-                            control,
-                            candidate,
-                            [p for points in fixtures.values() for p in points],
-                        ),
-                        "own_cell_edges": gate(control, candidate, own_probes),
-                        "border_lines": gate(control, candidate, shared_probes),
-                    }
-                finally:
-                    control.cleanup()
-                    candidate.cleanup()
+        own_probes = edge_probes(index, args.probes, rng)
+        row["gate"] = {}
+        for path in paths:
+            control = finder_on(path, control_index)
+            candidate = finder_on(path, index, IndexFinder)
+            try:
+                row["gate"][path] = {
+                    "fixtures": gate(
+                        control,
+                        candidate,
+                        [p for points in fixtures.values() for p in points],
+                    ),
+                    "own_cell_edges": gate(control, candidate, own_probes),
+                    "border_lines": gate(control, candidate, shared_probes),
+                }
+            finally:
+                control.cleanup()
+                candidate.cleanup()
         report["candidates"][index.name] = row
         print(f"priced {index.name}", flush=True)
 
@@ -1894,8 +1243,7 @@ def main() -> None:
         timed = [
             index
             for index in indexes
-            if not isinstance(index, TwoTier)
-            and report["candidates"][index.name]["malacca_witness_offered"]
+            if report["candidates"][index.name]["malacca_witness_offered"]
             and all(
                 checks[probe]["defect"] == checks[probe]["scalar_differs"] == 0
                 for checks in report["candidates"][index.name]["gate"].values()
@@ -1984,20 +1332,11 @@ def main() -> None:
 
     report["elapsed_seconds"] = round(time.perf_counter() - started, 1)
     rendered = json.dumps(report, indent=1) + "\n"
-    for path in (args.output, args.compact_output):
-        if path:
-            path.parent.mkdir(parents=True, exist_ok=True)
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered)
         print(f"wrote {args.output}")
-    if args.compact_output:
-        # the pretty-format-json hook's own form, should a run ever be committed
-        args.compact_output.write_text(
-            json.dumps(compact(report), indent=2, sort_keys=True, ensure_ascii=False)
-            + "\n"
-        )
-        print(f"wrote {args.compact_output}")
-    if not args.output and not args.compact_output:
+    else:
         print(rendered)
     reference.cleanup()
 
