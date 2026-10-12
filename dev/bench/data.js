@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791840701931,
+  "lastUpdate": 1791841949631,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14145,6 +14145,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2826",
             "unit": "lookups/sec",
             "extra": "min of 139 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "28a8aab954e0514d72a4bfb8285f54a8b7cd11d7",
+          "message": "IDX-4: read −180° as +180° and −90° as the point one unit north (#715)\n\n* IDX-4: read the -180 meridian as +180 and the -90 parallel as one unit north\n\nNo polygon owns a point on either line as spelled: a kernel gives a boundary\npoint to the polygon west of it, or south of it along an east-west edge, and\nnothing lies west of -180 or south of -90. So certain_timezone_at answered\nNone on both lines, and on the meridian timezone_at, timezones_at and the\nbatch lookups answered the shortcut index's untested final zone, which at\n4.0 % of latitudes owned neither side. utils.query2int now scales a lookup's\npoint and reads -180 as +180 and -90 as the point one unit north, as the\nmaintainer decided; it replaces the two coord2int calls in _zone_id_among,\ncertain_timezone_at and timezones_at. A unique-cell lookup and\nTimezoneFinderL need nothing, since H3 puts -180 in +180's cell; a test\npins that half too, so the replacement index has to wrap -180 rather than\nclamp it.\n\nThe scaling is written out rather than calling coord2int per axis, which\nlost about 70 % of paired rounds on an ambiguous timezone_at; a property\ntest holds the two together off the lines. Per query reaching a candidate\nthe change executes six bytecodes more and one Python call fewer; a paired\nwhole-lookup A/B read no difference on any scalar stratum, and an ambiguous\n256-point batch read unresolved, of order 1 % if real. The profiler's\nconversion rung is rebound to query2int.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-4 shipped: retire the item, keep its decision, free IDX-6\n\nThe item file and its ranking row are deleted. The decision it held -\n-180 reads as +180 and -90 as one unit north - moves with its measurements\nand the three refused options into the fallback-semantics decision record,\nwhich the geometry-format record now routes to. IDX-6 loses its last\nblocker: its status turns open and its row takes the top of the ranking,\nand it and the aligned-index record now cite the decision and the test that\nfails on a clamped -180 column rather than the retired id.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-4: answer the independent review of a227e2c\n\n- The checked-and-found-sound entry on certainty probes still named the\n  -180 meridian and the -90 parallel as places no polygon owns; it now says\n  a lookup reads them as their owned spelling.\n- The aligned-index prototype classified gate disagreements with coord2int,\n  so a tree answering -180 from the wrong column read as \"uncovered\"; the\n  gate and its simulated lookup now use query2int. Run for the chosen tree,\n  the gate now reports the three -180 border probes it answers differently\n  from H3 as defects on both kernels, and its docstrings and FINDINGS say the\n  tree's clamp reproduces the -90 answer and not the -180 one.\n- The decision's move to the fallback-semantics record dropped figures:\n  the fallbacks' agreement with each side, the breakdown of the 2,826\n  answers that moved, and TimezoneFinderL's on both indexes. Restored.\n- The new test's docstring and the EDGE_TEST_CASES comment no longer\n  overstate what the rest of the suite does at -180.\n- The classification-log entry names de96f5c, the master commit carrying\n  the measured tree, rather than its pre-merge twin.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-4: record the tracked suite's reading of the ambiguous batch cost\n\nThree local base/head pairs of the core benchmark suite reproduce the\nin-query A/B's order-of-1 % reading on the ambiguous batch rows; CI's\n-5.5 to -7.2 % on those rows did not reproduce, and moved a row that\nexecutes no changed statement by -5.1 % in the same run.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T21:51:43Z",
+          "tree_id": "efffca3e6b735e70d757519c83f0ee5a7c09eb45",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/28a8aab954e0514d72a4bfb8285f54a8b7cd11d7"
+        },
+        "date": 1791841948001,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 725299.9115157467,
+            "range": "± 9653",
+            "unit": "lookups/sec",
+            "extra": "min of 224 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 958926.1254816739,
+            "range": "± 24053",
+            "unit": "lookups/sec",
+            "extra": "min of 328 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 256214.61355941868,
+            "range": "± 2636",
+            "unit": "lookups/sec",
+            "extra": "min of 95 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1178989.464549903,
+            "range": "± 14304",
+            "unit": "lookups/sec",
+            "extra": "min of 362 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1905882.9269416386,
+            "range": "± 41636",
+            "unit": "lookups/sec",
+            "extra": "min of 656 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 307397.54654919996,
+            "range": "± 4301",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1160776.8847515918,
+            "range": "± 12835",
+            "unit": "lookups/sec",
+            "extra": "min of 354 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1853013.0733831462,
+            "range": "± 27777",
+            "unit": "lookups/sec",
+            "extra": "min of 609 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 304077.4351436605,
+            "range": "± 7200",
+            "unit": "lookups/sec",
+            "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
