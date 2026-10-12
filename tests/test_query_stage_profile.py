@@ -106,7 +106,7 @@ def test_examined_candidates_matches_the_lookup(
         )
         assert 1 <= opened <= slice_length
         candidates = tf.shortcuts.candidates_of(entry)
-        x, y = utils.coord2int(lng), utils.coord2int(lat)
+        x, y = utils.query2int(lng, lat)
         # ``inside_of_polygon`` is what the lookup's own loop calls, so this asserts the
         # loop and not a re-derivation of the predicate inside it
         contains = tf.inside_of_polygon

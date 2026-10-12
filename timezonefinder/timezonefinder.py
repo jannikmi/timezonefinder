@@ -1313,14 +1313,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         The last remaining zone is returned without a test - see :meth:`timezone_at`,
         whose note explains when that is and is not correct.
         """
-        # ATTENTION: the polygons are stored converted to 32-bit ints,
-        # convert the query coordinates in the same fashion in order to make the data
-        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
-        # see its comment - so calling it here costs the multiplication and not a
-        # dispatch on top of it.
-        # x = longitude  y = latitude  both converted to 8byte int
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
+        # ATTENTION: the polygons are stored converted to 32-bit ints, so the query
+        # point is converted the same way, reading the -180 meridian and the -90
+        # parallel as points a polygon owns - see ``utils.query2int``. It is a plain
+        # Python function, not an ``njit`` one, so calling it here costs the arithmetic
+        # and not a dispatch on top of it.
+        # x = longitude  y = latitude
+        x, y = utils.query2int(lng, lat)
 
         # check until the point is included in one of the possible boundary polygons.
         #
@@ -1415,14 +1414,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         lng, lat = utils.validate_coordinates(lng, lat)
 
-        # ATTENTION: the polygons are stored converted to 32-bit ints,
-        # convert the query coordinates in the same fashion in order to make the data
-        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
-        # see its comment - so calling it here costs the multiplication and not a
-        # dispatch on top of it.
-        # x = longitude  y = latitude  both converted to 8byte int
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
+        # ATTENTION: the polygons are stored converted to 32-bit ints, so the query
+        # point is converted the same way, reading the -180 meridian and the -90
+        # parallel as points a polygon owns - see ``utils.query2int``. It is a plain
+        # Python function, not an ``njit`` one, so calling it here costs the arithmetic
+        # and not a dispatch on top of it.
+        # x = longitude  y = latitude
+        x, y = utils.query2int(lng, lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
         for boundary_id in self._iter_boundaries_in_shortcut(lng=lng, lat=lat):
@@ -1492,9 +1490,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         last_zone_change_idx = self.shortcuts.stop_index_of(entry)
 
         # ATTENTION: the polygons are stored converted to 32-bit ints, so the query
-        # coordinates are converted the same way - see :meth:`certain_timezone_at`
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
+        # point is converted the same way - see :meth:`certain_timezone_at`
+        x, y = utils.query2int(lng, lat)
 
         zone_ids: list[int] = []
         # Candidates whose zone is already collected are *not* skipped ahead of the

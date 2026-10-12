@@ -12,8 +12,8 @@ DOC-8 independent; cheaper after DOC-9
 FT-5 waits on a decision
 GH-364 independent
 
-IDX-4 (decided) ──→ IDX-6 (decided: grid tree) ─→ IDX-7 (decided: rides IDX-6's pull request)
-                     IDX-6 also re-scopes GEOM-3, carries the held tie-order rebuild and PERF-10
+IDX-6 (decided: grid tree) ─→ IDX-7 (decided: rides IDX-6's pull request)
+IDX-6 also re-scopes GEOM-3, carries the held tie-order rebuild and PERF-10
 PREC-1 waits on a decision; it changes only the zone order the ordering optimizer keeps in overlap cells
 
 independent: GH-524

@@ -35,6 +35,8 @@ __all__ = [
     "MAX_LAT_VAL",
     "MAX_LNG_VAL_INT",
     "MAX_LAT_VAL_INT",
+    "MIN_LNG_VAL_INT",
+    "MIN_LAT_VAL_INT",
     "DATA_VERSION_FILENAME",
     "UNKNOWN_DATA_VERSION",
     "DATA_FORMAT_VERSION",
@@ -264,6 +266,10 @@ MIN_LNG_VAL = -180.0
 MIN_LAT_VAL = -90.0
 MAX_LNG_VAL_INT = int(MAX_LNG_VAL * COORD2INT_FACTOR)
 MAX_LAT_VAL_INT = int(MAX_LAT_VAL * COORD2INT_FACTOR)
+# Declared negative for the same reason: `utils.query2int` compares against both on
+# every lookup that tests a polygon.
+MIN_LNG_VAL_INT = -MAX_LNG_VAL_INT
+MIN_LAT_VAL_INT = -MAX_LAT_VAL_INT
 MAX_INT_VAL = MAX_LNG_VAL_INT
 assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 

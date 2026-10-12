@@ -153,6 +153,25 @@ def test_coord2int_matches_the_scaling_it_performs(lng, lat):
     assert utils.coord2int(-abs(lng)) == -utils.coord2int(abs(lng))
 
 
+@pytest.mark.unit
+@given(lng=_VALID_LNG, lat=_VALID_LAT)
+def test_query2int_scales_as_coord2int_off_the_two_unowned_lines(lng, lat):
+    """``query2int`` writes the scaling out instead of calling ``coord2int``, for speed.
+
+    So the two can drift apart - a rounding where the other truncates, say - and a
+    lookup would then test a different point than every script and test computing the
+    point with ``coord2int`` believes it does. This holds them together everywhere but
+    on the -180 meridian and the -90 parallel, where ``query2int`` reads the point as
+    the one a polygon owns; ``tests/test_minus_180_meridian_and_minus_90_parallel.py``
+    covers those two lines.
+    """
+    from timezonefinder.configs import MAX_LNG_VAL_INT, MIN_LAT_VAL_INT
+
+    x, y = utils.query2int(lng, lat)
+    assert x == (MAX_LNG_VAL_INT if lng == -180.0 else utils.coord2int(lng))
+    assert y == (MIN_LAT_VAL_INT + 1 if lat == -90.0 else utils.coord2int(lat))
+
+
 # The value range below the validated one is deliberate: `coord2int` used to be an
 # ``njit`` function with an ``i4`` return signature, so under numba an out-of-range
 # product wrapped into int32 while the no-numba configuration a plain ``pip install``

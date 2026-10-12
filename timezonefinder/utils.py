@@ -18,8 +18,11 @@ from timezonefinder.configs import (
     INT2COORD_FACTOR,
     MAX_LAT_VAL,
     MAX_LNG_VAL,
+    MAX_LNG_VAL_INT,
     MIN_LAT_VAL,
+    MIN_LAT_VAL_INT,
     MIN_LNG_VAL,
+    MIN_LNG_VAL_INT,
     NO_ZONE_ID,
     OCEAN_TIMEZONE_PREFIX,
     CoordArrayLike,
@@ -39,6 +42,7 @@ __all__ = [
     "is_valid_lat",
     "is_valid_lng",
     "coord2int",
+    "query2int",
     "validate_lat",
     "validate_lng",
     "validate_coordinates",
@@ -105,7 +109,7 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
 # Plain Python, and defined *here* rather than in ``utils_numba`` beside ``int2coord``
 # for exactly that reason: that module is what the package compiles, and a reader
 # reaching for a function there is entitled to assume it is compiled. Each of these
-# takes one number and performs one operation, which is the shape ``njit`` cannot pay
+# does a few operations on one point at most, which is the shape ``njit`` cannot pay
 # for - an empty dispatch is ~98 ns against ~40 ns to do the work - so the decorator
 # came off and the definitions followed it out. The rule is in the
 # `query-path decisions <../contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md>`__.
@@ -121,7 +125,7 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
 # call a pure-Python function from nopython mode; ``tests/test_property_validation.py``
 # holds the two forms to each other.
 #
-# All three read the bounds and the scale from ``configs``; do not restate them as
+# All of them read the bounds and the scale from ``configs``; do not restate them as
 # literals, and see the comment beside ``MIN_LAT_VAL`` for why they are declared
 # pre-negated.
 
@@ -146,10 +150,37 @@ def coord2int(double: float) -> int:
 
     Nothing narrows the result. The former ``njit`` signature cast it to ``int32``, so an
     out-of-range product wrapped silently under numba while the no-numba configuration a
-    plain ``pip install`` gives never did; both answer the same now. Query-path callers
-    are bounded to +-180 degrees by :func:`validate_coordinates` first, i.e. +-1.8e9.
+    plain ``pip install`` gives never did; both answer the same now. A lookup scales its
+    point through :func:`query2int` instead, after :func:`validate_coordinates` has
+    bounded it to +-180 degrees, i.e. +-1.8e9.
     """
     return int(double * COORD2INT_FACTOR)
+
+
+def query2int(lng: float, lat: float) -> tuple[int, int]:
+    """A validated query point as the integer point a lookup tests polygons against.
+
+    Each axis is scaled as :func:`coord2int` scales it, except on the two lines no
+    polygon owns. A kernel gives a point on a boundary to the polygon whose interior lies
+    immediately west of it, or south where the boundary runs east-west, and nothing lies
+    west of -180 degrees or south of -90. So -180 is read as +180, the same meridian,
+    whose points the polygon west of it owns; and -90 as the point one unit north, since
+    every longitude there names the one pole. One physical point then answers one zone
+    whichever spelling it arrives in, and the answer does not depend on the shortcut
+    index - which puts -180 in +180's cell, so a lookup testing no polygon agrees too.
+
+    The scaling is written out rather than calling :func:`coord2int` per axis, which
+    measured 1-3 % slower over an ambiguous ``timezone_at`` and lost about 70 % of paired
+    rounds to this body. ``tests/test_property_validation.py`` holds the two to each
+    other off the two lines.
+    """
+    x = int(lng * COORD2INT_FACTOR)
+    if x == MIN_LNG_VAL_INT:
+        x = MAX_LNG_VAL_INT
+    y = int(lat * COORD2INT_FACTOR)
+    if y == MIN_LAT_VAL_INT:
+        y += 1
+    return x, y
 
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]

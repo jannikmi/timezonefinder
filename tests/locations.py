@@ -79,8 +79,9 @@ TEST_LOCATIONS_AT_LAND = [
 ]
 
 EDGE_TEST_CASES = [
-    # directly at the poles and the 180deg longitude border the zone result is ambiguous
-    # the result should still be well defined
+    # directly at the poles and on the 180deg longitude border the result should be well
+    # defined; what -180 and -90 answer is pinned by
+    # test_minus_180_meridian_and_minus_90_parallel.py
     # zone_name="" is interpreted as "don't care"
     (-180.0, 90.0, ""),
     (-180.0, 0.0, ""),
