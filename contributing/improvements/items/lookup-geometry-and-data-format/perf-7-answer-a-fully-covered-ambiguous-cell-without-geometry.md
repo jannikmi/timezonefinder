@@ -40,6 +40,6 @@ No polygon clipping is needed. Coverage is `fully_contained_in_hole(cell, polygo
 
 ## Reopen only if
 
-The index's cells become exact planar shapes — IDX-1's longitude/latitude grid would make full coverage an exact rectangle-in-polygon test — **and** PREC-1 has made precedence consistent in every cell, so that converting a covered cell changes no answer. It is then a pure performance item, priced on its own count and without the per-cell split that withdrew it.
+The index's cells become exact planar shapes — [IDX-2](idx-2-replace-the-h3-shortcut-index-with-a-longitude-latitude-aligned-grid.md)'s grid tree, decided 2026-10-12, makes full coverage an exact rectangle-in-polygon test — **and** PREC-1 has made precedence consistent in every cell, so that converting a covered cell changes no answer. It is then a pure performance item, priced on its own count and without the per-cell split that withdrew it.
 
 - **Status:** withdrawn — applying precedence only in covered cells splits an overlap region by H3 cell, and the remaining ~0.6–2.1 % gain does not pay for certified coverage and keeping `timezones_at`'s candidates.
