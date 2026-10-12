@@ -30,7 +30,9 @@ unrolled one and lost to a flat grid.
 for 30,000 fixture points (289 of them in two overlapping zones), for points on and one
 unit either side of their own cell edges, and on the 7.5-degree and whole-degree lines
 borders follow, on both kernels and both the scalar and the batch path, except points on
-the -180 meridian and the -90 parallel, which no polygon owns.
+the -180 meridian and the -90 parallel, which no polygon owns as spelled. Lookups have
+since read them as +180 and as one unit north, which this tree's clamp reproduces on the
+parallel and not on the meridian.
 
 That run also priced linear quadtrees, ``tzf-rs``'s tile pyramid, a two-tier split and
 three-level trees; their code has since been dropped from this script, and their
@@ -495,7 +497,9 @@ class GridTree(ShortcutIndex):
     next level, one per cell any two zones can own; on the last level it is a candidate
     list entry, the shipped tri-state. Every level is a whole number of coordinate units
     wide, so a level's cell is one floor division per axis, and clamping the shifted
-    coordinate at 0 once covers -180 and -90 on every level.
+    coordinate at 0 once covers -90 on every level. It covers -180 too, but in the first
+    column, where the lookup now reads -180 as +180: a shipped tree wraps a negative
+    column to the last one instead, and this one's -180 points gate as defects.
     """
 
     __slots__ = (
@@ -769,7 +773,7 @@ def work_counts(
         candidates = index.candidates_of(entry).tolist()
         stop = index.stop_index_of(entry)
         offered += len(candidates)
-        x, y = utils.coord2int(lng), utils.coord2int(lat)
+        x, y = utils.query2int(lng, lat)
         answer = candidates[-1]
         for i, boundary_id in enumerate(candidates):
             if i >= stop:
@@ -805,8 +809,10 @@ def gate(
 
     ``overlap``: both answers' zones contain the point - precedence among overlapping
     zones, which any index may order differently. ``uncovered``: no zone contains the
-    point (the antimeridian and the south pole line), so both answers are the "last
-    remaining zone" fallback. ``control_wrong``: only the candidate's zone contains it.
+    point (a sliver between neighbouring stored boundaries), so both answers are the
+    "last remaining zone" fallback. Containment is tested at the point the lookup tests,
+    ``utils.query2int``'s, so a -180 meridian point answered from the wrong column is a
+    ``defect`` rather than ``uncovered``. ``control_wrong``: only the candidate's zone contains it.
     ``defect``: some zone contains the point and the candidate's does not.
     ``scalar_differs``: the candidate's ``timezone_at`` disagrees with its own batch
     answer, which would leave the scalar timing measuring an unverified path.
@@ -834,7 +840,7 @@ def gate(
         if expected[i] < 0 or actual[i] < 0:
             classes["defect"] += 1
             continue
-        x, y = utils.coord2int(lngs[i]), utils.coord2int(lats[i])
+        x, y = utils.query2int(lngs[i], lats[i])
         in_expected = zone_contains(control, int(expected[i]), x, y)
         in_actual = zone_contains(control, int(actual[i]), x, y)
         if in_expected and in_actual:

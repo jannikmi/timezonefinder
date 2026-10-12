@@ -12,7 +12,8 @@ then answers one zone whichever spelling it arrives in, and the answer is a prop
 the point rather than of the index.
 
 What fails silently if this regresses is the answer at a coordinate callers really send -
--180 is a common spelling of the antimeridian - and nothing else in the suite queries one.
+-180 is a common spelling of the antimeridian - and nothing else in the suite asserts what
+one answers.
 """
 
 import numpy as np
