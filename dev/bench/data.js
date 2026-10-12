@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791811698510,
+  "lastUpdate": 1791838214782,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13884,6 +13884,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4325",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8709 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "873e96cb484be46bf5925cc435a2cde8b1347c0b",
+          "message": "IDX-5: let the shortcut index map a coordinate to its entry (#714)\n\n* Split the pre-anchor entries out of the query-path classification log\n\nThe log was 14 words short of the canonical-module budget, so the next\nclassification would push it over. The five 2026-08 entries, which predate\nthe baseline's anchor and bear on freshness only through the rules they\nstate, move verbatim into their own module, routed from CONTRIBUTING.md and\nlinked from the log. The 2026-09-03 coordinate-bounds entry is condensed to\na route: its figures are superseded and its rule, with its measurement,\nalready lives above MIN_LNG_VAL in timezonefinder/configs.py.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* IDX-5: let the shortcut index map a coordinate to its entry\n\nShortcutIndex.entry_at and entries_at take the H3 cell computation over\nfrom every lookup method, so replacing the index's cells needs no change\nto timezonefinder.py. entry_of / entries_of stay as the cell-level forms\nthe converter-side tooling and the tests walk. The point-level callers in\nthe tests and the benchmark fixture generator go through the new methods,\nthe shortcut-ordering calibration's stand-in index gains entry_at (it is\ninstalled as finder.shortcuts and would otherwise fail the first lookup),\nand the stage profiler's block marker follows the new line.\n\nInert by count: with sys.settrace opcode events over 200 fixture points,\na unique query executes 138 bytecodes and 13 Python calls before and\nafter, an ambiguous one 343.6 and 24.94, and a batch 4 bytecodes more per\nbatch whatever its size. The cell computation is one expression because\nthe first form, with the cell id in a local, counted +2 bytecodes per\nquery. A paired whole-lookup A/B against master's functions read \"no\ndifference\" on every stratum, scalar and batch, on clang and numba, with\n3 of 18 rows unresolved in both directions.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* IDX-5: retire the item and its ranking row\n\nThe cell computation sits behind ShortcutIndex now, so IDX-6 is blocked on\nIDX-4's decision alone; its item names entry_at / entries_at as the\nlookup the tree replaces.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* IDX-5: settle the independent review of ff7ff77\n\n- The classification-log entry states the batch's +4 bytecodes in its\n  heading, names the commit and machine instead of \"the branch\" and \"this\n  container\", argues why the ladder keeps its split rungs, and states its\n  lesson as a rule rather than as the history of an intermediate form.\n- The stage profiler's examined_candidates resolves a point through\n  entry_at, like the lookup it mirrors; the test docstring naming the\n  collaborators timezone_at calls follows.\n- The aligned-index prototype's METHOD note describes the seam IndexFinder\n  replaces as it is now.\n- The route to the pre-anchor entries names both reasons to read them.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T22:49:16+02:00",
+          "tree_id": "0684ba1c4c8158e9b7432ac1ee99f67ec5e48033",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/873e96cb484be46bf5925cc435a2cde8b1347c0b"
+        },
+        "date": 1791838212703,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 571431.5755253732,
+            "range": "± 6197",
+            "unit": "lookups/sec",
+            "extra": "min of 184 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 751405.3534317601,
+            "range": "± 19537",
+            "unit": "lookups/sec",
+            "extra": "min of 268 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 197610.5720075213,
+            "range": "± 3576",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 905018.6542446429,
+            "range": "± 10671",
+            "unit": "lookups/sec",
+            "extra": "min of 297 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1465924.8695857243,
+            "range": "± 19606",
+            "unit": "lookups/sec",
+            "extra": "min of 525 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 235663.2605782177,
+            "range": "± 2090",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 889086.4636611473,
+            "range": "± 10006",
+            "unit": "lookups/sec",
+            "extra": "min of 290 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1435098.25543718,
+            "range": "± 16654",
+            "unit": "lookups/sec",
+            "extra": "min of 511 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 236075.68926562255,
+            "range": "± 3045",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
           }
         ]
       }
