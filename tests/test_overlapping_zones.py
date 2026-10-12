@@ -158,18 +158,28 @@ def test_a_unique_zone_cell_is_answered_without_touching_geometry(
 
 
 @pytest.mark.unit
-def test_the_south_pole_falls_back_to_the_untested_final_zone(tf: TimezoneFinder):
+def test_a_point_no_candidate_contains_falls_back_to_the_untested_final_zone(
+    tf: TimezoneFinder, monkeypatch: pytest.MonkeyPatch
+):
     """Where no candidate contains the point, ``timezone_at``'s answer is still first.
 
-    The pole is the reproducible case the usage docs already name: polygon vertices
-    meet there, so ``certain_timezone_at`` matches nothing. ``timezone_at`` answers
-    with the final candidate's zone without testing it, and this method agrees rather
-    than answering the empty list - which is the one branch where the two could have
-    contradicted each other.
+    With the packaged data that takes a sliver between two neighbouring stored
+    boundaries, and no committed point lies in one, so containment is switched off
+    instead: every candidate then fails its test, as over an area custom data leaves
+    uncovered. ``timezone_at`` answers with the final candidate's zone without testing
+    it, and this method agrees rather than answering the empty list - which is the one
+    branch where the two could have contradicted each other.
     """
-    assert tf.certain_timezone_at(lng=0.0, lat=-90.0) is None
-    assert tf.timezones_at(lng=0.0, lat=-90.0) == ["Antarctica/McMurdo"]
-    assert tf.timezone_at(lng=0.0, lat=-90.0) == "Antarctica/McMurdo"
+    lng, lat = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[0]
+    final = tf.zone_name_from_boundary_id(
+        tf.shortcuts.candidates_of(tf.shortcuts.entry_at(lng, lat))[-1]
+    )
+    monkeypatch.setattr(
+        TimezoneFinder, "inside_of_polygon", lambda self, boundary_id, x, y: False
+    )
+    assert tf.certain_timezone_at(lng=lng, lat=lat) is None
+    assert tf.timezone_at(lng=lng, lat=lat) == final
+    assert tf.timezones_at(lng=lng, lat=lat) == [final]
 
 
 @pytest.mark.unit

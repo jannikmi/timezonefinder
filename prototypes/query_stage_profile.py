@@ -86,6 +86,14 @@ describe this tree. What changed is the ladder itself - ``zone_name_from_id`` no
 public wrapper in front of it, and the two geometry rungs stop at the candidate the
 lookup stops at (finding 8). Only ladder figures moved.
 
+**The conversion rung is labelled ``coord2int x2`` in the tables and ``query2int`` in the
+script**, because it was rebound after they were taken, when the lookups started reading
+the -180° meridian and the -90° parallel as the points a polygon owns: one
+``utils.query2int`` call where the lookup had made two ``coord2int`` calls. A query that
+reaches a candidate executes six more bytecodes and one Python call fewer, counted over
+200 fixture points; a paired whole-lookup A/B read no difference on any scalar stratum on
+the C extension, mapped. So the tables still describe the lookup, to within that rung.
+
 The run before that was taken when ``is_valid_lat``, ``is_valid_lng`` and ``coord2int``
 stopped being
 ``njit`` functions, and when the numpy gather that built a cell's whole zone id array to
@@ -498,8 +506,7 @@ def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
             continue
         candidates = tf.shortcuts.candidates_of(entry)
         last = tf.shortcuts.stop_index_of(entry)
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
+        x, y = utils.query2int(lng, lat)
         opened = 0
         for i, boundary_id in enumerate(candidates):
             if i >= last:
@@ -525,7 +532,7 @@ def make_ladder(
     # which reaching for the public name is a bug.
     zone_name_from_id = tf.zone_names.name_of
     zone_id_of = tf._zone_id_of
-    coord2int = utils.coord2int
+    query2int = utils.query2int
     outside_bbox = tf.boundaries.outside_bbox
     holes_in_any = tf.holes.in_any_polygon
     hole_ids_of = tf._hole_ids_of
@@ -599,7 +606,7 @@ def make_ladder(
             n += 1
         return n
 
-    def s7_coord2int(points: Points, stops: Sequence[int]) -> int:
+    def s7_query2int(points: Points, stops: Sequence[int]) -> int:
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
@@ -610,8 +617,7 @@ def make_ladder(
                 continue
             candidates = shortcuts.candidates_of(entry)
             last = shortcuts.stop_index_of(entry)
-            x = coord2int(lng)
-            y = coord2int(lat)
+            x, y = query2int(lng, lat)
             n += 1
         return n
 
@@ -628,8 +634,7 @@ def make_ladder(
             # read but not branched on: the rung is timing this read, and where
             # the loop stops comes from `stop` - see `examined_candidates`
             last = shortcuts.stop_index_of(entry)
-            x = coord2int(lng)
-            y = coord2int(lat)
+            x, y = query2int(lng, lat)
             for i, boundary_id in enumerate(candidates):
                 if i >= stop:
                     break
@@ -651,8 +656,7 @@ def make_ladder(
             # read but not branched on: the rung is timing this read, and where
             # the loop stops comes from `stop` - see `examined_candidates`
             last = shortcuts.stop_index_of(entry)
-            x = coord2int(lng)
-            y = coord2int(lat)
+            x, y = query2int(lng, lat)
             for i, boundary_id in enumerate(candidates):
                 if i >= stop:
                     break
@@ -677,8 +681,7 @@ def make_ladder(
                 continue
             candidates = shortcuts.candidates_of(entry)
             last = shortcuts.stop_index_of(entry)
-            x = coord2int(lng)
-            y = coord2int(lat)
+            x, y = query2int(lng, lat)
             matched = False
             for i, boundary_id in enumerate(candidates):
                 if i >= last:
@@ -705,7 +708,7 @@ def make_ladder(
         ("zone_name_from_id", s4_zone_name),
         ("candidate list slice", s4b_candidates),
         ("last_change read", s6_last_change),
-        ("coord2int x2", s7_coord2int),
+        ("query2int", s7_query2int),
         ("bbox rejection", s8_bbox),
         ("hole checks", s9_holes),
         ("boundary PIP", s10_full),
@@ -872,7 +875,7 @@ BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("i = -(entry + 2)", "bookkeeping"),
     ("shortcuts.candidates_of", "bookkeeping"),
     ("shortcuts.stop_index_of", "bookkeeping"),
-    ("coord2int", "bookkeeping"),
+    ("query2int", "bookkeeping"),
     ("for i, boundary_id", "bookkeeping"),
     ("i >= last_zone_change_idx", "bookkeeping"),
     ("break", "bookkeeping"),

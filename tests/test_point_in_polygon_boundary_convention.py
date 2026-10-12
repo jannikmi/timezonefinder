@@ -25,8 +25,9 @@ boundary points to the other polygon:
   points whose owner's interior meets the cell's open interior, so a polygon touching
   the cell's west or south edge from outside never needs to be a candidate.
 * **No polygon owns a point on the -180° meridian or the -90° parallel**, since nothing
-  lies west or south of them. What a lookup answers there is decided by the shortcut
-  index rather than by geometry.
+  lies west or south of them. That is why a lookup reads -180° as +180° and -90° as the
+  point one unit north before it tests a polygon (``utils.query2int``); without that,
+  the shortcut index rather than geometry would decide what it answers there.
 
 ``tests/test_acceleration_paths.py`` holds the kernels to one another over the real
 data; what it cannot show is which answer they agree on at a boundary, because real

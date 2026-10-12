@@ -354,7 +354,7 @@ Reading the last column
 **Not every difference belongs to the other package.** Where ``timezone_at`` answers but
 :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` returns ``None``, this package cannot
 stand behind the answer without another check. That result proves no *candidate* contains the
-quantized point; it does not prove why. A missing shortcut candidate can cause it, but so can a coordinate on the ``lng=-180.0`` meridian or at ``lat=-90.0``, or one in a sliver between two neighbouring stored boundaries, where an exhaustive scan finds no containing packaged polygon either. The paired table counts a location here when neither side has
+quantized point; it does not prove why. A missing shortcut candidate can cause it, but so can a coordinate in a sliver between two neighbouring stored boundaries, where an exhaustive scan finds no containing packaged polygon either. The paired table counts a location here when neither side has
 an attributable disagreement and at least one side fails that containment check; the individual
 table counts the probes themselves.
 

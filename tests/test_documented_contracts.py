@@ -189,11 +189,12 @@ def test_usage_docs_example_returns_the_annotated_zone(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("lng", [-180.0, -120.0, 0.0, 120.0, 180.0])
-def test_certain_timezone_at_has_no_match_at_the_exact_south_pole(
+def test_certain_timezone_at_matches_at_the_exact_south_pole(
     tf: TimezoneFinder, lng: float
 ):
-    """The usage docs name the pole as a reachable exact-boundary ambiguity."""
-    assert tf.certain_timezone_at(lng=lng, lat=-90.0) is None
+    """The usage docs say no polygon would own the pole as spelled, so a lookup reads it
+    as the point one unit north and ``certain_timezone_at`` does not return ``None``."""
+    assert tf.certain_timezone_at(lng=lng, lat=-90.0) == "Antarctica/McMurdo"
     assert tf.timezone_at(lng=lng, lat=-90.0) == "Antarctica/McMurdo"
 
 

@@ -47,8 +47,8 @@ precomputed answer out of the shortcut index. Neither approximates at query time
 C extension, the ``numba`` kernel and the pure-Python fallback all return identical results -
 which is what :doc:`benchmark_results_acceleration_paths` compares for speed alone.
 
-The one documented exception is a point lying *exactly* on the edge of a polygon, such as one at
-``lat=-90.0`` or ``lng=-180.0``. Such a point has no guaranteed answer - see the note under
+The one documented exception is a point lying *exactly* on the edge of a polygon, such as one on
+a border two zones share. Such a point has no guaranteed answer - see the note under
 ``certain_timezone_at()`` in :doc:`1_usage`. It is still deterministic; it is simply not
 guaranteed to be the zone you would expect.
 
@@ -108,7 +108,7 @@ channels** (all of them, and not only the first, are what the warning above is a
    a re-assigned region, a municipality moved between zones or a zone that is split or renamed
    can change the answer for coordinates far from any previous border.
 2. **Polygon precedence.** A point inside overlapping polygons is resolved by which candidate the
-   lookup tests first. That is a convention rather than a geometric fact. Away from ``lng=-180.0`` and ``lat=-90.0``, a point exactly on a border two polygons share is not exposed to it: the point-in-polygon test gives such a point to a single polygon, whatever order the candidates are tested in.
+   lookup tests first. That is a convention rather than a geometric fact. A point exactly on a border two polygons share is not exposed to it: the point-in-polygon test gives such a point to a single polygon, whatever order the candidates are tested in.
    A cell with an overlap is one the reordering gate below
    refuses, so the converter keeps its inherited zone precedence - but that precedence orders zones
    by their total vertex count in the cell, so a dataset that adds, drops or reshapes a polygon can
@@ -137,7 +137,7 @@ one:
   *every* point in the cell, even when the boundary geometry is byte-identical, and those points
   need not be anywhere near a border.
 * ``timezones_at()`` **splits the two, and the split is not clean at one edge.** Wherever some
-  candidate contains the point - with the packaged data, everywhere but on ``lng=-180.0``, at ``lat=-90.0`` and in slivers between neighbouring boundaries - *which* zones it reports
+  candidate contains the point - with the packaged data, everywhere but in slivers between neighbouring boundaries - *which* zones it reports
   follows from the geometry alone, since it tests every candidate rather than stopping at the
   first match, so reordering a cell's candidates cannot change the set. Where *none* does, it
   answers ``timezone_at()``'s untested final-zone fallback, and that single element is pure

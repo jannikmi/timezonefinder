@@ -394,7 +394,7 @@ Roughly 1 % of points on land fall in two zones.
     Where *no* candidate polygon contains the point, this returns the one zone
     ``timezone_at()`` answers there - which that method returns without testing it - rather
     than an empty list, so the two still agree.
-    The packaged data's ocean zones make that unreachable except on the ``lng=-180.0`` meridian and at the exact South Pole, where no polygon contains a point, and in any sliver the stored boundaries of two neighbouring zones leave between them; custom data leaving areas uncovered reaches it everywhere those areas are.
+    The packaged data's ocean zones make that unreachable except in any sliver the stored boundaries of two neighbouring zones leave between them; custom data leaving areas uncovered reaches it everywhere those areas are.
     ``certain_timezone_at()`` is the lookup that reports "none" in that case.
 
 
@@ -461,7 +461,7 @@ Using a TimezoneFinder instance:
 
 .. note::
 
-    A coordinate exactly on the edge of a timezone polygon has no guaranteed answer. On a border two zones share, the point-in-polygon test gives the point to one of them, which need not be the zone you expect. On the ``lng=-180.0`` meridian, where the dataset is cropped at the antimeridian, and at the exact South Pole (``lat=-90.0``, at any longitude) it gives the point to no polygon at all, so ``certain_timezone_at()`` returns ``None`` there even though the packaged data otherwise covers the globe. ``lng=180.0`` and ``lat=90.0`` have no such gap.
+    A coordinate exactly on the edge of a timezone polygon has no guaranteed answer. On a border two zones share, the point-in-polygon test gives the point to one of them, which need not be the zone you expect. On the ``lng=-180.0`` meridian, where the dataset is cropped at the antimeridian, and at the exact South Pole (``lat=-90.0``, at any longitude) it would give the point to no polygon at all, so every lookup reads ``lng=-180.0`` as ``lng=180.0``, the same meridian, and ``lat=-90.0`` as the point one stored unit (~1.1 cm) north of the pole. Either spelling of such a point therefore answers the same zone, and with the packaged data ``certain_timezone_at()`` does not return ``None`` there.
 
     Such a point is still answered deterministically - the same input gives the
     same output - it is simply not guaranteed to be the zone you expect. See
