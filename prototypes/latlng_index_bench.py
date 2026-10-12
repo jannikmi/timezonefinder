@@ -43,8 +43,10 @@ METHOD
 ======
 
 Every candidate is compiled from the packaged boundaries and answers through the real
-``TimezoneFinder`` query path: :class:`IndexFinder` replaces only the two H3 lines of
-``timezone_at`` and of the batch prologue with the candidate's cell lookup.
+``TimezoneFinder`` query path: :class:`IndexFinder` replaces only the index lookup of
+``timezone_at`` and of the batch prologue - ``ShortcutIndex.entry_at`` / ``entries_at``
+in the shipped code - with the candidate's cell lookup. Only those two methods are
+replaced, so a candidate index answers nothing else a finder can be asked.
 
 * **One ordering policy, the converter's own.** Candidate lists are ordered by
   ``scripts.shortcuts.optimise_shortcut_ordering`` itself, called on a sorted input. The

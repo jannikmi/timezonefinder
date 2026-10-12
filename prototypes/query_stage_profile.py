@@ -492,7 +492,7 @@ def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
     counts = []
     for lng, lat in points:
         lng, lat = utils.validate_coordinates(lng, lat)
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry >= 0 or entry == ABSENT:
             counts.append(0)
             continue
@@ -863,7 +863,7 @@ BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("validate_coordinates", "prologue"),
     ("latlng_to_cell", "prologue"),
     ("entry = int(", "prologue"),
-    ("shortcuts.entry_of", "prologue"),
+    ("shortcuts.entry_at", "prologue"),
     ("SLOT_BASE_CELL_SHIFT", "prologue"),
     ("SLOT_DIGITS_SHIFT", "prologue"),
     ("if entry >= 0", "prologue"),

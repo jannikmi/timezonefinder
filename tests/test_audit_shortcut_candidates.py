@@ -27,7 +27,7 @@ def test_missing_shortcut_is_found_without_using_the_shortcut_as_oracle():
     finder = TimezoneFinder(in_memory=True)
     try:
         assert omission_at(finder, 13.4, 52.5) is None
-        finder.shortcuts = SimpleNamespace(entry_of=lambda _: ABSENT)
+        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
         finding = omission_at(finder, 13.4, 52.5)
         assert finding is not None
         assert finding["missing_polygon_ids"]
@@ -58,7 +58,7 @@ def test_holes_are_checked_before_reporting_a_bbox_candidate(monkeypatch):
     try:
         # A point in an exterior bbox is insufficient: the polygon predicate must run.
         monkeypatch.setattr(TimezoneFinder, "inside_of_polygon", lambda *a: False)
-        finder.shortcuts = SimpleNamespace(entry_of=lambda _: ABSENT)
+        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
         assert omission_at(finder, 13.4, 52.5) is None
     finally:
         finder.cleanup()
@@ -67,7 +67,7 @@ def test_holes_are_checked_before_reporting_a_bbox_candidate(monkeypatch):
 def test_limits_count_omissions_beyond_the_retained_witnesses():
     finder = TimezoneFinder(in_memory=True)
     try:
-        finder.shortcuts = SimpleNamespace(entry_of=lambda _: ABSENT)
+        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
         report = audit_points(finder, [(13.4, 52.5)] * 4, max_points=3, witness_limit=1)
         assert report["points_checked"] == 3
         assert report["points_with_omissions"] == 3
