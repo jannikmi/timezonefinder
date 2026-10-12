@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791838216969,
+  "lastUpdate": 1791839071499,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13971,6 +13971,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3045",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0168 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "de96f5c07aa50aed9fe6bdfdd38966a238bbd735",
+          "message": "IDX-4 decided: −180° reads as +180°, −90° as one unit north; claims that protect nothing may be deleted (#713)\n\n* IDX-4: measure the -180 meridian and -90 parallel options and brief the decision\n\nEvery 0.01 degree of both lines, through timezone_at, timezones_at,\ncertain_timezone_at and TimezoneFinderL, on the shipped H3 index and the\nchosen grid tree. The -90 parallel moves only certain_timezone_at. On the\nmeridian, neither index's untested fallback is neutral: each answers a zone\nowning neither side of it at 1-4 % of latitudes. The briefed question\nrecommends reading -180 as +180 and -90 as the point one unit north; the\nrow moves below the eligible ones, above IDX-6, which waits on it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* IDX-4: correct four claims the independent review of 305d6dd found\n\nTimezoneFinderL's figures now share one baseline, H3's answers. Option (1)\nclaims ownership on the two lines only, since slivers between neighbouring\nzones can still leave a point unowned. The latitude span where the sides\ndisagree over Antarctica is -75.0 to -70.0. The tree's fallback also\nanswers Asia/Anadyr at 9 latitudes where both sides are ocean.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* IDX-4: record the maintainer decision — -180 reads as +180, -90 as one unit north\n\nThe maintainer accepted the recommended option (1): every point on the two\nlines is then owned by a polygon, one physical point answers one zone\nwhichever spelling it arrives in, and no answer depends on the index.\nOptions (2), one unit east, and (3), the untested fallback, are recorded as\nrefused. The item now describes the implementation - a rewrite of the\nkernel coordinates on the ambiguous path, ahead of IDX-6 - and its row\nmoves to the top of the eligible rows; IDX-6's tree prologue wraps a\nnegative column to the last cell instead of clamping it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n* Claim protocol: allow deleting a claim that no longer protects work\n\nRequested by the maintainer. Any pass may now delete a claim ref, whichever\nrun made it, once its item has left the register or the branch its claim\ncommit names has a pull request (open, merged or closed): an open pull\nrequest is already the durable claim, and the other cases leave nothing to\nprotect. A claim on a live item whose branch has no pull request still\nblocks, since a run may be implementing it. The deletion is guarded by a\nlease on the inspected commit and reported with the claim's metadata.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01W9G8MUub3RDzNUy899SrqL\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T21:03:45Z",
+          "tree_id": "49749c2d4667d17f6880633d80f4ab1c583f202b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/de96f5c07aa50aed9fe6bdfdd38966a238bbd735"
+        },
+        "date": 1791839069457,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 711445.6233557595,
+            "range": "± 7382",
+            "unit": "lookups/sec",
+            "extra": "min of 225 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 930454.8286546543,
+            "range": "± 9239",
+            "unit": "lookups/sec",
+            "extra": "min of 314 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 252553.6201643305,
+            "range": "± 1500",
+            "unit": "lookups/sec",
+            "extra": "min of 95 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1178519.2706721039,
+            "range": "± 13476",
+            "unit": "lookups/sec",
+            "extra": "min of 370 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1924677.3663437606,
+            "range": "± 39290",
+            "unit": "lookups/sec",
+            "extra": "min of 658 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 307948.14153313875,
+            "range": "± 4803",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1156696.7885954182,
+            "range": "± 25655",
+            "unit": "lookups/sec",
+            "extra": "min of 368 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1875539.2175373803,
+            "range": "± 139349",
+            "unit": "lookups/sec",
+            "extra": "min of 632 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 303245.40510474204,
+            "range": "± 3679",
+            "unit": "lookups/sec",
+            "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
           }
         ]
       }
