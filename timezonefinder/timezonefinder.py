@@ -22,7 +22,6 @@ from typing import Literal, Self
 from zoneinfo import ZoneInfo
 
 import numpy as np
-from h3.api import numpy_int as h3
 
 from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
@@ -36,7 +35,6 @@ from timezonefinder.configs import (
     MAX_LAT_VAL,
     MAX_LNG_VAL,
     NO_ZONE_ID,
-    SHORTCUT_H3_RES,
     DATA_VERSION_FILENAME,
     CoordArrayLike,
     CoordLists,
@@ -411,9 +409,7 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :yield: Boundary polygon IDs.
         """
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
+        entry = self.shortcuts.entry_at(lng, lat)
         if entry == ABSENT:
             return
         if entry >= 0:
@@ -464,9 +460,7 @@ class AbstractTimezoneFinder(ABC):
         # public forms inline removes a Python call from the common path, while fixture
         # parity tests prevent the two implementations drifting.
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
+        entry = self.shortcuts.entry_at(lng, lat)
         if entry >= 0:
             return entry
         if entry == ABSENT:
@@ -632,29 +626,13 @@ class AbstractTimezoneFinder(ABC):
     def _zone_ids_of_valid(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
         """Zone ids for coordinates already known to be in range.
 
-        The prologue every point shares runs once over the whole batch: the slot
-        arithmetic and the table read are one numpy operation each rather than N. What
-        cannot join them is ``h3.latlng_to_cell`` - h3-py exposes no vectorised form, so
-        N points cost N scalar C calls, and that is nearly the whole cost of a batched
-        lookup once the cells resolve to a single zone.
+        The prologue every point shares runs once over the whole batch, in
+        ``ShortcutIndex.entries_at``, which says what of it cannot be vectorised.
         """
-        nr_points = lngs.shape[0]
-        if nr_points == 0:
+        if lngs.shape[0] == 0:
             return np.empty(0, dtype=ZONE_ID_RESULT_DTYPE)
 
-        # bound once outside the loop: N attribute lookups are a measurable share of a
-        # stage that is otherwise a single C call per point
-        latlng_to_cell = h3.latlng_to_cell
-        resolution = SHORTCUT_H3_RES
-        hex_ids = np.fromiter(
-            (
-                latlng_to_cell(lat, lng, resolution)
-                for lat, lng in zip(lats.tolist(), lngs.tolist(), strict=True)
-            ),
-            dtype=np.uint64,
-            count=nr_points,
-        )
-        entries = self.shortcuts.entries_of(hex_ids)
+        entries = self.shortcuts.entries_at(lngs, lats)
 
         # a non-negative entry is the answer itself. ABSENT and the candidate-list
         # encodings are both "no answer yet"; the latter are then resolved per point,
@@ -795,11 +773,10 @@ class AbstractTimezoneFinder(ABC):
         :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # a zone id in the table *is* the precomputed uniqueness; anything else in it
         # means either no coverage or several zones, and neither is a unique answer
-        zone_id = self.shortcuts.entry_of(hex_id)
+        zone_id = self.shortcuts.entry_at(lng, lat)
         if zone_id < 0:
             return None
         return self.zone_names.name_of(zone_id)
@@ -977,9 +954,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         """
         lng, lat = utils.validate_coordinates(lng, lat)
         # Inline fast-path to minimize helper overhead
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
+        entry = self.shortcuts.entry_at(lng, lat)
         if entry >= 0:
             # unique zone case: the index holds the answer
             return self.zone_names.name_of(entry)
@@ -1290,10 +1265,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         # NOTE: performance critical code. avoid helper function call overhead as much as possible
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # one lookup answers most queries: a zone id is the answer itself
-        entry = self.shortcuts.entry_of(hex_id)
+        entry = self.shortcuts.entry_at(lng, lat)
         if entry >= 0:
             return self.zone_names.name_of(entry)
         if entry == ABSENT:
@@ -1506,9 +1480,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             ['Asia/Urumqi', 'Asia/Shanghai']
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
+        entry = self.shortcuts.entry_at(lng, lat)
         if entry == ABSENT:
             return []
         if entry >= 0:

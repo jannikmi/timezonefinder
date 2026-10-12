@@ -16,7 +16,6 @@ could change meaning without failing it.
 
 import random
 
-import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
@@ -25,7 +24,6 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinderL, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import ABSENT, get_last_change_idx
 
 pytestmark = pytest.mark.unit
@@ -47,7 +45,7 @@ def ambiguous_cells(tf) -> list[tuple[float, float, int]]:
     """
     cells = []
     for lng, lat in load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE):
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry < 0 and entry != ABSENT:
             cells.append((lng, lat, entry))
     assert cells, "the ambiguous-point fixture reached no multi-zone cell"

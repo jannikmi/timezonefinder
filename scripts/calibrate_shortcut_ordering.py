@@ -489,6 +489,11 @@ class _ReorderedIndex:
     def entry_of(self, cell: int) -> int:
         return self.cell_entries.get(cell, self.base.entry_of(cell))
 
+    def entry_at(self, lng: float, lat: float) -> int:
+        # what the lookups ask: installed as ``finder.shortcuts``, this overlay has to
+        # answer the coordinate form, or ``timezone_at`` fails before the first count
+        return self.entry_of(int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)))
+
     def candidates_of(self, entry: int) -> np.ndarray:
         if entry in self.orders:
             return self.orders[entry]
@@ -544,7 +549,7 @@ def _query_counts(
     finder: TimezoneFinder, index: Any, lng: float, lat: float
 ) -> StageCounts:
     """Stage counts of the real candidate walk one query makes under ``index``."""
-    entry = index.entry_of(int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)))
+    entry = index.entry_at(lng, lat)
     candidates = index.candidates_of(entry)
     stop = index.stop_index_of(entry)
     x, y = utils.coord2int(lng), utils.coord2int(lat)

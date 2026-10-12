@@ -39,12 +39,6 @@ from pathlib import Path
 
 import numpy as np
 
-# NOTE: timezonefinder internally uses the int-keyed H3 API (see
-# timezonefinder.py: `from h3.api import numpy_int as h3`). The shortcut index is
-# addressed by slicing bits out of an int cell id, so the plain (string-keyed) `h3`
-# package must not be used here or every lookup below would silently miss.
-from h3.api import numpy_int as h3
-
 from scripts.configs import DEBUG, read_data_version
 from timezonefinder.shortcut_index import ABSENT
 from tests.auxiliaries import (
@@ -123,8 +117,7 @@ def generate_shortcut_points(
     while len(unique_points) < n_unique or len(ambiguous_points) < n_ambiguous:
         lng, lat = get_rnd_query_pt_area_weighted(rng)
         attempts += 1
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-        entry = tf.shortcuts.entry_of(hex_id)
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry == ABSENT:
             continue
         if entry >= 0:

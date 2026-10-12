@@ -16,7 +16,6 @@ import inspect
 import pytest
 
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import ABSENT
 
 pytest.importorskip("line_profiler", reason="prototypes/ needs the `proto` group")
@@ -47,7 +46,7 @@ def test_ladder_binds_no_public_timezonefinder_method(tf: TimezoneFinder) -> Non
     """No rung may reach for a *checked public* accessor of ``TimezoneFinder``.
 
     ``timezone_at`` calls the unchecked internals (``self._zone_id_of``) and the
-    collaborators (``self.zone_names.name_of``, ``self.shortcuts.entry_of``) directly.
+    collaborators (``self.zone_names.name_of``, ``self.shortcuts.entry_at``) directly.
     The public wrappers in front of those add id validation that the query path does not
     pay, so a rung binding one prices a call the lookup never makes: the
     ``zone_name_from_id`` rung read 58-64 ns for a call costing 37-38. The
@@ -92,15 +91,13 @@ def test_examined_candidates_matches_the_lookup(
     count they are given to the two facts it has to sit between: never zero where the
     lookup opens a candidate, and never past the candidate slice.
     """
-    from h3.api import numpy_int as h3
-
     points = load_benchmark_points(fixture)[:SAMPLE]
     counts = examined_candidates(tf, points)
     assert len(counts) == len(points)
 
     for (lng, lat), opened in zip(points, counts, strict=True):
         lng, lat = utils.validate_coordinates(lng, lat)
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry >= 0 or entry == ABSENT:
             assert opened == 0, "these two entries answer without opening a candidate"
             continue

@@ -29,6 +29,7 @@ from timezonefinder._data_integrity import (
 )
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    RANDOM_POINTS_FIXTURE,
     load_benchmark_points,
 )
 from timezonefinder.configs import (
@@ -453,6 +454,38 @@ def test_the_packaged_file_carries_the_markers_its_own_writer_stamps():
 
 
 @pytest.mark.unit
+def test_entry_at_answers_what_entry_of_answers_for_the_points_cell(tf):
+    """The point forms are the cell forms behind one cell computation, scalar and batch.
+
+    Every lookup method reaches the index through ``entry_at`` / ``entries_at``, so a
+    swapped coordinate order or a mis-zipped batch there would move answers everywhere
+    while ``entry_of`` - what the format tests check - stayed right. The expectation is
+    computed independently, with h3 called the way the shortcut compiler calls it, over
+    the random and ambiguous fixtures plus the corners and edges of the coordinate plane.
+    """
+    points = [
+        *load_benchmark_points(RANDOM_POINTS_FIXTURE)[:1000],
+        *load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:1000],
+        *((lng, lat) for lng in (-180.0, 0.0, 180.0) for lat in (-90.0, 0.0, 90.0)),
+    ]
+    lngs = np.array([lng for lng, _ in points], dtype=np.float64)
+    lats = np.array([lat for _, lat in points], dtype=np.float64)
+    expected = [
+        tf.shortcuts.entry_of(int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)))
+        for lng, lat in points
+    ]
+    assert any(e < ABSENT for e in expected) and any(e >= 0 for e in expected), (
+        "the sample must reach both a unique and an ambiguous cell"
+    )
+
+    assert [tf.shortcuts.entry_at(lng, lat) for lng, lat in points] == expected
+    batch = tf.shortcuts.entries_at(lngs, lats)
+    assert batch.dtype == tf.shortcuts.table.dtype
+    assert batch.tolist() == expected
+    assert tf.shortcuts.entries_at(lngs[:0], lats[:0]).shape == (0,)
+
+
+@pytest.mark.unit
 def test_entries_of_answers_what_entry_of_answers_for_every_cell(tf):
     """The batch sibling has to be the same lookup, not merely a lookup that agrees on
     the fixtures. It reaches the table through ``slots_of`` rather than ``slot_of`` and
@@ -492,8 +525,7 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
 
         def timezone_at(self, *, lng, lat):
             lng, lat = utils.validate_coordinates(lng, lat)
-            hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-            entry = self.shortcuts.entry_of(hex_id)
+            entry = self.shortcuts.entry_at(lng, lat)
             if entry >= 0:
                 return self.zone_name_from_id(entry)
             if entry == ABSENT:
@@ -512,10 +544,7 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
     points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:2000]
     with LiveStopIndex() as live:
         reached = sum(
-            1
-            for lng, lat in points
-            if tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-            < ABSENT
+            1 for lng, lat in points if tf.shortcuts.entry_at(lng, lat) < ABSENT
         )
         assert reached > 100, (
             f"only {reached} of {len(points)} points reach the candidate loop - the "
