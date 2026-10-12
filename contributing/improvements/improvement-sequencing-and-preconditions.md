@@ -14,7 +14,7 @@ FT-5 waits on a decision
 GH-364 independent
 
 IDX-4 (decision) ──┐
-IDX-5 ─────────────┴─→ IDX-6 (decided: grid tree) ─→ IDX-7 (decision: who drops h3) ─→ moots FT-3
+IDX-5 ─────────────┴─→ IDX-6 (decided: grid tree) ─→ IDX-7 (decided: rides IDX-6's pull request) ─→ moots FT-3
                        IDX-6 also re-scopes GEOM-3, moots GH-657, carries the held tie-order rebuild and PERF-10
 PREC-1 waits on a decision; it changes only the zone order the ordering optimizer keeps in overlap cells
 
