@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791773665832,
+  "lastUpdate": 1791774388852,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13623,6 +13623,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2901",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2537 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7008df84615277e95941e1ac204407091f2ebe05",
+          "message": "Drop the Codex review round from review settlement (#710)\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T03:05:37Z",
+          "tree_id": "39cf921699935c0d6bd0fd7a7593dd3f48638f71",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7008df84615277e95941e1ac204407091f2ebe05"
+        },
+        "date": 1791774386877,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 657206.5723804615,
+            "range": "± 27660",
+            "unit": "lookups/sec",
+            "extra": "min of 216 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 850025.5687690981,
+            "range": "± 34781",
+            "unit": "lookups/sec",
+            "extra": "min of 287 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 231068.80970354995,
+            "range": "± 11861",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 995964.3524449108,
+            "range": "± 59033",
+            "unit": "lookups/sec",
+            "extra": "min of 296 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1479231.296742582,
+            "range": "± 110227",
+            "unit": "lookups/sec",
+            "extra": "min of 531 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 272886.797387357,
+            "range": "± 10557",
+            "unit": "lookups/sec",
+            "extra": "min of 88 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 988454.456564932,
+            "range": "± 30572",
+            "unit": "lookups/sec",
+            "extra": "min of 310 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1460223.227245446,
+            "range": "± 37692",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 272373.85032363184,
+            "range": "± 6247",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           }
         ]
       }
