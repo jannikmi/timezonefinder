@@ -62,7 +62,9 @@ integrals over clipped geometry. The approximations are these, explicitly:
    so this preserves zone answers even where the proxy geometry is inaccurate.
    Invalid source geometry is repaired ONLY for the objective by GEOS make_valid;
    it always fails the safety gate. Runtime geometry is never repaired or removed.
-   Shared-border conventions remain a limitation of any polygon precedence.
+   The gate admits zones that touch, so a point on the border they share keeps
+   its answer only because the point-in-polygon kernel gives it exactly one
+   owner; tests/test_point_in_polygon_boundary_convention.py pins that rule.
    All candidates, including zero-area candidates, remain in the binary.
 """
 

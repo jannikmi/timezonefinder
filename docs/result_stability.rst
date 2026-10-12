@@ -107,9 +107,10 @@ channels** (all of them, and not only the first, are what the warning above is a
 1. **Boundary geometry.** Upstream revises boundaries. This is not bounded by a small distance:
    a re-assigned region, a municipality moved between zones or a zone that is split or renamed
    can change the answer for coordinates far from any previous border.
-2. **Polygon precedence.** A point lying exactly on a border shared by two polygons, or inside
-   overlapping polygons, is resolved by which candidate the lookup tests first. That is a
-   convention rather than a geometric fact. A cell like this is one the reordering gate below
+2. **Polygon precedence.** A point inside overlapping polygons is resolved by which candidate the
+   lookup tests first. That is a convention rather than a geometric fact. A point exactly on a
+   border two polygons share is not exposed to it: the point-in-polygon test gives such a point to
+   exactly one of them, whichever is tested first. A cell with an overlap is one the reordering gate below
    refuses, so the converter keeps its inherited zone precedence - but that precedence orders zones
    by their total vertex count in the cell, so a dataset that adds, drops or reshapes a polygon can
    reorder them and decide such a point differently. Zones with equal totals are ordered by their
@@ -235,8 +236,8 @@ code with an index built by the old ordering.
 
 **What no optimization can move:** a point strictly inside exactly one polygon. There, the answer
 follows from the geometry alone, and no ordering, index or traversal change reaches it. The
-exposure is confined to points the geometry does not decide by itself - a point on a shared border
-or inside overlapping polygons, and every ``TimezoneFinderL`` answer in a multi-zone cell, which is
+exposure is confined to points the geometry does not decide by itself - a point inside overlapping
+polygons or inside none of a cell's candidates, and every ``TimezoneFinderL`` answer in a multi-zone cell, which is
 a stored ordering decision rather than a geometric one.
 
 Code and data are versioned on separate axes and, as
