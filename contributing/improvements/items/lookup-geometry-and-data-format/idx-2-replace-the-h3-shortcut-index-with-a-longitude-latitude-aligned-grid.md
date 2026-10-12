@@ -2,7 +2,7 @@
 
 ## Related memory
 
-- [Shortcut index cell shape and resolution decisions](../../decisions/shortcut-index-cell-shape-and-resolution-decisions.md) — the measurement this item would adopt, what it trades away and leaves unpriced, and the variants refused.
+- [Shortcut index cell shape and resolution decisions](../../decisions/longitude-latitude-aligned-index-decisions.md) — the measurement this item would adopt, what it trades away and leaves unpriced, and the variants refused.
 - [Data-format version-marker and release-batching decisions](../../decisions/data-format-version-marker-and-release-batching-decisions.md) — the held shortcut-index rebuild, which rides this item's format bump if it is adopted and publishes as a post-release if it is refused.
 - [Benchmarking, tooling and dependency decisions](../../decisions/benchmarking-tooling-and-dependency-decisions.md) — `h3` is the one runtime dependency reopened for removal, and this is why.
 - [Data pipeline and release order](../../../development/data-pipeline-format-versioning-and-release-order.md)
