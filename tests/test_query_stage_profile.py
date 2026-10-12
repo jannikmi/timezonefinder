@@ -46,7 +46,7 @@ def test_ladder_binds_no_public_timezonefinder_method(tf: TimezoneFinder) -> Non
     """No rung may reach for a *checked public* accessor of ``TimezoneFinder``.
 
     ``timezone_at`` calls the unchecked internals (``self._zone_id_of``) and the
-    collaborators (``self.zone_names.name_of``, ``self.shortcuts.entry_of``) directly.
+    collaborators (``self.zone_names.name_of``, ``self.shortcuts.entry_at``) directly.
     The public wrappers in front of those add id validation that the query path does not
     pay, so a rung binding one prices a call the lookup never makes: the
     ``zone_name_from_id`` rung read 58-64 ns for a call costing 37-38. The

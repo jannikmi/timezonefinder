@@ -492,7 +492,7 @@ def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
     counts = []
     for lng, lat in points:
         lng, lat = utils.validate_coordinates(lng, lat)
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry >= 0 or entry == ABSENT:
             counts.append(0)
             continue
