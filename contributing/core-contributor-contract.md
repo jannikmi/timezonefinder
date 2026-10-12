@@ -10,13 +10,13 @@ Never edit generated files directly. Change the generator or schema, regenerate,
 
 Name what a change trades away before implementing it, rule out the options a project constraint already forbids, and validate the surviving trade-off with measurement rather than argument; the [trade-off rules](development/trade-off-surfacing-and-validation.md) say when a trade-off is instead a maintainer decision.
 
-Keep changes focused and production-ready: no placeholders, speculative compatibility, unrelated cleanup, or unmeasured fast-path trade-offs. Preserve unrelated working-tree changes and stage explicit paths. Put durable reasoning at the decision site or in the narrowest contributor-memory file; do not use temporary plans, issues, or pull-request numbers as the sole explanation.
+Keep changes focused and production-ready: no placeholders, speculative compatibility, unrelated cleanup, or unmeasured fast-path trade-offs. Preserve unrelated working-tree changes and stage explicit paths. Put durable reasoning at the decision site or in the narrowest contributor-memory file; do not use temporary plans, issues, or pull-request numbers as the sole explanation. Avoid temporal references a reader cannot resolve, like “this morning”, “in September” or “recently”, which silently go stale; where one helps, use an absolute parameter such as a commit hash.
 
 Add targeted tests for behavioral changes. Select integration, slow, acceleration-path, benchmark, or documentation gates by the changed subsystem rather than running expensive suites reflexively. Rebase onto current `master` before the final gate, because rebasing afterwards invalidates it.
 
 Every change needs a fragment in the matching unreleased changelog section, with development-only changes under `internal/`. Changes confined to contributor memory, provider adapters, and their structural tests are the exception and receive no changelog entry. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
 
-The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read the modules from every applicable route, because one change may match multiple triggers; ignore unrelated routes.
+The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md), which says how to match its routes.
 
 ## Maintaining contributor memory
 
@@ -28,6 +28,6 @@ Amend existing memory instead of appending corrective history. An amendment that
 
 ## Preventing memory bloat
 
-Add memory only for a durable, non-obvious fact with a concrete failure mode. State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. Link the authoritative code, test, schema, or public documentation instead of copying it.
+State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. Link the authoritative code, test, schema, or public documentation instead of copying it.
 
 Update the narrowest existing module before creating one. A new module needs a descriptive subject filename, a direct route from `CONTRIBUTING.md`, and a bounded subject. **Splitting is the contributor's call and is never a maintainer question:** when a module is at or near its word budget, split it in the change that would have pushed it over, rather than shaving load-bearing text to fit or asking whether to. Pay for the split by condensing first — replace a rule copied from another module with a route to it, delete superseded wording, consolidate duplicates — then move one bounded section out whole. Move it verbatim and diff the result against the original, because a split that quietly drops a rule is unreviewable. A split sized to the words the current change happens to need is the wrong size. Historical sequence belongs in Git, not contributor memory.
