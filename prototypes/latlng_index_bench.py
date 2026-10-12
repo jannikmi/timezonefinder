@@ -6,7 +6,7 @@ FINDINGS (2026-10-11, Apple M1 Pro, Python 3.14.2, data 2026d, fixture set v3)
 ==============================================================================
 
 **An aligned grid tree beats the resolution-4 H3 index on every axis measured, at less
-than H3's footprint; adopting it is IDX-2, decided 2026-10-12.** The chosen shape - a
+than H3's footprint; the maintainer decided to adopt it on 2026-10-12.** The chosen shape - a
 dense grid of 0.9375-degree root cells whose cells several zones can own refine into one
 level of 4x4 blocks - takes 507 KB on disk and in memory against H3's 617 KB and
 1,031 KB, tests 57 % and 42 % fewer polygons per random and on-land query than an H3
