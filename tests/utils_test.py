@@ -56,14 +56,14 @@ POINT_IN_POLYGON_TESTCASES = [
             (-1.0, -1.0),
             (0.0, -1.0),
             (1.0, -1.0),
-            # on the line test cases
-            # inclusion is not defined if point lies on the line
-            # (0.0, -0.5),
-            # (0, 0.5),
-            # (-0.5, 0),
-            # (0.5, 0),
+            # on the boundary: owned on the east and north edges only, the rule
+            # tests/test_point_in_polygon_boundary_convention.py pins
+            (0.0, -0.5),
+            (0, 0.5),
+            (-0.5, 0),
+            (0.5, 0),
         ],
-        [True, False, False, False, False, False, False, False, False],
+        [True] + [False] * 8 + [False, True, False, True],
     ),
     (
         # more complex polygon with sloped edges
@@ -107,8 +107,6 @@ POINT_IN_POLYGON_TESTCASES = [
             (7, 6),
             (0, 7),
             (7, 7),
-            # on the line test cases
-            # inclusion is not defined if point lies on the line
         ],
         [True] * 14 + [False] * 21,
     ),
@@ -126,10 +124,10 @@ POINT_IN_POLYGON_TESTCASES = [
             ),
             (-179.9999, -89.9998),
             (-179.9999, 89.9999),
-            # TODO uncertain case:
-            # (179.9998, 89.9999),
+            # exactly on the diagonal, whose interior side faces west: owned
+            (179.9998, 89.9999),
         ],
-        [True] * 3,
+        [True] * 4,
     ),
 ]
 

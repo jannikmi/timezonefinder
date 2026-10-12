@@ -1,0 +1,7 @@
+# IDX-5 — let the shortcut index map a coordinate to its entry
+
+- **Location:** `timezonefinder/timezonefinder.py`, every lookup method that calls `h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)` and hands the cell to `self.shortcuts.entry_of`, and the batch `_zone_ids_of_valid` with `entries_of`; `timezonefinder/shortcut_index.py` (`ShortcutIndex`).
+- **What it is:** `ShortcutIndex` says it is the only thing that knows how a cell's answer is stored, which "is what lets the storage change without touching `timezonefinder.py`". Which cell a point falls in is computed in `timezonefinder.py`, though, once per lookup method, so replacing the index's cells means rewriting every one of those call sites. `ShortcutIndex.entry_at(lng, lat)` and `entries_at(lngs, lats)` owning the cell computation remove the repeated pair and leave [IDX-6](idx-6-replace-the-h3-shortcut-index-with-the-grid-tree.md) a change to the index alone. Tests and scripts that resolve a point to its entry through `h3` directly, such as `tests/test_ordering_answer_invariance.py` and `scripts/generate_benchmark_fixtures.py`, go through the index too wherever they mean the index's entry.
+- **Trade-off:** none intended — the same calls in the same number, one of them now a method on the index. It is the query path, so it is measured: an in-query alternating A/B (`benchmarks/candidate_comparison.py`) on unique-cell scalar and batch lookups, on both kernels.
+- **Size:** ~150.
+- **Status:** open — sequenced before IDX-6.
