@@ -43,8 +43,9 @@ disagreements are points on the -180 meridian and the -90 parallel, which no pol
 owns, so both indexes answer the "last remaining zone" fallback there. Every candidate
 offers the Strait of Malacca witness's polygon. The verdict, with what it trades away
 and leaves unpriced, is in
-``contributing/improvements/decisions/shortcut-index-cell-shape-and-resolution-decisions.md``;
-the compact numbers are ``contributing/improvements/measurements/latlng-index-2026-10-11.json``.
+``contributing/improvements/decisions/shortcut-index-cell-shape-and-resolution-decisions.md``.
+No measurement file is committed: ``--compact-output`` writes every candidate's numbers
+in about 80 s, the counts exactly and the times for the machine it runs on.
 
 METHOD
 ======
@@ -1637,7 +1638,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
 
 
 def compact(report: dict) -> dict:
-    """What the decision record cites, in the committed measurement file's shape.
+    """Every candidate's counts, gate and timings, small enough to read and diff.
 
     Timing values are ``[best_round_change, challenger_wins, verdict]`` against the H3
     control; gate values are the disagreements summed over every probe set, per kernel.
@@ -1744,7 +1745,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--output", type=Path, help="the full report")
     parser.add_argument(
-        "--compact-output", type=Path, help="the summary the decision record cites"
+        "--compact-output", type=Path, help="a compact summary of every candidate"
     )
     parser.add_argument("--rounds", type=int, default=31)
     parser.add_argument("--points", type=int, default=2_000)
@@ -1990,7 +1991,7 @@ def main() -> None:
         args.output.write_text(rendered)
         print(f"wrote {args.output}")
     if args.compact_output:
-        # the pretty-format-json hook's own form, so committing it changes nothing
+        # the pretty-format-json hook's own form, should a run ever be committed
         args.compact_output.write_text(
             json.dumps(compact(report), indent=2, sort_keys=True, ensure_ascii=False)
             + "\n"
