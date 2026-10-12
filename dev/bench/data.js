@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791773664152,
+  "lastUpdate": 1791773665832,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -26231,6 +26231,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2238 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ae03b751847705b74adbc2a6553e3f74831115c",
+          "message": "IDX-1: price aligned indexes against H3; IDX-2 decided: a grid tree (#708)\n\n* IDX-1: retain blocked planar index measurements\n\n* IDX-1: price the aligned index family without the retained prototype's skews\n\nRewrite prototypes/latlng_index_bench.py so the comparison isolates cell shape:\n\n- Order every index with the converter's own optimise_shortcut_ordering\n  (identifier ties) and compare against an H3 control re-ordered the same way,\n  written and read back through the real shortcut file functions.\n- Compute cells from the truncated integer coordinates the kernel reads, owning\n  their east and north edges as the kernel does, so a cell on an ocean meridian\n  or a surveyed parallel is not made ambiguous by the zone across the line.\n- Size grids by cell count rather than by H3's padded slot table, and sweep each\n  family: equal-angle and equal-area grids, aligned and unaligned, node-geo-tz's\n  quadtree, a 7.5-degree-rooted quadtree, tzf-rs's tile pyramid and the two-tier\n  split.\n- Give each structure its cheapest correct lookup: integer arithmetic and one\n  read for grids, memoryview bisects for sparse structures, vectorised batches.\n- Gate every candidate on fixtures, its own cell edges and real border lines on\n  both kernels, and count TimezoneFinderL agreement.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: write the summary the decision record cites in the hook's JSON form\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: record the verdict; IDX-2 holds the adoption decision\n\nA dense longitude/latitude-aligned grid beats the resolution-4 H3 index on\nevery measured axis at H3's file size: faster scalar and batch lookups on\nboth kernels, fewer polygon tests, ~40 % less resident memory, and no answer\ndisagreement on any sampled point a zone owns.\n\n- Record the measurement, its trade-offs, what it leaves unpriced and the\n  refused variants (quadtrees, tzf-rs's tile pyramid, the two-tier split,\n  unaligned and oversized grids) in a new shortcut-index cell-shape decision\n  file. The raster fast-path and H3-resolution sections move into it\n  verbatim, splitting a query-performance record that was at its word budget.\n- Commit the compact measurement and the prototype's FINDINGS.\n- Record the adoption itself as IDX-2, a needs-decision item: whether to\n  replace H3, and with which grid.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: retire the item\n\nDelete the item, its ranking row and the provisional 2026-09-26 measurement\nthe retained prototype wrote. Every reference now names the lasting fact:\nthe held tie-order rebuild and PERF-10 wait for IDX-2's adoption decision\nrather than for IDX-1, with the hold's end conditions unchanged; the h3\ndependency reopening records what the pricing found; PERF-7's reopening\ncondition and the sequencing graph point at IDX-2.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: time a touch-inclusive control, gate the scalar path, stamp the base commit\n\nAddresses the pre-open review: the refusal of touch-inclusive cells now rests\non a paired control in the same run rather than on a cross-run comparison,\nthe correctness gate also checks the scalar path the scalar timing measures,\nand the report records the master commit that survives a squash merge.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: settle the pre-open review\n\nRe-measured with the paired touch-inclusive controls and the scalar gate, and\nrewrote every cited figure from the new run:\n\n- Rest the exact-cell argument on the same-run control (50 % more polygon\n  tests and ~8 points of random scalar speed for touch-inclusive 0.5-degree\n  cells) instead of a cross-run comparison; sizing never explained the\n  2026-09-26 result, and its timing used a slower lookup with no control.\n- Stop refusing grids larger than H3's file: whether \"replace, never add\"\n  bounds disk or memory is the maintainer's reading, so IDX-2 now offers the\n  equal-angle 0.375-degree grid as an option.\n- State in IDX-2 the answers that move: 147 of 200 sampled points at exactly\n  -180 degrees, and overlap winners beyond the sample.\n- Correct the same-size alignment effect (14-24 %), the batch multipliers\n  (2.5-3x random, 1.6-2x on land), resident \"array bytes\" wording, and the\n  ranges the re-run moved.\n- Route the new decision file from CONTRIBUTING.md.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: price grid trees, at the maintainer's request\n\nThe maintainer asked whether a better index existed and, on seeing the result,\nto make it the recommendation. A grid tree is an aligned dense root grid whose\nambiguous cells refine into fixed k x k blocks, every level addressed by one\nfloor division per axis: a quadtree with its top levels flattened into a grid\nand no search below them. The sweep adds seven shapes (root 0.9375 or 1.875\ndegrees, 2x2 or 4x4 blocks, one to three levels) with unrolled lookups, since a\ngeneric loop over the levels cost enough to lose to a flat grid.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: time the recommended grid tree head to head with its rivals\n\nA recommendation between two candidates should rest on a pair timed against\neach other, not on the difference of two comparisons against the H3 control.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: recommend the grid tree, at the maintainer's request\n\nRe-measured with the grid-tree family and the head-to-head pairs. The\nrecommended shape - a 0.9375-degree aligned root grid whose ambiguous cells\nrefine into one level of 4x4 blocks - beats H3 and every flat grid on every\nmeasured axis below H3's footprint: 507 KB on disk and resident, 57 % and 42 %\nfewer polygon tests, and 6.5-12 % faster per call than the flat equal-area\ngrid timed head to head. The verdict, IDX-2's options and recommendation, the\nranking row, FINDINGS and the prototype's README row now say so; flat grids\nand linear quadtrees join the refused variants.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: drop the committed measurement file, at the maintainer's request\n\nThe decision record keeps the numbers it argues from; every candidate's full\nfigures reproduce by rerunning the prototype, so a 3,300-line summary is not\ncommitted beside it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: trim the prototype to the families it recommends, at the maintainer's request\n\nDrop the linear quadtrees, tzf-rs's tile pyramid, the two-tier split, the\nthree-level trees and the compact summary writer. Their numbers and refusals\nstay in the decision record; what remains reproduces the grids, grid trees,\ntouch-inclusive controls and head-to-head pairs the recommendation rests on.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-1: record the verdict in a file of its own instead of moving sections\n\nAt the maintainer's request to shrink the diff: the raster and H3-resolution\nsections stay where they were, with only the sentence that named IDX-1\nrewritten, and the aligned-index verdict gets its own decision file.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-2: record the maintainer's decision for the grid tree; rank it first\n\nDecided 2026-10-12: replace the resolution-4 H3 index with a 0.9375-degree\naligned grid tree with one level of 4x4 blocks (option a). Refused: a flat\naligned grid, a deeper tree spending 55 % more disk, and keeping H3.\n\nIDX-2 returns to open and, at the maintainer's direction, ranks first. The\nheld tie-order rebuild and PERF-10 now ride its format release; the item is\ntrimmed to the decision and the work, leaving the figures to the record.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* IDX-2: include deciding the answers on the -180 meridian and -90 parallel, at the maintainer's request\n\nNo polygon owns a point exactly there, so the answer is a cell's untested\nlast zone and moves with the index. The item now briefs the options and\nfacts, and the pass implementing the reader puts the choice to the\nmaintainer before that slice lands.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T02:53:31Z",
+          "tree_id": "6bd112868a187525d791af47af82dc5e6cee8dd3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0ae03b751847705b74adbc2a6553e3f74831115c"
+        },
+        "date": 1791773665453,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0152225494384766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2756919860839844,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.276456832885742,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.86260223388672,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.86332130432129,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
           }
         ]
       }
