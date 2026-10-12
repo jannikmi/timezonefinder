@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791839073400,
+  "lastUpdate": 1791840699811,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14058,6 +14058,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3679",
             "unit": "lookups/sec",
             "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7493 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e1a9c615d4fc9f38b5aecf902878a21c2c268068",
+          "message": "Withdraw GH-657 and FT-3, which the grid tree and dropping h3 make stale (#716)\n\nGH-657 adopted H3 geodesic coverage for an index that IDX-6 replaces; the\nevaluation stays in the candidate-audit decision record. FT-3 waited on an h3\nrelease to flip the GIL assertion; IDX-7 removes h3 instead, so the flip moves\ninto it.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-12T21:30:48Z",
+          "tree_id": "df902db60fe0e0c9eb128dee3d5ef241fcb3df58",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e1a9c615d4fc9f38b5aecf902878a21c2c268068"
+        },
+        "date": 1791840697751,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 991813.9642646688,
+            "range": "± 19937",
+            "unit": "lookups/sec",
+            "extra": "min of 279 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1294969.0968546213,
+            "range": "± 34059",
+            "unit": "lookups/sec",
+            "extra": "min of 401 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 346738.5219838503,
+            "range": "± 12394",
+            "unit": "lookups/sec",
+            "extra": "min of 118 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1645786.0306989278,
+            "range": "± 98114",
+            "unit": "lookups/sec",
+            "extra": "min of 460 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 2601313.351072253,
+            "range": "± 56674",
+            "unit": "lookups/sec",
+            "extra": "min of 857 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 436176.55310264026,
+            "range": "± 9645",
+            "unit": "lookups/sec",
+            "extra": "min of 137 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1617284.5016931507,
+            "range": "± 14468",
+            "unit": "lookups/sec",
+            "extra": "min of 471 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 2553208.87291153,
+            "range": "± 54912",
+            "unit": "lookups/sec",
+            "extra": "min of 864 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 434117.01294180437,
+            "range": "± 2826",
+            "unit": "lookups/sec",
+            "extra": "min of 139 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4104 GHz"
           }
         ]
       }
