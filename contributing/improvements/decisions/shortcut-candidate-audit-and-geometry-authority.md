@@ -26,6 +26,8 @@ The repair must cover quantized query coordinates as well as spherical assignmen
 
 ## Upstream authority evaluation
 
+**Moot for the index, decided 2026-10-12:** the grid tree replacing H3 has rectangular cells aligned with longitude and latitude, the same frame as the planar source edges, so no H3 coverage mode — released or geodesic — will be a candidate authority, and adopting uber/h3#1178 was withdrawn with issue #657 closed. The evaluation below stays as the reason not to re-propose an H3 or great-circle authority for planar source geometry.
+
 Verified 2026-09-10: [H3 #1052](https://github.com/uber/h3/pull/1052) closed unmerged and was replaced by the still-open [#1178](https://github.com/uber/h3/pull/1178), head `b7d298225f36c4e8de8e3514e096d9b2c6be9ac3`. Its isolated shared-library build passed the five `Geodesic|SphereCap` CTest suites. No project dependency changed.
 
 Geodesic mode is not a drop-in conservative predicate for this package: it also changes source segments into great-circle arcs. Reproduce with the longitude/latitude rectangle `[(-10,60),(10,60),(10,61),(-10,61)]` at resolution 4 and point `(0,60.05)`, cell `8409a05ffffffff`. The point lies inside the source rectangle. Released H3 4.5.0 returns 54 full, 132 overlap and 169 bbox-overlap cells; overlap and bbox-overlap include the query cell. The isolated branch's planar modes give the same counts, while flags `CONTAINMENT_OVERLAPPING | FLAG_GEODESIC_MASK` return 129 cells and exclude it. This is a source-semantics witness, not a packaged lookup defect. Any H3-owned solution must enclose the original planar source geometry, not silently reinterpret it.
