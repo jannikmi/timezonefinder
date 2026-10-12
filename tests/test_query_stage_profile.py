@@ -16,7 +16,6 @@ import inspect
 import pytest
 
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import ABSENT
 
 pytest.importorskip("line_profiler", reason="prototypes/ needs the `proto` group")
@@ -92,15 +91,13 @@ def test_examined_candidates_matches_the_lookup(
     count they are given to the two facts it has to sit between: never zero where the
     lookup opens a candidate, and never past the candidate slice.
     """
-    from h3.api import numpy_int as h3
-
     points = load_benchmark_points(fixture)[:SAMPLE]
     counts = examined_candidates(tf, points)
     assert len(counts) == len(points)
 
     for (lng, lat), opened in zip(points, counts, strict=True):
         lng, lat = utils.validate_coordinates(lng, lat)
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry >= 0 or entry == ABSENT:
             assert opened == 0, "these two entries answer without opening a candidate"
             continue

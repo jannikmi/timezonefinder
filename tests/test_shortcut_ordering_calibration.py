@@ -13,6 +13,7 @@ from scripts.calibrate_shortcut_ordering import (
     FEATURES,
     MODEL_PATH,
     StageCounts,
+    _ReorderedIndex,
     _fit_nonnegative,
     _query_counts,
     check_model,
@@ -188,7 +189,7 @@ def _traced_queries(tf):
     """Every candidate test of 300 ambiguous lookups, plus points inside real holes."""
     queries = []
     for lng, lat in load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:300]:
-        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        entry = tf.shortcuts.entry_at(lng, lat)
         candidates = tf.shortcuts.candidates_of(entry)
         stop = tf.shortcuts.stop_index_of(entry)
         x, y = utils.coord2int(lng), utils.coord2int(lat)
@@ -251,3 +252,27 @@ def test_a_lookup_walks_exactly_the_candidates_the_calibration_traces(tf, monkey
         walked.append(calls[0])
     assert walked == expected
     assert max(walked) > 1
+
+
+@pytest.mark.unit
+def test_the_reordered_overlay_serves_the_lookup_it_is_installed_under(tf):
+    """``_ordering_report`` installs the overlay as ``finder.shortcuts`` and calls
+    ``timezone_at``, so the overlay must answer every question the lookup asks - a
+    method the lookups gain and the overlay lacks fails calibration runs only, which
+    no other test reaches. A held-out cell has to resolve to the overlay's own entry
+    from a point inside it, and every other point to the base index's.
+    """
+    points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:200]
+    base = tf.shortcuts
+    lng, lat = points[0]
+    held_out = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+    order = base.candidates_of(base.entry_of(held_out)).astype(int).tolist()
+    overlay = _ReorderedIndex(base, {held_out: order}, tf.zone_ids)
+
+    assert overlay.entry_at(lng, lat) == overlay.cell_entries[held_out]
+    expected = [tf.timezone_at(lng=x, lat=y) for x, y in points]
+    try:
+        tf.shortcuts = overlay
+        assert [tf.timezone_at(lng=x, lat=y) for x, y in points] == expected
+    finally:
+        tf.shortcuts = base

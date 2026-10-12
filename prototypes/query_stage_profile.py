@@ -863,7 +863,7 @@ BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("validate_coordinates", "prologue"),
     ("latlng_to_cell", "prologue"),
     ("entry = int(", "prologue"),
-    ("shortcuts.entry_of", "prologue"),
+    ("shortcuts.entry_at", "prologue"),
     ("SLOT_BASE_CELL_SHIFT", "prologue"),
     ("SLOT_DIGITS_SHIFT", "prologue"),
     ("if entry >= 0", "prologue"),

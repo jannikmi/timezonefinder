@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Final
 
 import numpy as np
+from h3.api import numpy_int as h3
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.layout import incompatible_layout_error
@@ -187,11 +188,11 @@ def compact_of_expanded(table: np.ndarray) -> np.ndarray:
 
 
 class ShortcutIndex:
-    """The loaded index, and the only thing that knows how a cell's answer is stored.
+    """The loaded index, and the only thing that knows its cells and their stored answers.
 
-    Callers ask it three questions and never touch its arrays. What a cell resolves to is
-    a tri-state, and :meth:`entry_of` returns it as one integer so that the common case
-    costs one comparison rather than an allocation:
+    Callers ask it three questions and never touch its arrays. What the cell holding a
+    coordinate resolves to is a tri-state, and :meth:`entry_at` returns it as one integer
+    so that the common case costs one comparison rather than an allocation:
 
     ============================ ===========================================
     ``entry >= 0``               the timezone id, and the whole answer
@@ -201,8 +202,9 @@ class ShortcutIndex:
 
     That tri-state is the lookup's own vocabulary - a cell is covered by one zone, by
     none, or by several - so branching on it is domain logic. **How** it is encoded (the
-    slot arithmetic, the ``-(entry + 2)`` entry index, the CSR bounds) stops here, which
-    is what lets the storage change without touching ``timezonefinder.py``.
+    cell a coordinate falls in, the slot arithmetic, the ``-(entry + 2)`` entry index, the
+    CSR bounds) stops here, which is what lets the cells and the storage change without
+    touching ``timezonefinder.py``.
 
     The arrays stay public because the build-time checks in ``timezonefinder/_data_integrity.py``
     and the format tests legitimately inspect them; the query path does not.
@@ -231,11 +233,51 @@ class ShortcutIndex:
 
     # --- the query contract -------------------------------------------------------
 
-    def entry_of(self, hex_id: int) -> int:
-        """What the cell resolves to, as the tri-state integer documented above.
+    def entry_at(self, lng: float, lat: float) -> int:
+        """What the cell holding a coordinate resolves to, as the tri-state above.
 
-        The slot arithmetic is inlined rather than delegated to :func:`slot_of`: this runs
-        on every query, and a call here would cost more than the arithmetic it wraps.
+        The lookups hand this the coordinate and never see a cell id, so replacing the
+        cells is a change to this class alone. Moving the cell computation here costs a
+        query nothing: written as one expression, inlining what :meth:`entry_of` and
+        :func:`slot_of` do, it executes exactly the calls and bytecode the lookups did
+        when they computed the cell themselves - a further call, or the cell id stored in
+        a local, would add to the one stage every query pays.
+        """
+        return int(
+            self.table[
+                (h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES) >> SLOT_DIGITS_SHIFT)
+                & SLOT_MASK
+            ]
+        )
+
+    def entries_at(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+        """What the cells holding many coordinates resolve to, as the same tri-state.
+
+        The batch sibling of :meth:`entry_at`. The slot arithmetic and the table read
+        are one numpy operation each for the whole batch; what cannot join them is
+        ``h3.latlng_to_cell`` - h3-py exposes no vectorised form, so N points cost N
+        scalar C calls, and that is nearly the whole cost of a batched lookup once the
+        cells resolve to a single zone.
+        """
+        # bound once outside the loop: N attribute lookups are a measurable share of a
+        # stage that is otherwise a single C call per point
+        latlng_to_cell = h3.latlng_to_cell
+        resolution = SHORTCUT_H3_RES
+        hex_ids = np.fromiter(
+            (
+                latlng_to_cell(lat, lng, resolution)
+                for lat, lng in zip(lats.tolist(), lngs.tolist(), strict=True)
+            ),
+            dtype=np.uint64,
+            count=lngs.shape[0],
+        )
+        return self.table[slots_of(hex_ids)]
+
+    def entry_of(self, hex_id: int) -> int:
+        """What a cell resolves to, for a caller that already holds the cell id.
+
+        The lookups ask :meth:`entry_at`; this form serves the tooling that walks cells
+        rather than points - the converter-side scripts and the tests.
         """
         return int(self.table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
 

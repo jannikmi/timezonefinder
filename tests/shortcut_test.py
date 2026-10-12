@@ -356,7 +356,7 @@ def test_the_candidate_loop_answers_what_the_narrowed_array_answered(tf):
 
     points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:2000]
     for lng, lat in points:
-        entry = tf.shortcuts.entry_of(latlng_to_cell(lng, lat))
+        entry = tf.shortcuts.entry_at(lng, lat)
         if entry >= 0:
             # a unique-zone cell is answered by the table and reaches no candidate loop
             continue
