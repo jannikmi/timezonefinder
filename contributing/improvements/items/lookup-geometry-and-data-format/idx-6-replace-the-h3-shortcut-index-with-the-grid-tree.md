@@ -9,7 +9,7 @@
 ## Decision
 
 - **Decided 2026-10-12 by the maintainer: replace the resolution-4 H3 index with a grid tree — a dense 0.9375° grid aligned with longitude and latitude whose cells several zones can own refine into one level of 4×4 blocks.** It was the only option ahead of H3 on every measured axis below H3's footprint, polygon-test counts included, and counts are what survive a change of machine. **Refused:** a flat aligned grid, the simplest format but slower per call and less selective; a deeper tree (1.875° root, two levels of 4×4), which spends 55 % more disk than H3 because "replace, never add" is not read as a memory bound; and keeping H3.
-- **Refined into slices on 2026-10-12**, since the whole replacement is not one reviewable pull request: [IDX-3](idx-3-pin-the-point-in-polygon-boundary-rule-with-a-test.md) pins the kernel's boundary rule the tree's exactness rests on, [IDX-4](idx-4-decide-what-a-lookup-answers-on-the-minus-180-meridian-and-the-minus-90-parallel.md) decides the answers no polygon owns, [IDX-5](idx-5-let-the-shortcut-index-map-a-coordinate-to-its-entry.md) moves the cell computation behind the index, this item is the format migration itself, and [IDX-7](idx-7-drop-h3-from-the-runtime-dependencies.md) drops the dependency.
+- **Refined into slices on 2026-10-12**, since the whole replacement is not one reviewable pull request. The kernel's boundary rule the tree's exactness rests on is already pinned, by `tests/test_point_in_polygon_boundary_convention.py`; [IDX-4](idx-4-decide-what-a-lookup-answers-on-the-minus-180-meridian-and-the-minus-90-parallel.md) decides the answers no polygon owns, [IDX-5](idx-5-let-the-shortcut-index-map-a-coordinate-to-its-entry.md) moves the cell computation behind the index, this item is the format migration itself, and [IDX-7](idx-7-drop-h3-from-the-runtime-dependencies.md) drops the dependency.
 
 ## What it changes
 
@@ -21,4 +21,4 @@
 - **Elsewhere:** GH-657 closes as moot; GEOM-3 is re-scoped to rectangle predicates; half of PERF-7's reopening condition is met; LITE-1 is phrased in H3 cells and needs rephrasing.
 - **To measure while implementing**, unpriced by the decision: loading and construction time, `make memory`, mapped page residency, a second machine class, and the rectangle port of the work optimizer.
 - **Size:** L — the format change is one atomic migration.
-- **Status:** blocked on IDX-4's decision, and sequenced after IDX-3 and IDX-5.
+- **Status:** blocked on IDX-4's decision, and sequenced after IDX-5.
