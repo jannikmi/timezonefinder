@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791841951533,
+  "lastUpdate": 1791884083332,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14232,6 +14232,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7200",
             "unit": "lookups/sec",
             "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "47b50d48fd77fbcd976aa64bd75408538f784835",
+          "message": "Bump pypa/cibuildwheel from 4.2.1 to 4.3.0 (#717)\n\nBumps [pypa/cibuildwheel](https://github.com/pypa/cibuildwheel) from 4.2.1 to 4.3.0.\n- [Release notes](https://github.com/pypa/cibuildwheel/releases)\n- [Changelog](https://github.com/pypa/cibuildwheel/blob/main/docs/changelog.md)\n- [Commits](https://github.com/pypa/cibuildwheel/compare/v4.2.1...v4.3.0)\n\n---\nupdated-dependencies:\n- dependency-name: pypa/cibuildwheel\n  dependency-version: 4.3.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-13T11:33:48+02:00",
+          "tree_id": "3991ce00d97646c3de2c91ca74e41e7ac72be874",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/47b50d48fd77fbcd976aa64bd75408538f784835"
+        },
+        "date": 1791884081755,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 657295.905676201,
+            "range": "± 7105",
+            "unit": "lookups/sec",
+            "extra": "min of 222 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 855546.4563447272,
+            "range": "± 15151",
+            "unit": "lookups/sec",
+            "extra": "min of 301 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 225507.06842888414,
+            "range": "± 3163",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 994789.2936806424,
+            "range": "± 33168",
+            "unit": "lookups/sec",
+            "extra": "min of 313 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1489911.5111805713,
+            "range": "± 52957",
+            "unit": "lookups/sec",
+            "extra": "min of 531 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 272722.6810688048,
+            "range": "± 7218",
+            "unit": "lookups/sec",
+            "extra": "min of 90 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 985060.1832336473,
+            "range": "± 17607",
+            "unit": "lookups/sec",
+            "extra": "min of 307 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1461308.0694499998,
+            "range": "± 21901",
+            "unit": "lookups/sec",
+            "extra": "min of 517 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 270023.162586827,
+            "range": "± 6479",
+            "unit": "lookups/sec",
+            "extra": "min of 90 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           }
         ]
       }
