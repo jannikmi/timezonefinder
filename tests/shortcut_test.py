@@ -20,7 +20,7 @@ from timezonefinder.shortcut_index import (
     child_cells_of,
     is_root_cell,
 )
-from timezonefinder.utils import coord2int, int2coord
+from timezonefinder.utils import coord2int, int2coord, query2int
 
 # Tests now work directly with hybrid_shortcuts format
 
@@ -48,49 +48,102 @@ def test_single_shortcut_binary_exists(shortcut_file_path):
 
 
 @pytest.mark.slow
-def test_shortcut_completeness(tf, shortcut_index, hybrid_shortcuts):
-    """Test that all points of each polygon are included in the proper shortcuts."""
-    # Get access to the timezone polygons
-    polygons = [tf.boundaries.coords_of(i) for i in range(tf.nr_of_polygons)]
+def test_every_vertex_a_polygon_owns_is_offered_in_its_cell(tf, shortcut_index):
+    """Walk every stored boundary vertex: if the kernel puts it inside its own polygon,
+    the cell a lookup there reads must offer that polygon.
 
+    **The condition is the point of this test.** A vertex is on a boundary, and the
+    kernel gives a point on a polygon's south or west boundary to the *other* polygon -
+    so a polygon frequently does not contain its own vertex. The candidate rule is exact
+    rather than conservative: a polygon that only touches a cell owns none of its points
+    and is correctly left out of it. Asserting that every vertex's cell lists its polygon
+    would therefore assert the old H3 rule's over-inclusion, and it fails on 326 of the
+    4.1 million stored vertices - all 326 of them vertices the kernel places *outside*
+    their own polygon, including 32 on the -180 meridian, which a lookup reads as +180
+    and answers from the far side by design.
+
+    What matters, and what this asserts, is that no polygon *containing* the queried
+    point is missing from the candidates. ``scripts/audit_shortcut_candidates.py`` is the
+    exhaustive form of that over three probe streams; this is the cheap vertex-driven
+    half of it, kept because it needs no separate run.
+    """
     errors = []
-    for poly_id, poly in enumerate(polygons):
+    for poly_id in range(tf.nr_of_polygons):
+        poly = tf.boundaries.coords_of(poly_id)
         if VERBOSE_TESTING and poly_id % 100 == 0:
             print(f"\rvalidating polygon {poly_id}", end="", flush=True)
-
+        zone = tf.zone_id_of(poly_id)
         for i, pt in enumerate(poly.T):
-            # ATTENTION: int to coord conversion required!
-            lng = int2coord(pt[0])
-            lat = int2coord(pt[1])
-            hex_id = shortcut_index.cell_at(lng, lat)
-            try:
-                hybrid_value = hybrid_shortcuts[hex_id]
-            except KeyError:
-                errors.append(
-                    f"shortcut mapping is incomplete at point ({lng}, {lat}) "
-                    f"(hexagon cell id {hex_id} missing in mapping)"
-                )
+            lng, lat = int2coord(pt[0]), int2coord(pt[1])
+            x, y = query2int(lng, lat)
+            if not tf.inside_of_polygon(poly_id, x, y):
+                # the kernel does not place this vertex inside its own polygon, so the
+                # cell owes it nothing - see the docstring
                 continue
-
-            # For hybrid shortcuts, check if polygon is covered
-            polygon_covered = False
-            if isinstance(hybrid_value, int):
-                # Zone ID - check if polygon belongs to this zone
-                polygon_zone = tf.zone_id_of(poly_id)
-                polygon_covered = polygon_zone == hybrid_value
-            else:
-                # Polygon array - check if polygon is in the list
-                polygon_covered = poly_id in hybrid_value
-
-            if not polygon_covered:
+            cell = shortcut_index.cell_at(lng, lat)
+            value = shortcut_index.value_of(cell)
+            offered = (
+                value == zone
+                if isinstance(value, int)
+                else value is not None and poly_id in value
+            )
+            if not offered:
                 errors.append(
-                    f"point #{i} ({lng}, {lat}) of polygon {poly_id} (zone {tf.zone_id_of(poly_id)}) "
-                    f"is not covered by hybrid shortcut entry {hybrid_value} of cell {hex_id}"
+                    f"vertex #{i} ({lng}, {lat}) of polygon {poly_id} (zone {zone}) is "
+                    f"inside that polygon, but cell {cell} offers {value}"
                 )
 
     assert not errors, f"Shortcut completeness errors: {errors[:5]}"
 
 
+@pytest.mark.slow
+def test_a_vertex_outside_its_own_polygon_is_still_answered(tf):
+    """The other half, and what keeps the test above from being satisfied by exclusion.
+
+    A rule that dropped *every* polygon from *every* cell would pass the test above
+    vacuously on the vertices it skips. So: at a vertex the kernel places outside its own
+    polygon, a lookup must still answer, and no polygon that *does* contain the point may
+    be missing. A sample rather than all 4.1 million, because establishing "no containing
+    polygon is missing" means a bounding-box sweep per point.
+    """
+    rng = np.random.default_rng(20261013)
+    checked = outside = 0
+    errors = []
+    for poly_id in rng.integers(0, tf.nr_of_polygons, 150).tolist():
+        poly = tf.boundaries.coords_of(poly_id)
+        for i in rng.integers(0, poly.shape[1], 20).tolist():
+            lng, lat = int2coord(poly[0, i]), int2coord(poly[1, i])
+            x, y = query2int(lng, lat)
+            checked += 1
+            if tf.inside_of_polygon(poly_id, x, y):
+                continue
+            outside += 1
+            bounds = tf.boundaries
+            eligible = np.flatnonzero(
+                (bounds.xmin <= x)
+                & (bounds.xmax >= x)
+                & (bounds.ymin <= y)
+                & (bounds.ymax >= y)
+            )
+            candidates = set(tf._iter_boundaries_in_shortcut(lng=lng, lat=lat))
+            missing = [
+                int(p)
+                for p in eligible
+                if p not in candidates and tf.inside_of_polygon(int(p), x, y)
+            ]
+            if missing:
+                errors.append(f"({lng}, {lat}) does not offer containing {missing}")
+            if tf.timezone_at(lng=lng, lat=lat) is None:
+                errors.append(f"({lng}, {lat}) is unanswered")
+
+    assert outside > 100, (
+        f"only {outside} of {checked} sampled vertices fall outside their own polygon - "
+        "the assertion below would be close to vacuous"
+    )
+    assert not errors, f"{len(errors)} failures, e.g. {errors[:5]}"
+
+
+@pytest.mark.unit
 def test_every_stored_cell_is_a_leaf_of_the_tree(shortcut_index, hybrid_shortcuts):
     """The stored cells are exactly the tree's leaves - no more and no fewer.
 

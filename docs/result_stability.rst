@@ -136,8 +136,9 @@ one:
   index that orders that cell differently therefore changes ``TimezoneFinderL``'s answer for
   *every* point in the cell, even when the boundary geometry is byte-identical, and those points
   need not be anywhere near a border.
-* ``timezones_at()`` **splits the two, and the split is not clean at one edge.** Wherever some
-  candidate contains the point - with the packaged data, everywhere but in slivers between neighbouring boundaries - *which* zones it reports
+* ``timezones_at()`` **splits the two, and the split is not clean at one edge.** Its first element
+  is ``timezone_at()``'s answer, so where two zones contain the point it inherits that method's
+  dependence on the zone order. Wherever some candidate contains the point - with the packaged data, everywhere but in slivers between neighbouring boundaries - *which* zones it reports
   follows from the geometry alone, since it tests every candidate rather than stopping at the
   first match, so reordering a cell's candidates cannot change the set. Where *none* does, it
   answers ``timezone_at()``'s untested final-zone fallback, and that single element is pure
@@ -233,9 +234,31 @@ All three are described in the :doc:`changelog <6_changelog>`. The third is not 
 9.0.0 reordered candidate polygons by the work a full lookup needs, which changed what
 ``TimezoneFinderL`` returns in a multi-zone cell, and moved the shortcut index from H3 resolution 3
 to 4, which changed which cells are multi-zone at all. The release that replaced those hexagons
-with an aligned grid tree changed the cells again, and therefore ``TimezoneFinderL``'s answer
-cell by cell - while leaving every ``TimezoneFinder`` answer in place, which is the guarantee above
-doing its work rather than a coincidence.
+with an aligned grid tree changed the cells again, and therefore ``TimezoneFinderL``'s answer cell
+by cell.
+
+**Replacing the cells is the one channel the guarantee above does not cover, and it is worth being
+precise about why.** That guarantee is about what the *optimizer* may reorder within a given set of
+cells. The order it starts from - the legacy one it keeps wherever the gate refuses - ranks a cell's
+zones by how many vertices each has *inside that cell*, so it is a function of the cell. Make the
+cells smaller and a zone that dominated a hexagon may not dominate the rectangle, and the order
+flips without the optimizer touching it. Where some candidate contains the point and only one zone
+does, that changes nothing, because the answer is then the geometry's. It can change the answer in
+exactly the two places where it is the order that decides:
+
+* **A point inside no candidate at all** - in the packaged data, slivers between neighbouring
+  boundaries, almost all of them on the 7.5 degree meridians where the ocean zones meet. There
+  ``timezone_at()`` returns the final candidate untested, so a different final candidate is a
+  different answer. This was never guaranteed, and is the subject of the note on the method.
+* **A point inside two zones' polygons** - the dataset's genuine overlaps. There the first
+  containing candidate wins, so the zone order decides which, and both answers are equally
+  truthful about the geometry.
+
+Measured over all 4,113,237 distinct stored boundary vertices - the densest probe of these two
+cases there is, since a vertex is where slivers and overlaps live - the hexagon-to-grid-tree
+change moved 18 ``timezone_at`` answers: 17 of the first kind and 1 of the second, at a point in
+both ``Australia/Brisbane`` and ``Etc/GMT-9``. Over 200,000 area-weighted random points and 14,742
+points inside two zones around Abyei and the West Bank it moved none.
 
 Note how such a change reaches you. The ordering optimizer and the shortcut builder live in the
 code repository (``scripts/``) but their *output* ships in ``timezonefinder-data``, so an

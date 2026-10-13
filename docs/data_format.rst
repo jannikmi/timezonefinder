@@ -538,7 +538,7 @@ How it works:
    * If it is a polygon array, tests only those polygons
 
 This provides several performance benefits:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **Reduced search space**: instead of checking all polygons (thousands), only a small subset needs to be evaluated — the large majority of random queries need no polygon test at all
 * **No search for the cell**: the cell is two integer divisions per level, so finding it touches no memory and needs no key array

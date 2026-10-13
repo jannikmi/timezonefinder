@@ -148,4 +148,3 @@ def test_unknown_zone_name_error_is_deliberately_unchained(tf: TimezoneFinder):
     assert "Nonexistent/Zone" in str(error)
     assert error.__cause__ is None
     assert error.__suppress_context__
-

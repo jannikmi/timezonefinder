@@ -48,7 +48,7 @@ Everything the layout assumes is checked where the data is produced -
 built.
 """
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Final
 
@@ -740,7 +740,7 @@ def get_last_change_idx(zone_ids: np.ndarray) -> int:
 
 
 def build_shortcut_index(
-    mapping: dict[int, int | list[int] | np.ndarray],
+    mapping: Mapping[int, int | list[int] | np.ndarray],
     poly_zone_ids: np.ndarray,
 ) -> ShortcutIndex:
     """Build the index from the compiled cell -> zone id | polygon ids mapping.
