@@ -8,7 +8,7 @@ import pytest
 
 from scripts.audit_shortcut_candidates import (
     audit_points,
-    cell_corner_points,
+    cell_edge_points,
     main,
     omission_at,
     query_coordinate,
@@ -107,7 +107,7 @@ def test_invalid_replay_coordinates_fail(point):
         omission_at(None, *point)
 
 
-def test_cell_probes_are_the_corner_integer_points_of_every_stored_cell():
+def test_cell_probes_cover_every_stored_cell_corner_and_edge_midpoint():
     """Every grid line is probed from both sides, which is what the edge rule needs.
 
     A cell owns its north and east edges and not its south or west, so the point that
@@ -130,8 +130,8 @@ def test_cell_probes_are_the_corner_integer_points_of_every_stored_cell():
             def items(self):
                 return ((cell, None) for cell in subset)
 
-        points = list(cell_corner_points(OnlySome()))
-        assert len(points) == 4 * len(subset)
+        points = list(cell_edge_points(OnlySome()))
+        assert len(points) == 8 * len(subset)
         for cell_id in subset:
             x0, y0, x1, y1 = cell_bounds(cell_id)
             corners = {(coord2int(lng), coord2int(lat)) for lng, lat in points}

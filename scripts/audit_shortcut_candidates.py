@@ -1,10 +1,11 @@
 """Find sampled shortcut omissions without using shortcut geometry as the oracle.
 
 Run with ``uv run python -m scripts.audit_shortcut_candidates --output tmp/audit.json``.
-The default probes the four corner integer points of every cell the index stores.
-Those are where the candidate rule is tightest: a cell owns its north and east edges
-and not its south or west, so each grid line is probed from both sides - once as one
-cell's ``x1`` and once as its neighbour's ``x0`` - without any point being invented.
+The default probes every stored cell's four corners and the midpoint of each of its
+four edges. The corners are where the candidate rule is tightest: a cell owns its north
+and east edges and not its south or west, so each grid line is probed from both sides -
+once as one cell's ``x1`` and once as its neighbour's ``x0`` - without any point being
+invented. The midpoints cover a polygon boundary crossing a cell edge between corners.
 ``--mode source-edges`` probes stored ring vertices and planar edge midpoints;
 ``--mode seams`` probes poles and both antimeridian representations.
 ``--points`` replays a JSON array of [longitude, latitude] pairs instead.
@@ -42,24 +43,41 @@ from timezonefinder.shortcut_index import ShortcutIndex, cell_bounds
 from timezonefinder.utils import coord2int
 
 
-def cell_corner_points(index: ShortcutIndex) -> Iterator[tuple[float, float]]:
-    """The four corner integer points of every cell the index stores.
+def cell_edge_points(index: ShortcutIndex) -> Iterator[tuple[float, float]]:
+    """Every stored cell's four corners and the midpoint of each of its four edges.
 
-    ``query_coordinate`` is what makes a probe land on the intended integer: a float
-    that truncates to it, not the nearest float to the division. Corners one unit
-    outside the coordinate range are skipped rather than clamped - a lookup rejects
-    them, and the two lines that *are* in range but owned by no polygon as spelled
-    (-180 and -90) are read as +180 and one unit north, which the ``seams`` mode probes.
+    The corners alone probe each grid *line* from both sides - a cell owns its north and
+    east edges and its neighbour owns the other side of the same line - which is the
+    property the candidate rule turns on. The midpoints are there because a *polygon*
+    boundary can cross a cell edge between its corners, and nothing about a corner says
+    what happens there; the H3 stream this replaced sampled each curved edge for the same
+    reason, and dropping to corners alone would have narrowed the audit while the rule
+    under it changed.
+
+    ``query_coordinate`` is what makes a probe land on the intended integer: a float that
+    truncates to it, not the nearest float to the division. Coordinates outside the valid
+    range are skipped rather than clamped - a lookup rejects them, and the two lines that
+    *are* in range but owned by no polygon as spelled (-180 and -90) are read as +180 and
+    one unit north, which the ``seams`` mode probes.
     """
     for cell_id, _ in index.items():
         x0, y0, x1, y1 = cell_bounds(cell_id)
-        for x in (x0, x1):
+        xm, ym = (x0 + x1) // 2, (y0 + y1) // 2
+        for x, y in (
+            (x0, y0),
+            (x0, y1),
+            (x1, y0),
+            (x1, y1),
+            (xm, y0),
+            (xm, y1),
+            (x0, ym),
+            (x1, ym),
+        ):
             if not -MAX_LNG_VAL_INT <= x <= MAX_LNG_VAL_INT:
                 continue
-            for y in (y0, y1):
-                if not -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT:
-                    continue
-                yield query_coordinate(x), query_coordinate(y)
+            if not -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT:
+                continue
+            yield query_coordinate(x), query_coordinate(y)
 
 
 def source_edge_points(finder: TimezoneFinder) -> Iterator[tuple[float, float]]:
@@ -200,8 +218,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=("cell-corners", "source-edges", "seams"),
-        default="cell-corners",
+        choices=("cell-edges", "source-edges", "seams"),
+        default="cell-edges",
     )
     parser.add_argument("--max-points", type=int)
     parser.add_argument("--witness-limit", type=int, default=100)
@@ -212,8 +230,8 @@ def main(argv: list[str] | None = None) -> int:
         points: Iterable[tuple[float, float]]
         if args.points:
             points = json.loads(args.points.read_text(encoding="utf-8"))
-        elif args.mode == "cell-corners":
-            points = cell_corner_points(finder.shortcuts)
+        elif args.mode == "cell-edges":
+            points = cell_edge_points(finder.shortcuts)
         elif args.mode == "source-edges":
             points = source_edge_points(finder)
         else:
