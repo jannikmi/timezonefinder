@@ -36,10 +36,10 @@ Where the ordering already picked the enclave the conversion moved nothing; wher
 
 On 2026c at H3 resolution 4: **826 of 31,394 ambiguous cells** are covered by one polygon; **742 convert and 84 cannot**, because a smaller zone reaches into them without covering them and would take the part it reaches. Converting the 742 removed **2.6 %, 2.1 % and 4.4 %** of point-in-polygon tests on the ambiguous, random and on-land fixtures; `shortcuts.bin` was the only binary that moved, and it kept its size.
 
-No polygon clipping is needed. Coverage is `fully_contained_in_hole(cell, polygon)` plus no hole of the covering polygon meeting the cell, and containment reduces to comparing spherical zone areas: the two ratios share the shared area as their numerator.
+No polygon clipping is needed. Coverage is a whole-cell-inside-polygon test plus no hole of the covering polygon meeting the cell, and containment reduces to comparing spherical zone areas: the two ratios share the shared area as their numerator.
 
 ## Reopen only if
 
-The index's cells become exact planar shapes — [IDX-6](idx-6-replace-the-h3-shortcut-index-with-the-grid-tree.md)'s grid tree, decided 2026-10-12, makes full coverage an exact rectangle-in-polygon test — **and** PREC-1 has made precedence consistent in every cell, so that converting a covered cell changes no answer. It is then a pure performance item, priced on its own count and without the per-cell split that withdrew it.
+The index's cells are now exact planar rectangles — the grid tree shipped in format 4, so full coverage is an exact rectangle-in-polygon test and the first half of this condition is met — **and** PREC-1 has made precedence consistent in every cell, so that converting a covered cell changes no answer. The second half is what still holds this closed. It is then a pure performance item, priced on its own count and without the per-cell split that withdrew it.
 
 - **Status:** withdrawn — applying precedence only in covered cells splits an overlap region by H3 cell, and the remaining ~0.6–2.1 % gain does not pay for certified coverage and keeping `timezones_at`'s candidates.

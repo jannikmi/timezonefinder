@@ -2,17 +2,19 @@
 
 ## What the audit establishes
 
-`scripts/audit_shortcut_candidates.py` compares the candidates exposed by the packaged shortcut index with independent full-polygon containment, including holes. It uses actual `latlng_to_cell` assignment, then integer query coordinates and the runtime polygon kernel. It does not use the converter's cell bounds or planar cell ring as its oracle. A unique-zone entry exposes every polygon of that zone; the compiled format no longer reveals which individual polygons the converter originally retained there.
+`scripts/audit_shortcut_candidates.py` compares the candidates exposed by the packaged shortcut index with independent full-polygon containment, including holes. It asks the index which cell a coordinate reads, then uses integer query coordinates and the runtime polygon kernel. It does not use the converter's candidate rule as its oracle. A unique-zone entry exposes every polygon of that zone; the compiled format no longer reveals which individual polygons the converter originally retained there.
 
-Run each deterministic stream with `uv run python -m scripts.audit_shortcut_candidates --mode MODE --output tmp/audit.json`: `cell-edges` enumerates all shortcut-resolution cells, including pentagons and face-crossing boundary vertices; `source-edges` enumerates stored boundary/hole vertices and planar midpoints; `seams` checks both poles and antimeridian representations. Source probes preserve the integer coordinate reached by runtime truncation. `--points` accepts a JSON array of longitude/latitude pairs for replay. `--max-points` bounds exploratory runs and records whether the stream was exhausted. Exit 1 means at least one omission; empty input fails instead of reporting success.
+Run each deterministic stream with `uv run python -m scripts.audit_shortcut_candidates --mode MODE --output tmp/audit.json`: `cell-corners` enumerates the four corner integer points of every stored cell, which probes each grid line from both sides because a cell owns its north and east edges and its neighbour owns the other side; `source-edges` enumerates stored boundary/hole vertices and planar midpoints; `seams` checks both poles and antimeridian representations. The default stream was `cell-edges` while the cells were hexagons, enumerating reported vertices and spherical edge midpoints nudged either way - a sampling of a curved edge, where corners of a rectangle are the edge. Source probes preserve the integer coordinate reached by runtime truncation. `--points` accepts a JSON array of longitude/latitude pairs for replay. `--max-points` bounds exploratory runs and records whether the stream was exhausted. Exit 1 means at least one omission; empty input fails instead of reporting success.
 
-Reports retain data hashes, H3 and Python versions, backend, counts and bounded witnesses. A missing polygon is not necessarily a wrong zone: overlapping polygons may supply the same answer. The report separately counts omissions whose answer belongs to none of the directly containing polygons. It makes no precedence claim when multiple zones contain a point. This is not an independent test of the polygon kernel, and zero sampled omissions is never a completeness certificate.
+Reports retain data hashes, the grid shape, the Python version, the backend, counts and bounded witnesses. A missing polygon is not necessarily a wrong zone: overlapping polygons may supply the same answer. The report separately counts omissions whose answer belongs to none of the directly containing polygons. It makes no precedence claim when multiple zones contain a point. This is not an independent test of the polygon kernel, and zero sampled omissions is never a completeness certificate.
 
 At the maintainer's request, `update_data.sh` runs all three untruncated audit streams once after conversion, before returning binaries or preparing a release. An omission or audit error stops the update before CI builds the data wheel. Reports live under `tmp/`, outside the packaged data; failure diagnostics include replay coordinates and missing IDs. Ordinary pytest/tox runs do not repeat these expensive streams: `tests/test_shortcut_candidate_coverage.py` executes the update script with external commands stubbed to verify all streams run and each failure blocks preparation, while the audit's unit tests check real missing-candidate detection and CLI failure. This intentionally leaves ordinary code PRs without a full sampled geometry census; rerun the diagnostic streams when changing candidate generation or the oracle.
 
 ## Exclusion audit
 
-The following proof obligations remain in `scripts/hex_utils.py`; absence of a witness does not discharge them.
+**Discharged by construction on 2026-10-13, not repaired.** The grid tree's candidate rule is exact: a cell is an axis-aligned rectangle of the integer coordinates the kernel reads, so an exclusion is a planar predicate over two rectangles and a ring rather than evidence about a spherical cell, and there is no recursive propagation step at all. Every site below is deleted code. What replaced the obligations is a smaller certification question, carried by [GEOM-3](../items/lookup-geometry-and-data-format/geom-3-conservatively-repair-shortcut-candidate-generation.md): shapely's predicates, the half-unit shift's implication, and the bounding-box fallback for an invalid ring.
+
+The table is kept because it is the clearest statement of **what a candidate rule has to prove**, and the next index — or a custom-data path — has to answer the same questions in its own frame. Superseded, 2026-09-10 through 2026-10-12, in `scripts/hex_utils.py`; absence of a witness did not discharge them.
 
 | Site | Required invariant and current gap |
 | --- | --- |
@@ -40,8 +42,10 @@ On 2026-09-10, data 2026c, H3 4.5.0, Python 3.14.2 with Numba on macOS arm64:
 
 | Stream | Points | Omissions | Seconds |
 | --- | ---: | ---: | ---: |
-| [H3 edges](../measurements/shortcut-candidates-cell-edges-2026-09-10.json) | 5,186,160 | 0 | 68.80 |
+| [H3 cell edges](../measurements/shortcut-candidates-cell-edges-2026-09-10.json) | 5,186,160 | 0 | 68.80 |
 | [Source edges](../measurements/shortcut-candidates-source-edges-2026-09-10.json) | 16,375,460 | 0 | 168.39 |
 | [Coordinate seams](../measurements/shortcut-candidates-seams-2026-09-10.json) | 124 | 0 | 0.05 |
+
+Re-run on 2026-10-13 against the grid-tree index, data 2026d, same machine: 927,192 cell-corner points, 16,505,010 source-edge points and 124 seam points, **zero omissions** on all three. The corner stream is a fifth of the H3 edge stream's size because a rectangle's edges are carried by its corners, where a hexagon's curved edges had to be sampled.
 
 These are single audit wall-clock runs, with concurrent local work, not performance comparisons. Enumerating every edge does not test every coordinate or solve every intersection. Backend regression tests deliberately remove candidates to ensure a zero-miss result is not a vacuous test of the oracle.
