@@ -29,6 +29,8 @@ from scripts.shortcuts import check_shortcut_sorting, optimise_shortcut_ordering
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
     POLYGON_BLOCK_SIZE,
 )
 from timezonefinder.shortcut_index import (
@@ -258,21 +260,57 @@ def refusing_orderer():
 
 
 @pytest.mark.parametrize("lng, lat", CELL_PROBES + [(90.0, 0.0)])
-def test_the_safety_gate_judges_a_seam_cell_on_its_geometry_like_any_other(lng, lat):
-    """The pole and antimeridian refusals are gone, and this is what says so.
+def test_the_safety_gate_reads_the_geometry_of_a_seam_cell_like_any_other(lng, lat):
+    """No cell is refused before its geometry is read.
 
     The H3 gate derived its envelope from a circumscribed spherical cap, and the
     conversion broke where the cap reached a pole or spanned the antimeridian - so those
-    cells were refused outright, before any geometry was read, and could never have their
-    final zone changed. A cell is now its own rectangle everywhere, so there is nothing
-    left to bail out of: every cell reaches the containment tests.
+    cells bailed out before any geometry was read. A cell is now its own rectangle
+    everywhere, so there is nothing left to bail out of.
 
     Asserted by making the geometry unreadable, so that reaching it is what fails. A
-    verdict-only test cannot tell "refused early" from "refused on the geometry", which
-    is precisely the distinction that mattered.
+    verdict-only test cannot tell "refused early" from "refused on the geometry".
     """
     with pytest.raises(AssertionError, match="was consulted"):
         refusing_orderer().safe_to_reorder(root_cell_of(*shifted(lng, lat)), [0, 1])
+
+
+def test_the_gate_can_pass_at_the_edges_of_the_domain():
+    """Reaching the geometry is not the same as being able to pass, and this is the half
+    that was missing.
+
+    ``cell_envelope`` grows the cell by one unit, and the top row ends at exactly +90
+    degrees while the last column ends at +180 - so without the clip to the coordinate
+    domain the envelope asks for coverage where no polygon can be, and ``covers`` is
+    False for all 384 top-row and 192 last-column root cells whatever their geometry.
+    That is the H3 gate's pole and antimeridian refusals surviving the port as an
+    arithmetic accident, and the test above cannot see it: those cells do read their
+    geometry, and still always refuse.
+
+    So: two synthetic zones tiling the entire legal domain exactly and disjointly - the
+    most admissible input there is - must be admitted at every edge, not only inside.
+    """
+    legal = box(-MAX_LNG_VAL_INT, -MAX_LAT_VAL_INT, MAX_LNG_VAL_INT, MAX_LAT_VAL_INT)
+    west = box(-MAX_LNG_VAL_INT, -MAX_LAT_VAL_INT, 0, MAX_LAT_VAL_INT)
+    east = box(0, -MAX_LAT_VAL_INT, MAX_LNG_VAL_INT, MAX_LAT_VAL_INT)
+    refused = []
+    for lng, lat in [
+        (0.0, 0.0),
+        (-179.99, 0.0),
+        (179.99, 0.0),
+        (0.0, -89.99),
+        (0.0, 89.99),
+        (179.99, 89.99),
+        (-179.99, -89.99),
+    ]:
+        cell = root_cell_of(*shifted(lng, lat))
+        assert legal.covers(cell_envelope(cell)), (
+            f"the envelope of the cell at ({lng}, {lat}) leaves the coordinate domain, "
+            "so no geometry can ever cover it"
+        )
+        if not synthetic_orderer([west, east], [0, 1]).safe_to_reorder(cell, [0, 1]):
+            refused.append((lng, lat))
+    assert not refused, f"a tiling of the whole domain was refused at {refused}"
 
 
 def test_hole_union_gate_skips_all_individual_hole_costs():

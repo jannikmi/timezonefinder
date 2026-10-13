@@ -57,12 +57,13 @@ integrals over clipped geometry. The approximations are these, explicitly:
    then gives the GLOBAL optimum for that special case. Point-dependent costs and
    overlaps need not admit a transitive ratio order; no global claim is made.
 6. Correctness is separate from that approximate objective. The cell's own
-   rectangle, grown one unit on each side, certifies coverage and absence of
-   cross-zone positive-area overlap before allowing final-zone changes or
-   interleaving. It is exact rather than a conservative circumscribed cap, which
-   is what the hexagons needed, so it admits more cells than that gate did -
-   including the polar and antimeridian cells the cap conversion had to refuse
-   outright.
+   rectangle, grown one unit on each side and clipped to the coordinate domain,
+   certifies coverage and absence of cross-zone positive-area overlap before
+   allowing final-zone changes or interleaving. It is exact rather than a
+   conservative circumscribed cap, which is what the hexagons needed, so it
+   admits more cells than that gate did - including the polar and antimeridian
+   cells the cap conversion had to refuse outright. The clip is what makes that
+   last clause true rather than merely intended: see `cell_envelope`.
    Otherwise preserve legacy zone priority and final zone, optimizing only
    within tested zone blocks. Block survivors depend on the zone's hit union,
    so this preserves zone answers even where the proxy geometry is inaccurate.
@@ -87,6 +88,8 @@ from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
     POLYGON_BLOCK_SIZE,
 )
 from timezonefinder.polygon_array import HoleArray, PolygonArray
@@ -167,14 +170,29 @@ def cell_region(cell: int) -> BaseGeometry:
 
 
 def cell_envelope(cell: int) -> BaseGeometry:
-    """What the safety gate has to be satisfied over: the cell plus one unit.
+    """What the safety gate has to be satisfied over: the cell plus one unit, clipped.
 
-    Every integer point the cell owns lies strictly inside this, so a coverage or
-    disjointness fact established here holds for every query the cell answers.
-    The unit of slack absorbs the query quantization the region above ignores.
+    Every integer point the cell owns lies inside this, so a coverage or disjointness
+    fact established here holds for every query the cell answers. The unit of slack
+    absorbs the query quantization the region above ignores.
+
+    **Clipped to the coordinate domain, which is not cosmetic.** The top row's cells end
+    at exactly +90 degrees and the last column's at +180, so an unclipped +1 would ask
+    the gate to find coverage beyond where any polygon can be - and ``covers`` would be
+    False for every one of them, whatever their geometry. That is how the H3 gate's
+    pole and antimeridian refusals would have survived the port into a rectangle that
+    has no reason for them: silently, as an arithmetic accident rather than a decision,
+    over the 384 top-row and 192 last-column root cells and all of their children.
+    ``tests/test_shortcut_ordering.py::test_the_gate_can_pass_at_the_edges_of_the_domain``
+    is what says they are reachable.
     """
     x0, y0, x1, y1 = cell_bounds(cell)
-    return box(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+    return box(
+        max(x0 - 1, -MAX_LNG_VAL_INT),
+        max(y0 - 1, -MAX_LAT_VAL_INT),
+        min(x1 + 1, MAX_LNG_VAL_INT),
+        min(y1 + 1, MAX_LAT_VAL_INT),
+    )
 
 
 class CheckCost:

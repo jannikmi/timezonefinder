@@ -57,10 +57,10 @@ def test_every_vertex_a_polygon_owns_is_offered_in_its_cell(tf, shortcut_index):
     so a polygon frequently does not contain its own vertex. The candidate rule is exact
     rather than conservative: a polygon that only touches a cell owns none of its points
     and is correctly left out of it. Asserting that every vertex's cell lists its polygon
-    would therefore assert the old H3 rule's over-inclusion, and it fails on 326 of the
-    4.1 million stored vertices - all 326 of them vertices the kernel places *outside*
-    their own polygon, including 32 on the -180 meridian, which a lookup reads as +180
-    and answers from the far side by design.
+    would therefore assert the old H3 rule's over-inclusion. It fails on 326 vertices of
+    the ~8.0 million this loop visits (4.1 million of them distinct) - all 326 of them
+    vertices the kernel places *outside* their own polygon, including 32 on the -180
+    meridian, which a lookup reads as +180 and answers from the far side by design.
 
     What matters, and what this asserts, is that no polygon *containing* the queried
     point is missing from the candidates. ``scripts/audit_shortcut_candidates.py`` is the
@@ -214,7 +214,7 @@ def test_empty_shortcut(hybrid_shortcuts):
     assert not empty_shortcuts, f"Found empty shortcut entries: {empty_shortcuts[:5]}"
 
 
-def test_the_rows_along_both_poles_are_covered(shortcut_index):
+def test_the_rows_along_both_poles_are_covered(tf, shortcut_index):
     """What replaces "exactly one cell surrounds each pole", which was H3 topology.
 
     An aligned grid reaches a pole as a whole row of cells rather than as one cell, so
@@ -231,11 +231,33 @@ def test_the_rows_along_both_poles_are_covered(shortcut_index):
         "southernmost": range(ROOT_COLUMNS),
         "northernmost": range(ROOT_CELLS - ROOT_COLUMNS, ROOT_CELLS),
     }
-    for name, cells in rows.items():
-        uncovered = [cell for cell in cells if shortcut_index.entry_of(cell) == ABSENT]
+    for name, roots in rows.items():
+        # the *leaves*, not the roots: a refined root cell is not an answer, so checking
+        # it would pass even if all sixteen of its children were uncovered - which is
+        # exactly the band of unanswered coordinates this exists to refuse
+        leaves = []
+        for root in roots:
+            entry = shortcut_index.entry_of(root)
+            if entry < ABSENT:
+                leaves.extend(int(c) for c in child_cells_of(root))
+            else:
+                leaves.append(root)
+        uncovered = [c for c in leaves if shortcut_index.entry_of(c) == ABSENT]
         assert not uncovered, (
-            f"{len(uncovered)} root cells of the {name} row are uncovered, e.g. "
-            f"{uncovered[:5]}"
+            f"{len(uncovered)} of the {len(leaves)} cells along the {name} row are "
+            f"uncovered, e.g. {uncovered[:5]}"
+        )
+        # and the index being covered is not the same as the lookup answering, which is
+        # the claim a reader of this test cares about. One probe per cell of the row,
+        # at the pole itself.
+        pole = 90.0 if name == "northernmost" else -90.0
+        unanswered = [
+            cell
+            for cell in leaves
+            if tf.timezone_at(lng=cell_centre(cell)[0], lat=pole) is None
+        ]
+        assert not unanswered, (
+            f"{len(unanswered)} longitudes answer nothing at latitude {pole}"
         )
 
 

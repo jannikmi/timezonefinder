@@ -71,11 +71,12 @@ __all__ = [
 #
 # Measured rather than chosen: against the H3 resolution-4 index this replaced, and
 # against flat grids, deeper trees, linear quadtrees and a tile pyramid, this shape was
-# the only one ahead of H3 on every axis at less than its footprint - 29-30 % faster per
-# scalar and 3.4x per batch random lookup, 57 % fewer polygon tests, 507 KB against
-# 617 KB on disk and 1,031 KB resident. A 1.875-degree root with two levels of 4x4 is
-# slightly faster still and spends 55 % more disk than H3, which "replace, never add"
-# refuses. The runs and the refused variants are in
+# the only one ahead of H3 on every axis at less than its footprint - faster per scalar
+# lookup, several times faster per batch, far fewer polygon tests, and about half the
+# resident index arrays. A 1.875-degree root with two levels of 4x4 is slightly faster
+# still and spends more disk than H3, which "replace, never add" refuses. The sizes the
+# shipped index actually reaches are in `docs/data_report.rst`; the runs, the exact
+# figures and the refused variants are in
 # `contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`;
 # `prototypes/latlng_index_bench.py` re-measures the family.
 #

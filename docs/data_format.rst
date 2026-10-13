@@ -551,7 +551,7 @@ Why these cells
 Through release 9.0.0 this index was built on `H3 hexagons <https://github.com/uber/h3-py>`__ at resolution 4. The aligned grid tree replaced it because it is faster and smaller on every axis measured. Two properties account for that, and both come from the cells rather than from the storage:
 
 * **A cell is arithmetic.** An H3 cell came from a library call that could not be vectorised and cost about half of a query that needed no geometry. A grid cell is a floor division, and a batch of them is one NumPy expression.
-* **A cell is exact.** The cells are defined in the same integer coordinates the point-in-polygon kernel reads, and each owns its north and east edges and not its south or west — the kernel's own convention. So a zone whose polygons only reach *across* a cell edge is not a candidate inside it, where a spherical cell had to be over-approximated. Fewer candidates per cell means fewer cells that need geometry at all.
+* **A cell is tight.** The cells are defined in the same integer coordinates the point-in-polygon kernel reads, and each owns its north and east edges and not its south or west — the kernel's own convention. So a zone whose polygons only reach *across* a cell edge is not a candidate inside it, where a spherical cell had to be over-approximated. Fewer candidates per cell means fewer cells that need geometry at all. The rule never leaves out a polygon the kernel can place a cell's point inside; it does admit one whose interior enters the cell without reaching any of its integer points, a sliver under ~1.1 cm wide, which costs that cell one bounding-box rejection.
 
 Alignment matters too: the ocean timezones meet on the 7.5 degree meridians, and a grid whose cell edges fall on them does not mix two ocean zones into one cell.
 
@@ -561,7 +561,7 @@ The shape — how coarse the root grid is, how many levels it refines, and how l
 
 The two lines no polygon owns as spelled are handled before the division: ``-180`` degrees reads as ``+180``, which is the *last* column rather than the first, and ``-90`` as the point one unit north, which is row 0. ``docs/result_stability.rst`` says why, and ``tests/test_minus_180_meridian_and_minus_90_parallel.py`` fails on a tree that clamps the longitude instead of wrapping it.
 
-The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast. ``scripts/grid_cells.py`` holds the candidate rule and why it is exact.
+The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast. ``scripts/grid_cells.py`` holds the candidate rule, what it guarantees and where it over-includes.
 
 .. _shortcut-index-layout:
 

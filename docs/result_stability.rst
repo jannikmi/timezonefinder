@@ -254,11 +254,13 @@ exactly the two places where it is the order that decides:
   containing candidate wins, so the zone order decides which, and both answers are equally
   truthful about the geometry.
 
-Measured over all 4,113,237 distinct stored boundary vertices - the densest probe of these two
-cases there is, since a vertex is where slivers and overlaps live - the hexagon-to-grid-tree
-change moved 18 ``timezone_at`` answers: 17 of the first kind and 1 of the second, at a point in
-both ``Australia/Brisbane`` and ``Etc/GMT-9``. Over 200,000 area-weighted random points and 14,742
-points inside two zones around Abyei and the West Bank it moved none.
+How much this amounts to in practice was measured when the cells changed, over every stored
+boundary vertex - the densest probe of these two cases there is, since a vertex is where slivers
+and overlaps live. The answer was a double-digit number of moved answers out of millions of
+vertices, almost all of the first kind, and none at all over a large area-weighted random sample
+or over the dataset's two best-known overlap regions. The changelog entry for that release
+carries the counts; this page is about which answers can move and why, not about how many did
+once.
 
 Note how such a change reaches you. The ordering optimizer and the shortcut builder live in the
 code repository (``scripts/``) but their *output* ships in ``timezonefinder-data``, so an

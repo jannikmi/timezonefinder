@@ -13,7 +13,8 @@ belongs here is why it is shaped that way:
   the index of a block of :data:`BLOCK_SIDE` x :data:`BLOCK_SIDE` children instead, and
   the child is where its candidate list lives. A flat grid of the finest cells would
   spend two bytes on every cell of the open ocean; the tree spends them where zones
-  meet, which is how it reaches 0.234 degree cells in 507 KB.
+  meet, which is how it reaches 0.234 degree cells in about half a megabyte.
+  ``docs/data_report.rst`` carries what the shipped index weighs.
 * **The cell is arithmetic, not a search.** Each level is a whole number of coordinate
   units wide, so a level's cell is one floor division per axis of the truncated integer
   coordinates the kernel reads - no key array, no ``bisect``, and the whole descent
@@ -21,8 +22,8 @@ belongs here is why it is shaped that way:
   which is the difference between beating a flat grid and losing to it.
 * **The table holds the answer, not a pointer to it.** One ``int16`` per root cell: a
   zone id for a cell a single zone covers, ``ABSENT`` for a cell with no coverage, and
-  otherwise the index of a child block. 86 % of root cells are answered by that one
-  read. The block array is the same tri-state one level down, with a candidate list
+  otherwise the index of a child block. The large majority of root cells are answered by
+  that one read. The block array is the same tri-state one level down, with a candidate list
   index where the table had a block index.
 * **Only the candidate lists are stored, each distinct one once.** Duplicates carry
   *equal* offsets into the shared payload rather than an index to a shared entry, so a
@@ -32,8 +33,9 @@ belongs here is why it is shaped that way:
   and east edges and not its south or west - the point-in-polygon kernel's own
   convention, which ``tests/test_point_in_polygon_boundary_convention.py`` pins. A zone
   whose polygons only reach across a cell edge therefore is not a candidate in it, and
-  the index tests 57 % fewer polygons per random query than the H3 index it replaced.
-  A kernel change moving boundary points to the other polygon would make these cells
+  the index offers far fewer candidate polygons per random query than the H3 index it
+  replaced. A kernel change moving boundary points to the other polygon would make these
+  cells
   misanswer one-unit strips along every aligned border, which is why that test is the
   one this layout rests on.
 
@@ -688,9 +690,15 @@ def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -
     """Guard a narrow column, with the message that makes choosing it by fit safe.
 
     For the columns whose width is *fixed* by the format rather than chosen by fit -
-    which is the root table and the block array, both ``int16``. The two data-dependent
-    columns need no such guard: their width is derived from the maximum they have to hold,
-    so it fits by construction. Called by the builder, never when a finder is constructed.
+    the root table, the block array and the payload. The two data-dependent columns need
+    no such guard: their width is derived from the maximum they have to hold, so it fits
+    by construction. Called by the builder, never when a finder is constructed.
+
+    The payload is the one that reads as safe and is not: a boundary id past ``uint16``
+    wraps to a *valid* id, and no reader can tell the difference afterwards - the
+    committed-data check compares the payload's maximum against the polygon count, and a
+    wrapped value is below it by construction. So it has to be caught where the value is
+    still known.
 
     The message is the deliverable, not the assertion: whoever hits this is regenerating
     the data years from now and needs to be told what overflowed, what the ceiling was and
@@ -799,7 +807,14 @@ def build_shortcut_index(
         if isinstance(value, (int, np.integer)):
             level_table[position] = int(value)
             continue
-        poly_ids = np.asarray(value, dtype=PAYLOAD_DTYPE)
+        requested = np.asarray(value, dtype=np.int64)
+        check_fits(
+            requested,
+            PAYLOAD_DTYPE,
+            what="a candidate boundary polygon id",
+            remedy="Widen PAYLOAD_DTYPE to uint32.",
+        )
+        poly_ids = requested.astype(PAYLOAD_DTYPE)
         if len(poly_ids) == 0:
             # A cell no polygon covers. Recorded as absent rather than as an empty entry:
             # every caller answers `None` for both, and storing nothing needs no index.

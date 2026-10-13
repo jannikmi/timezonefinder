@@ -806,10 +806,11 @@ def validate_shortcut_index(data_dir: Path) -> None:
     """Check that the shortcut index in ``data_dir`` says what a lookup will read from it.
 
     The lookup does no bounds checking and no dispatch beyond the sign of one ``int16``:
-    it slices bits into the table, and follows what it finds there straight into the
-    payload. Everything that makes that safe is established here - the widths chosen by
-    fit rather than by headroom, the reserved table values, the precomputed stop index,
-    and the padding that must read as "nothing here" - because none of it is
+    it divides a coordinate into the root table, follows a negative value into the block
+    array, and follows what it finds there straight into the payload. Everything that
+    makes that safe is established here - the widths chosen by fit rather than by
+    headroom, the reserved values on each of the two levels, the payload being reachable
+    in its entirety, and the precomputed stop index - because none of it is
     self-announcing at lookup time. A stop index one too small returns a plausible wrong
     timezone; a zone id truncated into ``int16`` returns a different zone's name.
 

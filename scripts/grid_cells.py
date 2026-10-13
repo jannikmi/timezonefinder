@@ -1,11 +1,19 @@
 """Which boundary polygons can own a point of a grid-tree cell.
 
-This is the whole of the shortcut index's candidate rule, and it is **exact** rather than
-conservative: a polygon is a candidate in a cell if and only if the point-in-polygon
-kernel can put one of the cell's integer points inside it. Nothing is over-included to be
-safe, and nothing is left out.
+This is the whole of the shortcut index's candidate rule. **It never leaves a polygon
+out that the point-in-polygon kernel can place one of the cell's integer points inside,
+and it is tight rather than exact**: what it tests is whether the polygon's *interior*
+meets the cell's half-open region, which is a superset of "owns one of the cell's
+integer points". A polygon whose interior enters the cell without reaching any of its
+lattice points is admitted and owns nothing - a sliver narrower than one coordinate unit,
+~1.1 cm. Over 4,000 randomised (small polygon, small cell) pairs that is 250 admissions
+and **zero** omissions; on the packaged data it costs those cells one bounding-box
+rejection each.
 
-Two facts make that possible, and both are the cells' doing rather than this module's:
+Omission is the direction that matters, because it is a silently wrong timezone, and it
+is the direction the half-unit shift below closes. Over-inclusion costs a bbox test.
+
+Two facts make the rule tight, and both are the cells' doing rather than this module's:
 
 * **A cell is an axis-aligned rectangle of integer coordinates**, ``[x0, x1] x [y0, y1]``
   from ``timezonefinder.shortcut_index.cell_bounds``, so "can this polygon own one of
@@ -20,7 +28,8 @@ Two facts make that possible, and both are the cells' doing rather than this mod
   *touches* the box ``[x0 - 0.5, x1] x [y0 - 0.5, y1]`` owns none of the cell's points,
   and one whose interior meets that box may own some. Shifting the box half a unit
   south-west is what turns "the polygon reaches the cell" into "the polygon can own an
-  integer point of it".
+  integer point of it" - the *may* is where the over-inclusion above lives, and dropping
+  the shift is what would turn it into an omission.
 
 The geometry runs on the **stored integer rings**, read planar exactly as the kernel reads
 them, because matching the kernel is the point: a candidate set computed on the sphere
@@ -83,7 +92,9 @@ def owned_pairs(
     """``(cell, polygon)`` index pairs where the polygon can own a point of the cell.
 
     ``x0 .. y1`` are ``cell_bounds`` per cell, so cell ``i`` owns the integer points
-    ``[x0[i], x1[i]] x [y0[i], y1[i]]``.
+    ``[x0[i], x1[i]] x [y0[i], y1[i]]``. "Can own" is the module docstring's superset:
+    never an omission, and admitting a polygon whose interior enters the cell without
+    reaching one of its lattice points.
 
     The expensive predicate is ``touches``, so it is asked only where it can matter: a
     polygon reaching the box shrunk by a further quarter unit meets its interior, which
