@@ -80,7 +80,7 @@ requires bumping ``DATA_FORMAT_VERSION`` too.
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes, as bit-packed residuals against a per-block coordinate frame (see `Block Coordinate Frames`_). The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
-2. **Shortcut Index**: Spatial index over H3 hexagons (``shortcuts.bin``) holding, per cell, either the timezone that covers it or the polygons a lookup there has to test
+2. **Shortcut Index**: Spatial index over an aligned grid tree (``shortcuts.bin``) holding, per cell, either the timezone that covers it or the polygons a lookup there has to test
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
@@ -208,7 +208,7 @@ Hole Data
 Spatial Indexing
 ----------------
 
-* ``shortcuts.bin``: the spatial index, mapping every H3 cell at resolution 4 to either the
+* ``shortcuts.bin``: the spatial index, mapping every cell of the grid tree to either the
   zone that covers it or the boundary polygons a lookup there has to test. Its layout is
   described under `Shortcut Index Layout`_.
 
@@ -512,117 +512,72 @@ The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 Note that this check covers those two files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 
 
-Spatial Indexing with H3 Hexagons
-=================================
+Spatial Indexing with an Aligned Grid Tree
+==========================================
 
 The Spatial Indexing Backbone
 -----------------------------
 
-The spatial indexing system based on `H3 hexagons  <https://github.com/uber/h3-py>`__ is the backbone of the ``timezonefinder`` package and its performance. This indexing mechanism drastically reduces the number of polygons that need to be checked to determine which timezone a point is located in.
+The shortcut index is the backbone of the ``timezonefinder`` package and its performance. It drastically reduces the number of polygons that need to be checked to determine which timezone a point is located in.
 
 How it works:
 ~~~~~~~~~~~~~
 
-* The surface of the Earth is divided into a grid of hexagons using Uber's H3 library
-* For each hexagon cell, the library uses a hybrid storage approach:
+* The surface of the Earth is divided into a dense grid of square cells aligned with longitude and latitude: 384 columns by 192 rows, so 0.9375 degrees a side
+* Each cell gets one of three answers:
 
-   - **Unique zones**: When all polygons in a hexagon belong to the same timezone, the zone ID is stored directly
-   - **Multiple zones**: When a hexagon contains polygons from different timezones, an array of polygon IDs is stored
+   - **Unique zones**: when every polygon reaching the cell belongs to the same timezone, the zone ID is stored directly
+   - **Several zones**: the cell is *refined* into a 4 by 4 block of children, 0.234375 degrees a side, and each child is asked the same question
+   - **Several zones in a child too**: the child stores an array of polygon IDs to test
 
 * When looking up a timezone for a specific point, the library:
-   * Determines which H3 hexagon contains the point
-   * Retrieves the shortcut entry for that hexagon
-   * If it's a zone ID, returns the timezone immediately
-   * If it's a polygon array, tests only those polygons to determine which timezone the point belongs to
+   * Divides the point's integer coordinates by the cell width, one division per axis
+   * Reads the entry for that cell
+   * If it is a zone ID, returns the timezone immediately
+   * If it names a block, repeats the division one level finer and reads again
+   * If it is a polygon array, tests only those polygons
 
-This hybrid approach provides several performance benefits:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This provides several performance benefits:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Reduced Search Space**: Instead of checking all polygons (thousands), only a small subset needs to be evaluated
-* **Immediate Results**: For hexagons with unique timezones (~majority of cases), the result is returned immediately without any polygon testing
-* **Memory Efficiency**: The spatial index is compact and optimized for fast lookups, storing zone IDs directly when possible
-* **Adaptive Storage**: Uses the most efficient storage method for each hexagon based on its timezone complexity
+* **Reduced search space**: instead of checking all polygons (thousands), only a small subset needs to be evaluated — the large majority of random queries need no polygon test at all
+* **No search for the cell**: the cell is two integer divisions per level, so finding it touches no memory and needs no key array
+* **Memory efficiency**: two bytes per cell, and the finer cells exist only where zones meet, so the open ocean costs one entry per 0.9375 degrees rather than per 0.234375
+* **Vectorised batches**: :meth:`~timezonefinder.TimezoneFinder.timezone_ids_at` resolves a whole batch's cells in a handful of NumPy operations, which is most of why a batch lookup is worth using
 
-H3 Resolution Selection
-~~~~~~~~~~~~~~~~~~~~~~~
+Why these cells
+~~~~~~~~~~~~~~~
 
-The library uses H3 resolution 4, about 288k hexagons, for its spatial index. That is a measured
-choice, not an assumption: ``prototypes/single_resolution_bench.py`` builds a separate index at
-every resolution from 0 upwards, prices each one in the layout described below, and benchmarks them
-against a common set of globally random query points.
+Through release 9.0.0 this index was built on `H3 hexagons <https://github.com/uber/h3-py>`__ at resolution 4. The aligned grid tree replaced it because it is faster and smaller on every axis measured. Two properties account for that, and both come from the cells rather than from the storage:
 
-Every level multiplies the cells by seven and the table by eight, so the choice is a trade between
-how often a lookup needs geometry at all and how much memory the table costs. Measured on the
-packaged dataset:
+* **A cell is arithmetic.** An H3 cell came from a library call that could not be vectorised and cost about half of a query that needed no geometry. A grid cell is a floor division, and a batch of them is one NumPy expression.
+* **A cell is exact.** The cells are defined in the same integer coordinates the point-in-polygon kernel reads, and each owns its north and east edges and not its south or west — the kernel's own convention. So a zone whose polygons only reach *across* a cell edge is not a candidate inside it, where a spherical cell had to be over-approximated. Fewer candidates per cell means fewer cells that need geometry at all.
 
-.. list-table::
-   :header-rows: 1
+Alignment matters too: the ocean timezones meet on the 7.5 degree meridians, and a grid whose cell edges fall on them does not mix two ocean zones into one cell.
 
-   * - resolution
-     - cells
-     - answered by one table read
-     - index on disk
-     - index resident
-     - candidates tested per 10k random queries
-   * - 3
-     - 41,162
-     - 74.5 %
-     - 103 KiB
-     - 143 KiB
-     - 3,877
-   * - **4**
-     - **288,122**
-     - **89.1 %**
-     - **596 KiB**
-     - **1,000 KiB**
-     - **1,566**
-   * - 5
-     - 2,016,842
-     - 95.4 %
-     - 4,029 KiB
-     - 7,832 KiB
-     - 667
+The shape — how coarse the root grid is, how many levels it refines, and how large a block is — was chosen by measurement over the whole family, against an H3 control ordered by the same converter rule. ``prototypes/latlng_index_bench.py`` is that sweep: it compiled each candidate from the packaged boundaries and answered through the real query path, reporting counts and times. It is kept as the record of the question rather than as a tool that still runs against this tree - it was written against the index it replaced. A flat grid of the finest cells spends bytes on every cell of the open ocean; a deeper tree is slightly faster again and costs more disk than the H3 index it replaced. The decision and the refused variants are recorded in ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``.
 
-Resolution 4 removes **60 % of the point-in-polygon tests** a uniformly random workload runs, which
-is worth ~40 % of such a query end to end, for ~0.9 MiB of resident table. It also *lowers* the
-resident set of the default memory-mapped mode, because far fewer candidate polygons are fetched and
-so far fewer coordinate pages are faulted in.
+**The exactness rests on the kernel's edge convention**, which ``tests/test_point_in_polygon_boundary_convention.py`` pins on every kernel. A kernel change moving boundary points to the other polygon would make these cells misanswer one-unit strips along every aligned border while every sampled test still passed, so that test is what this layout is built on.
 
-Resolution 5 is refused, and the reason is the exchange rate rather than its gains, which are real.
-Memory paid per candidate polygon removed is 0.019 KiB going from resolution 2 to 3, 0.371 KiB from
-3 to 4, and **7.600 KiB from 4 to 5** — each level about twenty times worse than the last. The table
-is fixed by the resolution rather than by the data, so at resolution 5 it is 99.7 % of the index:
-7.8 MiB resident, more than the entire index format generation 1 used, and ``TimezoneFinderL`` —
-whose whole footprint is this index — would grow about forty-five fold. Resolutions above 5 are not
-worth measuring, since resolution 6's table alone is the size of the polygon data it indexes.
+The two lines no polygon owns as spelled are handled before the division: ``-180`` degrees reads as ``+180``, which is the *last* column rather than the first, and ``-90`` as the point one unit north, which is row 0. ``docs/result_stability.rst`` says why, and ``tests/test_minus_180_meridian_and_minus_90_parallel.py`` fails on a tree that clamps the longitude instead of wrapping it.
 
-Below resolution 3, cells cover too much area and too many of them come out ambiguous, which pushes
-work back onto the expensive point-in-polygon path.
-
-**A hierarchical index — several resolutions at once, refining only where cells are ambiguous — was
-prototyped and dropped.** The maximum resolution dominates the size, so a multi-resolution index
-comes out slightly *larger* than the single-resolution one it contains; H3 cells do not nest
-cleanly, so a parent has to be kept even once its children exist; and consulting several resolutions
-per query costs more than the refinement saves. It yielded no lookup benefit over a single-resolution
-index at the same maximum resolution, so the simpler structure won.
-
-The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
+The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast. ``scripts/grid_cells.py`` holds the candidate rule and why it is exact.
 
 .. _shortcut-index-layout:
 
 Shortcut Index Layout
 ---------------------
 
-``shortcuts.bin`` holds four arrays after a 40-byte header. The header is the file
-identifier ``TZSC``, a ``uint32`` layout version, and four ``int64``: the H3 resolution
-the index was built for, the number of distinct candidate lists, and the widths chosen
-for the two data-dependent columns.
+``shortcuts.bin`` holds five arrays after a 56-byte header. The header is the file
+identifier ``TZSC``, a ``uint32`` layout version, and six ``int64``: the root column
+count and the block side the index was built for, how many child blocks it stores, the
+number of distinct candidate lists, and the widths chosen for the two data-dependent
+columns.
 
-The resolution is in the header because nothing else in the file records it, and it
-changes what every slot *means* without changing anything a reader would notice - the
-layout is identical at every resolution, so the layout version cannot cover it. A reader
-built for another resolution is refused rather than allowed to answer with a different
-cell's timezone.
+The grid shape is in the header because nothing else in the file records it, and it
+changes what every cell *means* without changing anything a reader would notice - the
+layout is identical at every shape, so the layout version cannot cover it. A reader built
+for another grid is refused rather than allowed to answer with another cell's timezone.
 
 .. list-table::
    :header-rows: 1
@@ -633,7 +588,11 @@ cell's timezone.
      - holds
    * - ``table``
      - ``int16``
-     - compact slot
+     - root cell
+     - the answer for that cell, or which block refines it
+   * - ``blocks``
+     - ``int16``
+     - child cell, ``block * 16 + position``
      - the answer for that cell
    * - ``bounds``
      - narrowest that fits
@@ -648,41 +607,41 @@ cell's timezone.
      - distinct candidate list
      - where the candidate loop may stop
 
-**The cell id is the index.** H3 packs a cell index as a base cell in bits 45-51 followed
-by fifteen 3-bit digits. At a fixed resolution every other bit is constant, so those bits
-*are* the cell and, with ``res`` the resolution the index was built for
-(``SHORTCUT_H3_RES``),
+**The cell is the index, and it is arithmetic.** Each level is a whole number of
+coordinate units wide, because 0.9375 and 0.234375 degrees both divide the integer
+longitude span exactly. A cell owns ``(c * w, (c + 1) * w]`` of its axis - its north and
+east edges and not its south or west - so with ``x`` the point's scaled integer longitude
+and ``w`` the level's width:
 
 .. code-block:: python
 
-    digit_bits = 3 * res
-    base = (cell >> 45) & 0x7F
-    digits = (cell >> (45 - digit_bits)) & (2**digit_bits - 1)
-    slot = base * 2**digit_bits + digits
+    column = (x + 180 * COORD2INT_FACTOR - 1) // w
+    row = (y + 90 * COORD2INT_FACTOR - 1) // w
+    cell = row * columns_at_this_level + column
 
-is a bijection onto a dense table rather than a hash. The base cell sits immediately above
-the digits, so the whole slot is one contiguous bit field and the lookup evaluates it as a
-single shift and mask - ``(cell >> (45 - digit_bits)) & (2 ** (digit_bits + 7) - 1)``. No
-keys are stored and no search runs at lookup time. That h3-py does not promise its index
-encoding as API is handled by checking rather than by storing:
-``timezonefinder._data_integrity.validate_shortcut_index``
-confirms the arithmetic against the public ``get_base_cell_number`` and
-``cell_to_child_pos`` on every cell that exists, so an encoding change fails where the
-data is built instead of silently returning a neighbour's timezone.
+No keys are stored and no search runs at lookup time. The whole descent is written out
+per level rather than looped, because a Python call per level costs more than the level
+saves.
 
-**The table holds the answer.** One ``int16`` per slot:
+**The two levels hold the same tri-state.** One ``int16`` each:
 
-* ``>= 0`` - the zone id, and the whole answer. Roughly three quarters of the cells.
+* ``>= 0`` - the zone id, and the whole answer. The large majority of cells.
 * ``== -1`` - no cell here. Custom data can leave cells uncovered, so this is a real
-  state and not only padding.
-* ``< -1`` - several zones; candidate list ``-(value + 2)``.
+  state; the packaged ocean zones cover every cell.
+* ``< -1`` - in ``table``, child block ``-(value + 2)``; in ``blocks``, candidate list
+  ``-(value + 2)``.
+
+A negative value therefore means a block on one level and a candidate list on the other,
+and nothing in the number says which: the level does. That is why the root table may
+never carry a candidate list, and why ``timezonefinder/_data_integrity.py`` checks each
+level's negative values against the array they address.
 
 ``-1`` is free for "absent" because a stored candidate list can never have length 1: a
 lone candidate is unambiguous and is therefore stored as a zone id instead.
 
-Because a cell the table answers reads nothing else, ``bounds`` and ``last_change`` are
-indexed by *distinct candidate list* rather than by cell or by slot - far fewer of them,
-and the cells that never read them cost nothing.
+Because a cell the tree answers reads nothing else, ``bounds`` and ``last_change`` are
+indexed by *distinct candidate list* rather than by cell - far fewer of them, and the
+cells that never read them cost nothing.
 
 **Each distinct candidate list is stored once.** Cells with identical lists carry *equal*
 offsets into the shared payload, not an index to a shared entry, so a repeated list costs
@@ -709,32 +668,33 @@ precedence where necessary while allowing within-zone polygon optimization.
 This changes no candidate membership or binary layout. It does change the
 fallback heuristic used by ``TimezoneFinderL``.
 
+A cell is now its own rectangle, so the gate's envelope is exact rather than a
+circumscribed spherical cap, and no cell has to be refused for sitting at a pole or at
+the antimeridian the way a cap-derived envelope did.
+
 Resolving overlapping-zone precedence and replacing covered ambiguous cells by
 direct answers are separate conversion decisions. This ordering pass preserves
 legacy overlap precedence; it does not infer a new precedence rule from cost.
 A coverage pass can run first, leaving only its remaining ambiguous cells to
 order.
 
-**The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
-base-8 slots can never be addressed. Which ones follows from the resolution and never from
-the data, so the file stores the compact base-7 form and the reader expands it - a base-8
-slot is exactly the C-order ravel of a ``(122,) + (8,) * res`` array, so the base-7 block
-lands correctly when sliced into its corner. The in-memory table keeps its padding: addressing
-it base-7 per query costs more than the padding is worth.
-
 **The two data-dependent widths are chosen by fit, not by headroom.** An overflow surfaces
 where the data is built rather than in a user's process - provided something checks, which
 is what ``timezonefinder/_data_integrity.py`` does, over what the converter just wrote and over
 what is committed, naming the value, the ceiling, the width to move to and the version
-bumps that follow.
+bumps that follow. The two fixed ``int16`` levels are guarded the same way, and the block
+index is the one that answers first as a dataset grows: a root table that cannot name all
+its blocks is fixed by a finer root grid before it is fixed by a wider column.
 
 A lookup, in full::
 
-    slot = <the arithmetic above>            # no memory touched
-    z = table[slot]
-    if z >= 0:  return z                     # 1 read
-    if z == -1: return None                  # 1 read
-    i = -(z + 2)                             # several zones: the candidate list, plus
+    v = table[root_cell]                     # two divisions, one read
+    if v >= 0:  return v                     # the common case
+    if v == -1: return None
+    v = blocks[(-v - 2) * 16 + child]        # two more divisions, one more read
+    if v >= 0:  return v
+    if v == -1: return None
+    i = -(v + 2)                             # several zones: the candidate list, plus
     return payload[bounds[i]:bounds[i + 1]]  # last_change[i] for where to stop
 
 Why the index makes no polygon redundant
@@ -744,13 +704,13 @@ Roughly three quarters of the cells resolve to a single zone ID, and a query ans
 
 **No such polygon exists.** Every boundary polygon appears in at least one ambiguous cell, and a large share of them appear in exactly one — which is what makes the idea look plausible in the first place.
 
-This is structural rather than a property of a particular release or resolution. The packaged data covers the globe, so any cell that a polygon's *rim* passes through also holds area outside that polygon; that area belongs to a different zone, unless a polygon of the same zone abuts it there — which dissolved multipolygons do not do. Cell size never enters the argument, so a finer index does not create such polygons either. It only makes the rim cells smaller.
+This is structural rather than a property of a particular release or cell shape. The packaged data covers the globe, so any cell that a polygon's *rim* passes through also holds area outside that polygon; that area belongs to a different zone, unless a polygon of the same zone abuts it there — which dissolved multipolygons do not do. Cell size never enters the argument, so a finer index does not create such polygons either. It only makes the rim cells smaller.
 
 The nearest claim that *is* true concerns testing rather than candidacy: because ``timezone_at`` stops at the last zone change in the candidate list and returns the final zone untested, a polygon can be a candidate everywhere and still never be handed to the point-in-polygon kernel. In release ``2026c`` that describes 206 of the 1,322 boundary polygons, around a sixth of all vertices. Their coordinates are kept regardless, for reasons that are worth stating because the conclusion is easy to reach and wrong:
 
 * **Most of them are hole rings.** 175 of the 206 are the ring some hole is stored as a reference to (see `Holes as Boundary References`_), so their coordinates serve the *surrounding* polygon's hole test, which is very much performed.
 * **The remainder are the largest polygons in the dataset.** A zone that is the biggest in every cell listing it is, by construction, a mainland — the 31 survivors are around a sixth of all vertices, and include the main polygons of ``America/Toronto``, ``Europe/Berlin``, ``Europe/Moscow`` and ``Asia/Shanghai``. A bounding box is not a degraded outline of those: it averages well over twice the polygon's own area, so :meth:`~timezonefinder.TimezoneFinder.get_geometry` would answer a rectangle largely covering other countries, in the same return type and without an error. :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` degrades further still — it tests every candidate with no early break, so with the ring gone it would match nothing and return ``None`` across most of the zone.
-* **It would make an API's output depend on the index.** Which polygons qualify follows from which cells happened to come out unique and from how shortcut candidates happened to be sorted. The index is a candidate *filter*, free to be reordered, rebuilt or replaced; deriving ``get_geometry``'s output from its structure would turn a future resolution change into a silent change in what the geometry API returns.
+* **It would make an API's output depend on the index.** Which polygons qualify follows from which cells happened to come out unique and from how shortcut candidates happened to be sorted. The index is a candidate *filter*, free to be reordered, rebuilt or replaced — and has been: the cells changed from H3 hexagons to an aligned grid tree outright. Deriving ``get_geometry``'s output from its structure would turn a future index change into a silent change in what the geometry API returns.
 
 This is the boundary-polygon counterpart of `Holes without a twin`_, and it fails in the same way: covering the query path is not the same question as covering the public API.
 
@@ -764,7 +724,7 @@ Several key design decisions make ``timezonefinder`` extremely efficient:
 
 2. **Integer Coordinates**: Converting floating-point coordinates to integers improves computational speed and reduces memory usage
 
-3. **Spatial Indexing**: The H3 hexagon-based spatial index drastically reduces the search space for polygon containment tests
+3. **Spatial Indexing**: The aligned grid-tree spatial index drastically reduces the search space for polygon containment tests
 
 4. **Memory Mapping**: Binary files be read fully into memory with the setting ``in_memory=True``
 

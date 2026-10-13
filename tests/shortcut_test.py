@@ -2,18 +2,24 @@
 test the actually stored shortcut binary file
 """
 
-import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
 
-from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     load_benchmark_points,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
+from timezonefinder.configs import COORD2INT_FACTOR, DEFAULT_DATA_DIR
+from timezonefinder.shortcut_index import (
+    ABSENT,
+    ROOT_CELLS,
+    ROOT_COLUMNS,
+    cell_bounds,
+    child_cells_of,
+    is_root_cell,
+)
 from timezonefinder.utils import coord2int, int2coord
 
 # Tests now work directly with hybrid_shortcuts format
@@ -21,8 +27,10 @@ from timezonefinder.utils import coord2int, int2coord
 VERBOSE_TESTING = True
 
 
-def latlng_to_cell(lng: float, lat: float) -> int:
-    return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+def cell_centre(cell_id: int) -> tuple[float, float]:
+    """A coordinate inside one cell, which for a rectangle is exactly its middle."""
+    x0, y0, x1, y1 = cell_bounds(cell_id)
+    return ((x0 + x1) // 2) / COORD2INT_FACTOR, ((y0 + y1) // 2) / COORD2INT_FACTOR
 
 
 def test_single_shortcut_binary_exists(shortcut_file_path):
@@ -40,7 +48,7 @@ def test_single_shortcut_binary_exists(shortcut_file_path):
 
 
 @pytest.mark.slow
-def test_shortcut_completeness(tf, hybrid_shortcuts):
+def test_shortcut_completeness(tf, shortcut_index, hybrid_shortcuts):
     """Test that all points of each polygon are included in the proper shortcuts."""
     # Get access to the timezone polygons
     polygons = [tf.boundaries.coords_of(i) for i in range(tf.nr_of_polygons)]
@@ -54,7 +62,7 @@ def test_shortcut_completeness(tf, hybrid_shortcuts):
             # ATTENTION: int to coord conversion required!
             lng = int2coord(pt[0])
             lat = int2coord(pt[1])
-            hex_id = latlng_to_cell(lng, lat)
+            hex_id = shortcut_index.cell_at(lng, lat)
             try:
                 hybrid_value = hybrid_shortcuts[hex_id]
             except KeyError:
@@ -83,17 +91,29 @@ def test_shortcut_completeness(tf, hybrid_shortcuts):
     assert not errors, f"Shortcut completeness errors: {errors[:5]}"
 
 
-def test_shortcut_resolution(hybrid_shortcuts):
-    """Test that all shortcuts have the correct H3 resolution."""
-    invalid_resolutions = []
-    for hex_id in hybrid_shortcuts.keys():
-        res = h3.get_resolution(hex_id)
-        if res != SHORTCUT_H3_RES:
-            invalid_resolutions.append(
-                f"Hexagon {hex_id} has resolution {res}, expected {SHORTCUT_H3_RES}"
-            )
+def test_every_stored_cell_is_a_leaf_of_the_tree(shortcut_index, hybrid_shortcuts):
+    """The stored cells are exactly the tree's leaves - no more and no fewer.
 
-    assert not invalid_resolutions, f"Resolution errors: {invalid_resolutions[:5]}"
+    This is what the H3 resolution check became. There a stale cell id was one built for
+    another resolution; here it is one on the wrong level: a root cell that also refines
+    has two answers and the lookup reads one of them, and a finest-level cell whose root
+    does not refine has no stored value at all. Both are invisible in the file.
+    """
+    expected = set(np.flatnonzero(shortcut_index.table >= 0).tolist())
+    for parent in np.flatnonzero(shortcut_index.table < ABSENT).tolist():
+        expected.update(int(child) for child in child_cells_of(parent))
+    stored = set(hybrid_shortcuts)
+    # the packaged ocean zones cover every cell, so the two sets are equal; a dataset
+    # leaving cells uncovered stores a subset, never a cell outside the tree
+    assert stored <= expected, (
+        f"{len(stored - expected)} stored cells are not leaves of the tree, e.g. "
+        f"{sorted(stored - expected)[:5]}"
+    )
+    assert not expected - stored, (
+        f"{len(expected - stored)} leaves of the tree are not stored, e.g. "
+        f"{sorted(expected - stored)[:5]}"
+    )
+    assert all(0 <= cell < ROOT_CELLS for cell in stored if is_root_cell(cell))
 
 
 @pytest.mark.slow
@@ -136,30 +156,34 @@ def test_empty_shortcut(hybrid_shortcuts):
             is_empty = len(hybrid_value) == 0
 
         if is_empty:
-            boundary = h3.cell_to_boundary(hex_id)[0]
-            empty_shortcuts.append(f"Hexagon {hex_id} at {boundary}")
+            empty_shortcuts.append(f"cell {hex_id} at {cell_centre(hex_id)}")
 
     assert not empty_shortcuts, f"Found empty shortcut entries: {empty_shortcuts[:5]}"
 
 
-def test_unique_pole_cells(hybrid_shortcuts):
-    """Test that exactly one cell surrounds each pole."""
-    s_pole_cells = []
-    n_pole_cells = []
+def test_the_rows_along_both_poles_are_covered(shortcut_index):
+    """What replaces "exactly one cell surrounds each pole", which was H3 topology.
 
-    for hex_id in hybrid_shortcuts.keys():
-        # Check if this hex cell surrounds the poles using extracted functions
-        if surrounds_south_pole(hex_id):
-            s_pole_cells.append(hex_id)
-        if surrounds_north_pole(hex_id):
-            n_pole_cells.append(hex_id)
+    An aligned grid reaches a pole as a whole row of cells rather than as one cell, so
+    there is no cell to be unique. What still has to hold is that the rows are *there*
+    and answered: they are the hardest row for a candidate rule to get right - every
+    polygon reaching them is clipped by the row's own edge - and a gap in either would
+    be a band of unanswered coordinates around a pole.
 
-    assert len(s_pole_cells) == 1, (
-        f"{len(s_pole_cells)} cells surround the south pole: {s_pole_cells}"
-    )
-    assert len(n_pole_cells) == 1, (
-        f"{len(n_pole_cells)} cells surround the north pole: {n_pole_cells}"
-    )
+    It says nothing about different spellings of a pole agreeing. They do not, and did
+    not under H3 either: the Arctic and Antarctic ocean zones are longitude strips, so
+    the kernel gives (0, 90) and (170, 90) to different ones whatever the index offers.
+    """
+    rows = {
+        "southernmost": range(ROOT_COLUMNS),
+        "northernmost": range(ROOT_CELLS - ROOT_COLUMNS, ROOT_CELLS),
+    }
+    for name, cells in rows.items():
+        uncovered = [cell for cell in cells if shortcut_index.entry_of(cell) == ABSENT]
+        assert not uncovered, (
+            f"{len(uncovered)} root cells of the {name} row are uncovered, e.g. "
+            f"{uncovered[:5]}"
+        )
 
 
 def test_shortcut_uniqueness(hybrid_shortcuts):
@@ -194,9 +218,9 @@ def test_unique_shortcut_consistency(tf, hybrid_shortcuts):
         if isinstance(hybrid_value, int):
             # This is a zone ID - verify it's consistent with timezone_at
             zone_id = hybrid_value
-            # Get a point in this hex cell to test
-            boundary = h3.cell_to_boundary(hex_id)
-            lat, lng = boundary[0]  # Get first boundary point
+            # a point in this cell: its centre, which a rectangle states exactly - where
+            # a hexagon's first boundary vertex could fall in a neighbouring cell
+            lng, lat = cell_centre(hex_id)
 
             # Check using TimezoneFinder's timezone_at method
             found_timezone = tf.timezone_at(lng=lng, lat=lat)
@@ -229,11 +253,13 @@ def test_shortcut_sorting(tf, hybrid_shortcuts):
     assert not invalid_sortings, f"Shortcut sorting errors: {invalid_sortings[:5]}"
 
 
-# Coordinates whose H3 cell has all six corners inside a hole of the polygon that covers
+# Coordinates whose H3 cell had all six corners inside a hole of the polygon that covers
 # the coordinate itself - an ocean zone's cut-out around an island, or one country's
 # enclave inside another. Compiling the index by corner alone dropped that polygon from
 # the cell, and every coordinate in the part of the cell outside the hole was answered
-# with the zone that happens to be left.
+# with the zone that happens to be left. The grid tree subtracts holes from the ring it
+# intersects cells with, so it has no corner rule to be fooled; these stay as the
+# cheapest statement of the invariant at the hardest coordinates anyone has found.
 HOLE_CLIPPED_CELL_COORDS = [
     # in South Africa, in a cell whose corners are all inside Lesotho
     (27.52307, -29.24473),
@@ -264,10 +290,12 @@ def test_a_hole_clipping_a_cell_leaves_the_covering_polygon_in_it(tf, lng, lat):
     assert tf.timezone_at(lng=lng, lat=lat) == certain
 
 
-# Coordinates in the three cells north of latitude 88.5 whose stored ring jumps the
-# +-180 degree cut. Judged as a planar ring it is not a hexagon at all but a
+# Coordinates in the three H3 cells north of latitude 88.5 whose stored ring jumped the
+# +-180 degree cut. Judged as a planar ring that was not a hexagon at all but a
 # self-intersecting shape spanning most of the globe, so the overlap tests answered about
-# that shape and the ocean strip on the far side of the cut was left out of all three.
+# that shape and the ocean strip on the far side of the cut was left out of all three. No
+# cell of an aligned grid crosses the cut, so the failure mode is gone with the hexagons;
+# the invariant is pinned here all the same.
 ANTIMERIDIAN_CELL_COORDS = [
     (-179.42048, 89.60654),
     (-175.13121, 89.44923),
@@ -282,7 +310,7 @@ ANTIMERIDIAN_CELL_COORDS = [
 
 @pytest.mark.unit
 @pytest.mark.parametrize("lng,lat", ANTIMERIDIAN_CELL_COORDS)
-def test_a_cell_crossing_the_antimeridian_keeps_the_polygon_covering_it(tf, lng, lat):
+def test_a_cell_at_the_antimeridian_keeps_the_polygon_covering_it(tf, lng, lat):
     """Same invariant as above, on the other way a cell used to lose its polygon."""
     certain = tf.certain_timezone_at(lng=lng, lat=lat)
 
@@ -301,12 +329,11 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
     Sampled by area rather than uniformly in latitude, so it is a workload and not a
     pole-heavy one - which also means it visits the cells at the antimeridian and the
     poles far too rarely to stand in for an exhaustive check. The exhaustive form is
-    this same assertion over the seven resolution-5 child centres of every cell
-    (``h3.cell_to_children(cell, SHORTCUT_H3_RES + 1)`` over ``all_res_candidates``),
-    which enumerates the defective cells outright instead of sampling for them - that
-    is what ``ANTIMERIDIAN_CELL_COORDS`` and ``HOLE_CLIPPED_CELL_COORDS`` were found
-    with. At ~2 million lookups it costs ~8 minutes against this test's ~15 seconds,
-    so run it by hand after changing the shortcut compiler rather than on every gate.
+    ``scripts/audit_shortcut_candidates.py``, which ``update_data.sh`` runs over every
+    cell corner, every stored ring vertex and both seams on each compiled dataset and
+    enumerates the defective cells outright instead of sampling for them - that is what
+    ``ANTIMERIDIAN_CELL_COORDS`` and ``HOLE_CLIPPED_CELL_COORDS`` were found with, under
+    the H3 index. This test stays because it is a cheap interior sweep on every gate.
     """
     n = 100_000
     rng = np.random.default_rng(20260825)

@@ -4,8 +4,8 @@ No query points are sampled. All probabilities and work estimates are surface
 integrals over clipped geometry. The approximations are these, explicitly:
 
 1. Surface measure is spherical, dmu=cos(phi) dphi dlambda (radius cancels).
-   H3 cells are not equal-area and planar degree areas are not probabilities.
-   For WGS84 geodetic area the density is instead proportional to
+   Grid cells are equal-angle, not equal-area, and planar degree areas are not
+   probabilities. For WGS84 geodetic area the density is instead proportional to
    cos(phi)/(1-e^2 sin^2(phi))^2. Its ratio to spherical density has max/min
    <=1.013525 globally; this bounds the measure-only loss of a spherical
    population optimum, not our heuristic's or cost model's error.
@@ -13,12 +13,14 @@ integrals over clipped geometry. The approximations are these, explicitly:
    plane. Their spherical areas are integrated analytically by Green's theorem:
    A(ring)=abs(sum_edges -dlambda * mean_edge(sin(phi))). For a linear edge,
    mean(sin(phi))=sin(mid_phi)*sinc(dphi/(2*pi)). Holes subtract; components add.
-   H3 edges are great-circle arcs. We subdivide those deterministically until
-   represented cell area agrees with H3's spherical area to 1e-6 relative error.
-   This is an area convergence check, NOT a boundary-distance certificate.
-   Overlay roundoff and ignoring the tiny query-quantization strips remain
-   geometric errors. Small positive regions are not dropped by a probability
-   threshold. Longitude wrapping and polar caps are represented explicitly.
+   A cell is an axis-aligned rectangle of that same plane, so its region is
+   exact and its area closes the same integral - where the H3 hexagons this
+   replaced had great-circle edges that had to be subdivided until the
+   represented area converged on H3's own, a check that was never a
+   boundary-distance certificate. No cell now wraps the plane's cut or encloses
+   a pole, so neither needs representing. Overlay roundoff and ignoring the tiny
+   query-quantization strips (one coordinate unit, ~1.1 cm) remain geometric
+   errors. Small positive regions are not dropped by a probability threshold.
 3. The work proxy is a positive sum of rectangular indicator functions:
        c_i(x) = BBOX + sum_t w_it * 1[x in rectangle_it].
    Outer bbox survivors pay the hole-union probe and outer PIP. Only survivors
@@ -54,9 +56,13 @@ integrals over clipped geometry. The approximations are these, explicitly:
    the exchange difference (after minus before) is c_b*p_a-c_a*p_b. Enumerating L
    then gives the GLOBAL optimum for that special case. Point-dependent costs and
    overlaps need not admit a transitive ratio order; no global claim is made.
-6. Correctness is separate from that approximate objective. The conservative
-   spherical-cap bbox gate below certifies coverage and absence of cross-zone
-   positive-area overlap before allowing final-zone changes/interleaving.
+6. Correctness is separate from that approximate objective. The cell's own
+   rectangle, grown one unit on each side, certifies coverage and absence of
+   cross-zone positive-area overlap before allowing final-zone changes or
+   interleaving. It is exact rather than a conservative circumscribed cap, which
+   is what the hexagons needed, so it admits more cells than that gate did -
+   including the polar and antimeridian cells the cap conversion had to refuse
+   outright.
    Otherwise preserve legacy zone priority and final zone, optimizing only
    within tested zone blocks. Block survivors depend on the zone's hit union,
    so this preserves zone answers even where the proxy geometry is inaccurate.
@@ -72,21 +78,19 @@ from dataclasses import dataclass
 from itertools import combinations, groupby
 from pathlib import Path
 
-import h3.api.numpy_int as h3
 import numpy as np
 from shapely import Polygon, box, make_valid, union_all
-from shapely.affinity import scale, translate
 from shapely.errors import GEOSException
 from shapely.geometry.base import BaseGeometry
 
 from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
 from timezonefinder.configs import (
-    COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     POLYGON_BLOCK_SIZE,
 )
 from timezonefinder.polygon_array import HoleArray, PolygonArray
+from timezonefinder.shortcut_index import cell_bounds
 
 BBOX = 160
 HOLE_UNION_PROBE = 80
@@ -95,7 +99,6 @@ HOLE_BBOX = 120
 PIP_DISPATCH = 700
 BLOCK_PROBE = 1
 ACTIVE_VERTEX = 1
-CELL_AREA_RTOL = 1e-6
 IMPROVEMENT_RTOL = 1e-12
 
 
@@ -148,64 +151,30 @@ def spherical_area(geometry: BaseGeometry) -> float:
     return 0.0  # shared edges and points have zero area
 
 
-def _cell_region(cell: int, subdivisions: int) -> BaseGeometry:
-    boundary = np.radians(h3.cell_to_boundary(cell))
-    lat, lng = boundary[:, 0], boundary[:, 1]
-    vectors = np.column_stack(
-        (np.cos(lat) * np.cos(lng), np.cos(lat) * np.sin(lng), np.sin(lat))
-    )
-    points = []
-    for a, b in zip(vectors, np.roll(vectors, -1, axis=0), strict=True):
-        angle = np.arccos(np.clip(a @ b, -1, 1))
-        t = np.arange(subdivisions) / subdivisions
-        points.extend(
-            (np.sin((1 - t) * angle)[:, None] * a + np.sin(t * angle)[:, None] * b)
-            / np.sin(angle)
-        )
-    xyz = np.asarray(points + [points[0]])
-    lngs = np.degrees(np.unwrap(np.arctan2(xyz[:, 1], xyz[:, 0])))
-    lats = np.degrees(np.arctan2(xyz[:, 2], np.hypot(xyz[:, 0], xyz[:, 1])))
-    coords = list(zip(lngs.tolist(), lats.tolist(), strict=True))
-    if abs(lngs[-1] - lngs[0]) > 180:
-        # A ring winding around a pole needs the pole-side edge of this planar
-        # chart to close it; otherwise planar closure cuts away the polar cap.
-        pole = 90 if h3.cell_to_latlng(cell)[0] > 0 else -90
-        coords.extend([(lngs[-1], pole), (lngs[0], pole)])
-    unwrapped = Polygon(coords)
-    world = box(-180, -90, 180, 90)
-    first = int(np.floor((unwrapped.bounds[0] + 180) / 360))
-    last = int(np.floor((unwrapped.bounds[2] + 180) / 360))
-    parts = [
-        translate(unwrapped, xoff=-360 * k).intersection(world)
-        for k in range(first, last + 1)
-    ]
-    return scale(
-        union_all(parts), xfact=COORD2INT_FACTOR, yfact=COORD2INT_FACTOR, origin=(0, 0)
-    )
-
-
 def cell_region(cell: int) -> BaseGeometry:
-    """Deterministic arc approximation checked against H3's own spherical area."""
-    target = h3.cell_area(cell, unit="rads^2")
-    for subdivisions in (4, 8, 16, 32, 64, 128, 256, 512):
-        region = _cell_region(cell, subdivisions)
-        if abs(spherical_area(region) / target - 1) <= CELL_AREA_RTOL:
-            return region
-    raise ValueError(f"H3 cell {cell:x}: area integration did not converge")
+    """The cell, as the exact rectangle of the integer plane it is.
+
+    A cell owns the integer points ``cell_bounds`` gives, so as a region of query
+    positions it is ``(x0 - 1, x1] x (y0 - 1, y1]`` - half-open on the sides it
+    does not own, which an area integral does not distinguish anyway. Exactness
+    is what the aligned grid buys here: the H3 version of this function
+    subdivided great-circle arcs until the represented area converged on H3's,
+    then had to stitch a polar cap onto rings winding round a pole and unwrap
+    rings crossing the plane's cut. A rectangle needs none of it.
+    """
+    x0, y0, x1, y1 = cell_bounds(cell)
+    return box(x0 - 1, y0 - 1, x1, y1)
 
 
-def cell_cap(cell: int) -> tuple[float, float, float]:
-    lat, lng = np.radians(h3.cell_to_latlng(cell))
-    boundary = np.radians(h3.cell_to_boundary(cell))
-    distances = np.arccos(
-        np.clip(
-            np.sin(lat) * np.sin(boundary[:, 0])
-            + np.cos(lat) * np.cos(boundary[:, 0]) * np.cos(boundary[:, 1] - lng),
-            -1,
-            1,
-        )
-    )
-    return float(lat), float(lng), float(distances.max()) * 1.01
+def cell_envelope(cell: int) -> BaseGeometry:
+    """What the safety gate has to be satisfied over: the cell plus one unit.
+
+    Every integer point the cell owns lies strictly inside this, so a coverage or
+    disjointness fact established here holds for every query the cell answers.
+    The unit of slack absorbs the query quantization the region above ignores.
+    """
+    x0, y0, x1, y1 = cell_bounds(cell)
+    return box(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
 
 
 class CheckCost:
@@ -388,20 +357,14 @@ class ShortcutOrderer:
         return self.geometries[pid]
 
     def safe_to_reorder(self, cell: int, ids: list[int]) -> bool:
-        lat, lng, radius = cell_cap(cell)
-        if abs(lat) + radius >= np.pi / 2:
-            return False
-        delta = float(np.arcsin(np.sin(radius) / np.cos(lat)))
-        if abs(lng) + delta >= np.pi:
-            return False
-        xmin, ymin = np.degrees([lng - delta, lat - radius])
-        xmax, ymax = np.degrees([lng + delta, lat + radius])
-        envelope = box(
-            utils.coord2int(xmin) - 1,
-            utils.coord2int(ymin) - 1,
-            utils.coord2int(xmax) + 1,
-            utils.coord2int(ymax) + 1,
-        )
+        """Whether the zones in this cell may be reordered freely.
+
+        Free reordering is sound exactly where the candidates cover the cell with
+        no cross-zone area overlap: every point then has one owner whatever order
+        it is found in. Where that cannot be shown the legacy zone precedence is
+        preserved and only within-zone blocks are optimized.
+        """
+        envelope = cell_envelope(cell)
         try:
             geometries = [self.geometry(pid) for pid in ids]
             if any(pid in self.invalid_geometries for pid in ids):

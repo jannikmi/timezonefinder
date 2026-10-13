@@ -3,12 +3,10 @@ from pathlib import Path
 from collections.abc import Iterator
 from typing import Any
 
-import h3.api.numpy_int as h3
 import numpy as np
 from pydantic import (
     BaseModel,
     ConfigDict,
-    Field,
     PrivateAttr,
     ValidationError,
     field_validator,
@@ -31,7 +29,6 @@ from scripts.configs import (
 )
 from timezonefinder.configs import zone_id_dtype_to_string
 from scripts.helper_classes import Boundaries, GeoJSON, PolygonGeometry, compile_bboxes
-from scripts.hex_utils import Hex
 from scripts.utils import canonical_ring_key, to_numpy_polygon_repr
 
 
@@ -135,11 +132,7 @@ class PolygonCollection(BaseModel):
 
     polygons: PolygonList
     lengths: LengthList
-    original_polygons: list[np.ndarray] | None = None
     _boundaries: list[Boundaries] | None = PrivateAttr(default=None)
-    _vertex_hex_cache: dict[int, dict[int, set[int]]] = PrivateAttr(
-        default_factory=dict
-    )
 
     @field_validator("polygons")
     @classmethod
@@ -153,10 +146,6 @@ class PolygonCollection(BaseModel):
             raise ValueError(
                 f"Polygon count ({len(self.polygons)}) does not match polygon_lengths entries ({len(self.lengths)})"
             )
-        if self.original_polygons is not None and len(self.original_polygons) != len(
-            self.polygons
-        ):
-            raise ValueError("original_polygons length must match number of polygons")
         for idx, (poly, length) in enumerate(
             zip(self.polygons, self.lengths, strict=True)
         ):
@@ -186,8 +175,8 @@ class PolygonCollection(BaseModel):
         The converter holds the rings in memory, so this is an index rather than the
         payload decode the runtime pays. Deliberately not the written binaries read
         back through `PolygonArray`: that decode measures 193 us per call against
-        0.04 us here, and `Hex.lies_in_cell` reads a ring once per (cell, candidate)
-        pair while compiling the shortcut index.
+        0.04 us here, and a ring is read once per candidate pair while the shortcut
+        index is compiled.
         """
         return self.polygons[idx]
 
@@ -205,23 +194,6 @@ class PolygonCollection(BaseModel):
         it does with them. Here they are compared whole, against a cell.
         """
         return self.bboxes[idx]
-
-    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
-        res_cache = self._vertex_hex_cache.setdefault(res, {})
-        try:
-            return res_cache[poly_nr]
-        except KeyError:
-            if self.original_polygons is None:
-                # deliberately unchained: the caught KeyError is the cache miss that
-                # got us here, not the cause of the missing coordinates
-                raise RuntimeError(
-                    f"original polygon coordinates missing, "
-                    f"cannot compute vertex hexes of polygon {poly_nr} at resolution {res}"
-                ) from None
-            coords = self.original_polygons[poly_nr]
-            vertex_hexes = {h3.latlng_to_cell(lat, lng, res) for lng, lat in coords.T}
-            res_cache[poly_nr] = vertex_hexes
-            return vertex_hexes
 
 
 class HoleCollection(BaseModel):
@@ -471,19 +443,6 @@ class HoleCollection(BaseModel):
 
 
 @dataclass
-class HexCache:
-    cache: dict[int, Hex] = field(default_factory=dict)
-
-    def get(self, hex_id: int, data: "TimezoneData") -> Hex:
-        try:
-            return self.cache[hex_id]
-        except KeyError:
-            hex_obj = Hex.from_id(hex_id, data)
-            self.cache[hex_id] = hex_obj
-            return hex_obj
-
-
-@dataclass
 class ParseAccumulator:
     """The state a GeoJSON parse builds up, passed down the parse as one object.
 
@@ -502,7 +461,6 @@ class ParseAccumulator:
     polynrs_of_holes: PolynrHolesList = field(default_factory=list)
     holes: PolygonList = field(default_factory=list)
     all_hole_lengths: HoleLengthList = field(default_factory=list)
-    original_polygons: list[np.ndarray] = field(default_factory=list)
     # The id the next polygon receives, and how many holes have been seen so far.
     # Both used to be returned and reassigned at every call level.
     poly_id: int = 0
@@ -529,22 +487,6 @@ class ParseAccumulator:
         zone_id: int,
         tz_name: str,
     ) -> None:
-        original_boundary_coords = poly_with_hole[0]
-        # not strict: this unpacks parsed GeoJSON, where `strict=` would constrain each
-        # position's arity and reject the elevation a position is allowed to carry
-        x_coords_orig, y_coords_orig = zip(*original_boundary_coords, strict=False)
-        if (
-            len(x_coords_orig) > 3
-            and x_coords_orig[0] == x_coords_orig[-1]
-            and y_coords_orig[0] == y_coords_orig[-1]
-        ):
-            x_coords_orig = x_coords_orig[:-1]
-            y_coords_orig = y_coords_orig[:-1]
-        original_coord_array = np.array(
-            [x_coords_orig, y_coords_orig], dtype=np.float64
-        )
-        self.original_polygons.append(original_coord_array)
-
         poly = to_numpy_polygon_repr(poly_with_hole.pop(0), from_source=True)
         self.polygons.append(poly)
         x_coords = poly[0]
@@ -577,7 +519,6 @@ class TimezoneData(BaseModel):
     # `PolygonArray` / `HoleArray` spell them, and `holes_of_poly` as the finder does.
     boundaries: PolygonCollection
     holes: HoleCollection
-    hex_cache: HexCache = Field(default_factory=HexCache, exclude=True)
 
     @classmethod
     def create_validated(cls, **kwargs) -> "TimezoneData":
@@ -626,7 +567,6 @@ class TimezoneData(BaseModel):
         polygon_collection = PolygonCollection(
             polygons=acc.polygons,
             lengths=acc.polygon_lengths,
-            original_polygons=acc.original_polygons,
         )
         hole_collection = HoleCollection(
             holes=acc.holes,
@@ -688,12 +628,6 @@ class TimezoneData(BaseModel):
         positions = self.zones.zone_positions()
         print("...Done.\n")
         return positions
-
-    def get_hex(self, hex_id: int) -> Hex:
-        return self.hex_cache.get(hex_id, self)
-
-    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
-        return self.boundaries.polygon_vertex_hexes(poly_nr, res)
 
     @property
     def hole_poly_refs(self) -> list[int]:

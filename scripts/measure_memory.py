@@ -64,7 +64,7 @@ RSS_METRICS = ("init_rss", "steady_rss")
 CONFIG_METRICS = (*HEAP_METRICS, *RSS_METRICS)
 
 # The one measurement that is not per configuration: importing the package
-# (numpy and h3 above all) before any timezone data is touched.
+# (numpy above all) before any timezone data is touched.
 IMPORT_METRIC_NAME = "memory::import::rss"
 
 METRIC_NAME_PREFIX = "memory::"
@@ -255,13 +255,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if DEBUG:
-        # the same guard benchmarks/conftest.py applies: DEBUG lowers
-        # SHORTCUT_H3_RES, which changes the size of the shortcut index and so
+        # the same guard benchmarks/conftest.py applies: DEBUG stops the parse
+        # after a handful of zones, which changes the size of every binary and so
         # the very thing being measured
         parser.error(
-            "scripts.configs.DEBUG is True, which overrides SHORTCUT_H3_RES to a "
-            "much coarser resolution. Footprints measured under DEBUG describe a "
-            "different shortcut index and must never be recorded."
+            "scripts.configs.DEBUG is True, which stops the parse after a handful of "
+            "zones. Footprints measured under DEBUG describe a different dataset and "
+            "must never be recorded."
         )
     if args.repetitions < 1:
         parser.error("--repetitions must be at least 1")

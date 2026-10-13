@@ -151,19 +151,6 @@ class TestGeoJsonParseAccumulation:
         assert data.all_tz_names == ["Test/A", "Test/B"]
         assert list(data.poly_zone_ids) == [0, 0, 1]
 
-    def test_the_original_polygons_pair_with_the_parsed_boundaries(self):
-        data = TimezoneData.from_geojson(_geo_json())
-        originals = data.boundaries.original_polygons
-        assert originals is not None
-        # each boundary ring's own offset, so a permuted or shifted list of
-        # originals fails here rather than matching on a shared shape
-        assert [pytest.approx(o[0].mean(), abs=1e-6) for o in originals] == [
-            0.0,
-            10.0,
-            20.0,
-        ]
-        assert [o.shape[1] for o in originals] == list(data.boundaries.nr_vertices)
-
 
 @pytest.mark.unit
 class TestTheRuntimeVocabulary:

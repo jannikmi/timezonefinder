@@ -83,8 +83,8 @@ PIP_STRATA = ("small", "medium", "large")
 # Bump whenever the *generation logic* changes in a way that makes previously
 # committed fixtures mean something different: the point sampler, the ``N_*``
 # counts, the order in which the generators consume the shared seeded ``rng``,
-# or ``SHORTCUT_H3_RES`` - the unique/ambiguous strata are a classification by
-# the shortcut index, so changing its resolution re-labels points without
+# or the shortcut index's grid - the unique/ambiguous strata are a classification
+# by that index, so changing which cells it is made of re-labels points without
 # touching a line of generator code. The loader below refuses fixtures carrying
 # a different version, so a checkout with new generator code and stale ``.npy``
 # files fails loudly instead of silently benchmarking a workload nobody
@@ -92,7 +92,7 @@ PIP_STRATA = ("small", "medium", "large")
 # NOTE: this deliberately lives here rather than in the generator - the
 # generator imports from this module, so the loader could not validate a
 # constant owned by the generator without an import cycle.
-FIXTURE_VERSION = 3
+FIXTURE_VERSION = 4
 
 
 # Command constants.

@@ -80,11 +80,9 @@ explains why it is not fixable, and ``tests/test_hole_lookup_regression.py`` is 
 import sys
 from collections import defaultdict
 
-import h3.api.numpy_int as h3
 import numpy as np
 
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
 
 PROBES_PER_HOLE = 16
 MAX_REJECTION_TRIES = 8_000
@@ -216,9 +214,7 @@ def main() -> None:
             uncovered += 1
             continue
         holes_with_competition.add(hole_id)
-        cell = h3.latlng_to_cell(
-            utils.int2coord(y), utils.int2coord(x), SHORTCUT_H3_RES
-        )
+        cell = finder.shortcuts.cell_at(utils.int2coord(x), utils.int2coord(y))
         for other in competitors:
             edges[true_zone].add(other)
             witness.setdefault((true_zone, other), (x, y, hole_id))
@@ -262,10 +258,10 @@ def main() -> None:
                 contradictory += 1
                 print(
                     f"  {names[a]} / {names[b]}: {len(shared)} cell(s), "
-                    f"e.g. {h3.int_to_str(sorted(shared)[0])}"
+                    f"e.g. cell {sorted(shared)[0]}"
                 )
     if not contradictory:
-        print("  none at this resolution")
+        print("  none in the shipped index's cells")
 
     # What a partial drop - keeping only the holes whose precedence is contradictory -
     # would leave behind. It does not remove the subsystem, which is the point.

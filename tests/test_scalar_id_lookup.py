@@ -7,7 +7,6 @@ zone.
 """
 
 import pytest
-from h3.api import numpy_int as h3
 
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -24,8 +23,7 @@ from timezonefinder import (
     timezone_id_at,
     timezone_id_at_land,
 )
-from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
+from timezonefinder.shortcut_index import ABSENT
 
 SAMPLE_SIZE = 300
 FIXTURES = (
@@ -91,20 +89,12 @@ def test_overlap_id_is_the_canonical_first_zone(timezonefinder_in_memory):
 
 @pytest.mark.unit
 def test_an_uncovered_cell_answers_none_in_both_scalar_forms():
-    """Reach the custom-data-only ABSENT branch by blanking one copied index slot."""
+    """Reach the custom-data-only ABSENT branch by blanking the point's one cell."""
     lng, lat = 13.358, 52.5061
     with TimezoneFinder(in_memory=True) as finder:
-        slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        assert finder.shortcuts.table[slot] != ABSENT
-        table = finder.shortcuts.table.copy()
-        table[slot] = ABSENT
-        finder.shortcuts = ShortcutIndex(
-            table,
-            finder.shortcuts.starts,
-            finder.shortcuts.ends,
-            finder.shortcuts.last_change,
-            finder.shortcuts.payload,
-        )
+        cell = finder.shortcuts.cell_at(lng, lat)
+        assert finder.shortcuts.entry_of(cell) != ABSENT
+        finder.shortcuts = finder.shortcuts.replacing(cell, ABSENT)
 
         assert finder.timezone_id_at(lng=lng, lat=lat) is None
         assert finder.timezone_id_at_land(lng=lng, lat=lat) is None

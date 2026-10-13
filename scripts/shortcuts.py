@@ -1,32 +1,42 @@
-"""functions for compiling the h3 hexagon shortcuts"""
+"""Compiling the grid-tree shortcut index: which polygons each cell has to test.
 
-import itertools
+The tree is built level by level, which is what decides its shape: every root cell is
+given its candidate polygons, a cell only one zone can own is answered by that zone id,
+and a cell several zones can own is refined into its block of children and the question
+asked again of each. A child several zones can still own keeps a candidate list, ordered
+so the point-in-polygon loop does the least work.
+
+``scripts/grid_cells.py`` holds the candidate rule itself and why it is exact;
+``timezonefinder/shortcut_index.py`` holds the layout the result is written in.
+"""
+
 import sys
 from collections import defaultdict
 from collections.abc import Sequence
 from pathlib import Path
 
-import h3.api.numpy_int as h3
 import numpy as np
 
-from scripts.timezone_data import TimezoneData
-from scripts.shortcut_ordering import ShortcutOrderer
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
     SOURCE_DATA_DIR,
-    HexIdSet,
-    SHORTCUT_H3_RES,
     ShortcutMapping,
 )
-from scripts.utils import (
-    time_execution,
-)
+from scripts.grid_cells import grouped, owned_pairs, planar_polygons
+from scripts.shortcut_ordering import ShortcutOrderer
+from scripts.timezone_data import TimezoneData
+from scripts.utils import time_execution
 from timezonefinder.shortcut_index import (
+    BLOCK_CELLS,
+    CHILD_COLUMNS,
+    ROOT_CELLS,
+    ROOT_COLUMNS,
     build_shortcut_index,
+    cell_bounds_of,
+    child_cells_of,
     get_shortcut_file_path,
     write_shortcuts_binary,
 )
-from timezonefinder.utils_numba import using_numba
 
 
 try:
@@ -92,204 +102,105 @@ def check_shortcut_sorting(
 
 
 @profile
-def process_single_hex(hex_id: int, data: TimezoneData) -> list[int]:
+def candidates_per_cell(
+    polygons: np.ndarray, cell_ids: np.ndarray, poly_zone_ids: np.ndarray
+) -> list[tuple[int, np.ndarray, int]]:
+    """One level's worth of candidates: ``(cell id, polygon ids, single zone or -1)``.
+
+    Cells with no candidate at all are simply absent from the result, which is what the
+    index stores them as.
     """
-    Process a single hex cell to find its polygon shortcuts.
-
-    Args:
-        hex_id: The H3 hexagon ID to process
-        data: The timezone data (shared read-only resource)
-
-    Returns:
-        The optimized polygon IDs for this hex cell
-    """
-    # IMPORTANT: cache hexagons to avoid recomputing them
-    cell = data.get_hex(hex_id)
-    polys = list(cell.polys_in_cell)
-    polys_optimised = optimise_shortcut_ordering(data, polys)
-    check_shortcut_sorting(polys_optimised, data.poly_zone_ids)
-    return polys_optimised
-
-
-@profile
-def compile_h3_map(data: TimezoneData, candidates: set[int]) -> ShortcutMapping:
-    """
-    operate on one hex resolution
-    also store results separately to divide the output data files
-
-    Args:
-        data: TimezoneData instance
-        candidates: Set of hex IDs to process
-    """
-    if not using_numba:
-        print(
-            "NOTE: if the shortcut compilation is slow, consider installing Numba for JIT compilation\n"
-        )
-
-    mapping: ShortcutMapping = {}
-    total_candidates = len(candidates)
-
-    progress_interval = 50
-
-    for processed, hex_id in enumerate(candidates, start=1):
-        polys_optimised = process_single_hex(hex_id, data)
-        mapping[hex_id] = polys_optimised
-
-        if processed % progress_interval == 0 or processed == total_candidates:
-            remaining = total_candidates - processed
-            sys.stdout.write(f"\r{processed:,} processed\t{remaining:,} remaining\t")
-            sys.stdout.flush()
-
-    print()  # New line after progress reporting
-    return mapping
-
-
-def all_res_candidates(res: int) -> HexIdSet:
-    print(f"compiling hex candidates for resolution {res}.")
-    if res == 0:
-        return set(h3.get_res0_cells())
-    parent_res_candidates = all_res_candidates(res - 1)
-    child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
-    return set(itertools.chain.from_iterable(child_iter))
+    cell_idx, poly_idx = owned_pairs(polygons, *cell_bounds_of(cell_ids))
+    return [
+        (int(cell_ids[cell]), polys, single)
+        for cell, polys, single in grouped(cell_idx, poly_idx, poly_zone_ids)
+    ]
 
 
 @time_execution
-def compile_shortcut_mapping(
-    data: TimezoneData,
-) -> ShortcutMapping:
-    """compiles the h3 hexagon shortcut mapping
+def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
+    """Compile the grid tree's leaves: cell id -> zone id or candidate polygon ids.
 
-    Args:
-        data: TimezoneData instance containing polygon and timezone information
+    Two passes, because the second one's cells are the first one's answer: a root cell
+    several zones can own is the only thing that refines, and nothing else in the tree
+    depends on the data.
 
-    Returns:
-        mapping from hexagon id to list of polygon ids
-
-    cf. https://eng.uber.com/h3/
-
-    NOTE: the compilation is sequential. Benchmarking parallel execution revealed no
-        significant speedup (baseline: 13s for 40k hexes) -> probably because of the fast
-        per-hex processing time and the overhead of managing threads
+    The candidate lists carry the legacy zone ordering here;
+    :func:`compile_shortcuts` then re-orders them against the packed geometry.
     """
-    print("\n\ncomputing timezone polygon index ('shortcuts')...")
+    print("\n\ncomputing the timezone polygon index ('shortcuts')...")
+    polygons = planar_polygons(data)
+    poly_zone_ids = data.poly_zone_ids
 
-    candidates = all_res_candidates(SHORTCUT_H3_RES)
-    print(
-        f"reached desired resolution {SHORTCUT_H3_RES}.\n"
-        "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
+    mapping: ShortcutMapping = {}
+    refine: list[int] = []
+    root_cells = np.arange(ROOT_CELLS, dtype=np.int64)
+    print(f"level 0: {ROOT_CELLS:,} root cells of {360 / ROOT_COLUMNS:g} degrees")
+    for cell_id, _polys, single in candidates_per_cell(
+        polygons, root_cells, poly_zone_ids
+    ):
+        if single >= 0:
+            mapping[cell_id] = single
+        else:
+            refine.append(cell_id)
+
+    children = (
+        np.concatenate([child_cells_of(cell) for cell in refine])
+        if refine
+        else np.empty(0, dtype=np.int64)
     )
-    shortcuts = compile_h3_map(data, candidates=candidates)
-    # Shortcut statistics will be printed in the reporting module
-    return shortcuts
-
-
-def compute_unique_shortcut_mapping(
-    shortcuts: ShortcutMapping, zone_ids: np.ndarray
-) -> dict[int, int]:
-    """Derive a mapping from hex id to a unique zone id when present."""
-
-    unique_map: dict[int, int] = {}
-    for hex_id, polygon_ids in shortcuts.items():
-        if len(polygon_ids) == 0:
+    print(
+        f"level 1: {len(refine):,} root cells several zones can own refine into "
+        f"{len(children):,} cells of {360 / CHILD_COLUMNS:g} degrees"
+    )
+    ambiguous = 0
+    for cell_id, polys, single in candidates_per_cell(
+        polygons, children, poly_zone_ids
+    ):
+        if single >= 0:
+            mapping[cell_id] = single
             continue
-        polygon_zone_ids = zone_ids[np.asarray(polygon_ids, dtype=np.int64)]
-        first_zone = int(polygon_zone_ids[0])
-        if np.all(polygon_zone_ids == first_zone):
-            unique_map[hex_id] = first_zone
-
-    return unique_map
-
-
-def build_hybrid_index_from_separate_indices(
-    shortcuts: ShortcutMapping, unique_shortcuts: dict[int, int]
-) -> dict[int, int | list[int]]:
-    """Build hybrid index from separate shortcuts and unique_shortcuts indices.
-
-    This algorithm combines the two legacy data structures into a single hybrid
-    structure that replaces both, optimizing storage and lookup performance.
-
-    ALGORITHM EXPLANATION:
-    The legacy system uses two separate data structures:
-    1. `shortcuts`: Maps hex_id -> [polygon_ids] for ALL hex cells
-    2. `unique_shortcuts`: Maps hex_id -> zone_id for hex cells where all polygons belong to same zone
-
-    The hybrid system combines these into one structure:
-    - If a hex is in unique_shortcuts, store just the zone_id (saves space & lookup time)
-    - Otherwise, store the polygon_ids list (allows proper ambiguity resolution)
-
-    This optimization reduces storage (single zone_id vs list of polygon_ids) and
-    improves lookup performance (direct zone lookup vs polygon intersection tests)
-    for the common case where all polygons in a hex belong to the same timezone.
-
-    Args:
-        shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
-        unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
-
-    Returns:
-        Dictionary mapping hex IDs to either:
-        - int: zone ID (for unique cases where all polygons share same zone)
-        - list[int]: polygon IDs (for ambiguous cases requiring polygon tests)
-    """
-    hybrid_mapping: dict[int, int | list[int]] = {}
-
-    # First, add all entries from shortcuts (polygon lists)
-    # This ensures we have entries for all hex cells with any polygons
-    for hex_id, polygon_ids in shortcuts.items():
-        hybrid_mapping[hex_id] = polygon_ids
-
-    # Then, override with unique shortcuts where applicable
-    # This replaces polygon lists with single zone IDs when all polygons
-    # in the hex belong to the same timezone
-    for hex_id, zone_id in unique_shortcuts.items():
-        hybrid_mapping[hex_id] = zone_id
-
-    return hybrid_mapping
+        ordered = optimise_shortcut_ordering(data, sorted(int(p) for p in polys))
+        check_shortcut_sorting(ordered, poly_zone_ids)
+        mapping[cell_id] = np.asarray(ordered, dtype=np.int64)
+        ambiguous += 1
+    print(
+        f"{len(mapping):,} cells stored; {ambiguous:,} of them carry a candidate list"
+    )
+    return mapping
 
 
 def compile_shortcut_index(
-    shortcuts: ShortcutMapping,
-    unique_shortcuts: dict[int, int],
+    mapping: ShortcutMapping,
     poly_zone_ids: np.ndarray,
     output_path: Path,
-) -> dict[int, int | list[int]]:
-    """Compile the shortcut index combining shortcuts and unique_shortcuts, and write it.
+) -> None:
+    """Lay the compiled mapping out as the binary a lookup reads, and report its shape.
 
-    Args:
-        shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
-        unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
-        poly_zone_ids: zone id per boundary polygon; the index precomputes from it where
-            a candidate loop may stop
-        output_path: Path where to save the shortcut index binary file
-
-    Returns:
-        The compiled hybrid shortcuts mapping
+    :param mapping: the tree's leaves, as :func:`compile_shortcut_mapping` compiles them
+    :param poly_zone_ids: zone id per boundary polygon; the index precomputes from it
+        where a candidate loop may stop
+    :param output_path: the compiled data directory to write into
     """
     print("compiling the shortcut index...")
-
-    # Build the hybrid index using our algorithm
-    hybrid_mapping = build_hybrid_index_from_separate_indices(
-        shortcuts, unique_shortcuts
-    )
-
+    index = build_shortcut_index(mapping, poly_zone_ids)
     output_file = get_shortcut_file_path(output_path)
-    write_shortcuts_binary(
-        build_shortcut_index(hybrid_mapping, poly_zone_ids), output_file
-    )
+    write_shortcuts_binary(index, output_file)
 
-    # Report statistics
-    zone_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, int))
-    polygon_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, list))
-
-    print(f"shortcut index compiled: {len(hybrid_mapping)} total entries")
+    zone_cells = sum(1 for v in mapping.values() if isinstance(v, (int, np.integer)))
+    list_cells = len(mapping) - zone_cells
+    print(f"shortcut index compiled: {len(mapping):,} stored cells")
     print(
-        f"  - zone entries: {zone_entries} ({zone_entries / len(hybrid_mapping) * 100:.1f}%)"
+        f"  - answered by a zone id: {zone_cells:,} "
+        f"({zone_cells / len(mapping) * 100:.1f}%)"
     )
     print(
-        f"  - polygon entries: {polygon_entries} ({polygon_entries / len(hybrid_mapping) * 100:.1f}%)"
+        f"  - carrying a candidate list: {list_cells:,} "
+        f"({list_cells / len(mapping) * 100:.1f}%), "
+        f"{index.nr_of_entries:,} of them distinct"
     )
-    print(f"  - saved to: {output_file}")
-
-    return hybrid_mapping
+    print(f"  - refined root cells: {index.nr_of_blocks:,}, {BLOCK_CELLS} cells each")
+    print(f"  - saved to: {output_file} ({output_file.stat().st_size:,} bytes)")
 
 
 def compile_shortcuts(
@@ -297,37 +208,41 @@ def compile_shortcuts(
     data: TimezoneData,
 ) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
-    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
+    mapping = compile_shortcut_mapping(data)
 
+    with_lists = [
+        cell
+        for cell, value in mapping.items()
+        if not isinstance(value, (int, np.integer))
+    ]
     orderer = ShortcutOrderer(data, output_path)
     changed = 0
     try:
-        for processed, (cell, ids) in enumerate(shortcuts.items(), start=1):
+        for processed, cell in enumerate(with_lists, start=1):
+            ids = [int(p) for p in mapping[cell]]
             ordered = orderer.order(cell, ids)
             check_shortcut_sorting(ordered, data.poly_zone_ids)
             changed += ordered != ids
-            shortcuts[cell] = ordered
-            if processed % 10_000 == 0:
-                print(f"Ordering: {processed:,}/{len(shortcuts):,} cells", flush=True)
+            mapping[cell] = np.asarray(ordered, dtype=np.int64)
+            if processed % 500 == 0:
+                print(
+                    f"Ordering: {processed:,}/{len(with_lists):,} cells",
+                    flush=True,
+                )
+                sys.stdout.flush()
     finally:
         orderer.close()
     print(f"Optimized {changed:,} shortcut candidate orders")
 
-    # Compute unique shortcuts mapping (needed for hybrid shortcuts)
-    unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
-
-    # Compile and write hybrid shortcuts binary file (replaces legacy formats)
     compile_shortcut_index(
-        shortcuts=shortcuts,
-        unique_shortcuts=unique_mapping,
+        mapping=mapping,
         poly_zone_ids=data.poly_zone_ids,
         output_path=output_path,
     )
-
-    return shortcuts
+    return mapping
 
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
-    # This writes the shortcut index binary (hex cell -> zone id OR candidate polygons)
+    # This writes the shortcut index binary (cell -> zone id OR candidate polygons)
     compile_shortcuts(output_path=SOURCE_DATA_DIR, data=data)

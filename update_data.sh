@@ -189,7 +189,7 @@ fi
 # binaries or preparing a release. Ordinary pytest/tox runs exercise the guard's
 # failure behavior on small inputs rather than repeating these full sample streams.
 # Keep reports outside the packaged data so they cannot enter the released wheel.
-for mode in cell-edges source-edges seams; do
+for mode in cell-corners source-edges seams; do
     echo "AUDITING SHORTCUT CANDIDATES: $mode..."
     if ! uv run python -m scripts.audit_shortcut_candidates \
         --mode "$mode" --output "$WORKING_FOLDER_NAME/shortcut-candidates-$mode.json"; then

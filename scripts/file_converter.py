@@ -14,27 +14,17 @@ This makes computations faster and it takes lot less space,
 [SHORTCUTS:] hybrid spatial index: coordinate to potential polygon id candidates or direct zone IDs
 shortcuts drastically reduce the amount of polygons which need to be checked in order to
     decide which timezone a point is located in.
-the surface of the world is split up into a grid of hexagons (h3 library)
-hybrid shortcut here means storing for every cell in a grid of the world map either:
+the surface of the world is split up into a grid tree aligned with longitude and
+latitude: a dense grid of square root cells, each of which refines into one level of
+4x4 children where several zones can own it. hybrid shortcut here means storing for
+every cell either:
     - a direct zone ID (when all polygons in that cell belong to the same timezone)
     - an array of polygon IDs that need to be checked (when the cell contains multiple timezones)
 
 Note: the poly ids within one shortcut entry are sorted for optimal performance
 
-
-Uber H3 findings:
-replacing the polygon data with hexagon key mappings failed (filling up the polygon with hexagons of different resolutions),
-    since the amount of required entries becomes too large in the resolutions required for sufficient accuracy.
-    hypothesis: "boundary regions" where multiple zones meet and no unique shortcut can be found are very large.
-    also: storing one single hexagon id takes 8 byte
-still h3 hexagons can be used to index the timezone polygons ("shortcuts") in a clean way
-observation: some small region of children protrudes the parent cell and
-      is not covered by the children of the neighbouring parent cell!
-    but "complete coverage" required: for every point on earth there is a zone match (mapping to None)
-    -> inefficient to store mappings of different resolutions
-in res=3 it takes only slightly more space to store just the highest resolution ids (= complete coverage!),
-    than also storing the lower resolution shortcuts (when there is a unique or no timezone match).
-    -> only use one resolution, because of the higher simplicity of the lookup algorithms
+`timezonefinder/shortcut_index.py` holds why the tree is shaped as it is, and
+`scripts/grid_cells.py` why a cell's candidate set is exact rather than conservative.
 """
 
 import shutil

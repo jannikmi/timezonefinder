@@ -4,7 +4,6 @@ import json
 import random
 from dataclasses import asdict
 
-import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 from shapely import Polygon
@@ -27,7 +26,12 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.shortcut_index import (
+    cell_bounds,
+    child_cell_of,
+    root_cell_of,
+    shifted,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -116,11 +120,20 @@ def test_recording_a_run_keeps_the_reviewed_decision(tmp_path):
 @pytest.mark.parametrize(
     "lat, lng", [(0.0, 10.0), (0.0, 180.0), (89.99, 0.0), (-89.99, 0.0)]
 )
-def test_cell_samples_stay_inside_the_cell(lat, lng):
-    cell = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+@pytest.mark.parametrize("level", ["root", "finest"])
+def test_cell_samples_stay_inside_the_cell(lat, lng, level, tf):
+    """Every sampled point has to read the cell it was sampled from, or the A/B that
+    prices a re-ordering is measuring a mix of cells. The rejection loop the hexagons
+    needed is gone - the cell *is* its own box - so this is what says the replacement
+    samples the same set."""
+    x, y = shifted(lng, lat)
+    cell = root_cell_of(x, y) if level == "root" else child_cell_of(x, y)
     points = sample_cell_points(cell, 50, random.Random(0))
     assert len(points) == 50
-    assert {int(h3.latlng_to_cell(y, x, SHORTCUT_H3_RES)) for x, y in points} == {cell}
+    x0, y0, x1, y1 = cell_bounds(cell)
+    for lng_sample, lat_sample in points:
+        sx, sy = utils.query2int(lng_sample, lat_sample)
+        assert x0 <= sx <= x1 and y0 <= sy <= y1
 
 
 def test_nonnegative_fit_recovers_independent_features_without_scipy():
@@ -158,7 +171,7 @@ def test_probe_runs_the_real_early_exit_and_preserves_answers(tf):
     saw_outer_rejection = False
     saw_pip = False
     for lng, lat in points:
-        cell = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        cell = tf.shortcuts.cell_at(lng, lat)
         entry = tf.shortcuts.entry_of(cell)
         candidates = tf.shortcuts.candidates_of(entry)
         stop = tf.shortcuts.stop_index_of(entry)
@@ -265,7 +278,7 @@ def test_the_reordered_overlay_serves_the_lookup_it_is_installed_under(tf):
     points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:200]
     base = tf.shortcuts
     lng, lat = points[0]
-    held_out = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+    held_out = base.cell_at(lng, lat)
     order = base.candidates_of(base.entry_of(held_out)).astype(int).tolist()
     overlay = _ReorderedIndex(base, {held_out: order}, tf.zone_ids)
 

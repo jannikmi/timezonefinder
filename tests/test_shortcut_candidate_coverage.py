@@ -11,7 +11,7 @@ import pytest
 from tests.auxiliaries import PROJECT_ROOT
 
 pytestmark = pytest.mark.unit
-MODES = ["cell-edges", "source-edges", "seams"]
+MODES = ["cell-corners", "source-edges", "seams"]
 
 
 @pytest.fixture

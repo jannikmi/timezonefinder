@@ -90,8 +90,8 @@ def _reject_debug_mode() -> None:
     """A DEBUG-mode number in the trend chart is worse than a missing one."""
     if DEBUG:
         raise RuntimeError(
-            "scripts.configs.DEBUG is True, which overrides SHORTCUT_H3_RES to a "
-            "much coarser resolution. Benchmark numbers produced under DEBUG are "
+            "scripts.configs.DEBUG is True, which stops the parse after a handful "
+            "of zones. Benchmark numbers produced under DEBUG are "
             "not comparable to real measurements and must never be recorded. "
             "Run benchmarks with scripts.configs.DEBUG = False."
         )

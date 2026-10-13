@@ -10,7 +10,6 @@ from timezonefinder.configs import (
     DEFAULT_ZONE_ID_DTYPE,
     UNKNOWN_DATA_VERSION,
     DEFAULT_ZONE_ID_DTYPE_NAME,
-    SHORTCUT_H3_RES,
     available_zone_id_dtype_names,
     get_zone_id_dtype,
     zone_id_dtype_to_string,
@@ -231,11 +230,16 @@ def validate_data_distribution_version(
         )
 
 
+# Parse only the first few zones, for a conversion that finishes while a change is
+# being debugged (`DEBUG_ZONE_CTR_STOP` below, applied in `scripts.timezone_data`).
+#
+# It no longer coarsens the shortcut grid as it coarsened the H3 resolution: compiling
+# the whole grid tree takes seconds rather than the minutes the hexagons took, so there
+# is nothing left to buy - and the grid shape is stamped into the index file and
+# derived from it by the runtime reader, so an override here would have been a silent
+# no-op rather than a coarser index.
 DEBUG = False
 # DEBUG = True
-
-# lower the shortcut resolution for debugging
-SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 
 # Lower bound on the share of holes stored as a reference to an identical boundary
@@ -254,7 +258,7 @@ SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 MIN_HOLE_DEDUP_RATIO = 0.9
 
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
-HexIdSet: TypeAlias = set[int]
+CellIdSet: TypeAlias = set[int]
 PolyIdSet: TypeAlias = set[int]
 ZoneIdSet: TypeAlias = set[int]
 
@@ -288,12 +292,20 @@ class BinaryData(TypedDict):
     output_path: Path
 
 
-class ShortcutH3Coverage(TypedDict):
-    """How much of the H3 grid at this resolution the index stores a cell for."""
+class ShortcutGridCoverage(TypedDict):
+    """The shape of the grid tree, and how much of it the index stores a cell for.
 
-    h3_resolution: int
+    ``leaf_cells`` is the tree's own cell count rather than the finest grid's: a root
+    cell only one zone can own *is* a cell, and the 4x4 block it would refine into does
+    not exist. Which is why the count depends on the data and is read off the mapping.
+    """
+
+    root_columns: int
+    block_side: int
+    root_cells: int
+    refined_root_cells: int
+    leaf_cells: int
     stored_cells: int
-    possible_cells: int
     missing_cells: int
     coverage_ratio: float
 
@@ -336,7 +348,7 @@ class ShortcutEntryCountStats(TypedDict):
 
 class ShortcutIndexStats(
     ShortcutEntryCountStats,
-    ShortcutH3Coverage,
+    ShortcutGridCoverage,
     ShortcutEfficiencyMetrics,
     ShortcutStorageMetrics,
 ):

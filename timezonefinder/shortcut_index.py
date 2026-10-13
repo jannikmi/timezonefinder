@@ -1,42 +1,51 @@
-"""The H3 shortcut index: reader, writer and the slot arithmetic both share.
+"""The grid-tree shortcut index: reader, writer and the cell arithmetic both share.
 
 The shortcut index answers "which timezone polygons can possibly cover this point" for
-every H3 cell at :data:`~timezonefinder.configs.SHORTCUT_H3_RES`. Most cells are covered
-by a single zone and need no answer beyond its id; the rest carry a list of candidate
-boundary polygons for the point-in-polygon loop to work through.
+every cell of a longitude/latitude-aligned grid tree. Most cells are covered by a single
+zone and need no answer beyond its id; the rest carry a list of candidate boundary
+polygons for the point-in-polygon loop to work through.
 
 ``docs/data_format.rst`` is the authoritative description of the binary layout. What
 belongs here is why it is shaped that way:
 
-* **The cell id is the index.** H3 packs a cell as a base cell (bits 45-51) followed by
-  fifteen 3-bit digits; at a fixed resolution everything else in the index is constant,
-  so those bits *are* the cell and :func:`slot_of` is a bijection onto a dense table
-  rather than a hash. No keys are stored and no search runs at lookup time.
-* **The table holds the answer, not a pointer to it.** One ``int16`` per slot: a zone id
-  for a cell a single zone covers, ``ABSENT`` for a cell with no coverage, and otherwise
-  the index of a candidate list. Three quarters of the cells are answered by that one
-  read, and their offsets and payload entries therefore need not exist at all.
+* **A dense aligned grid, refined where borders are.** Level 0 is one ``int16`` per
+  square root cell of :data:`ROOT_WIDTH` units. A root cell several zones can own holds
+  the index of a block of :data:`BLOCK_SIDE` x :data:`BLOCK_SIDE` children instead, and
+  the child is where its candidate list lives. A flat grid of the finest cells would
+  spend two bytes on every cell of the open ocean; the tree spends them where zones
+  meet, which is how it reaches 0.234 degree cells in 507 KB.
+* **The cell is arithmetic, not a search.** Each level is a whole number of coordinate
+  units wide, so a level's cell is one floor division per axis of the truncated integer
+  coordinates the kernel reads - no key array, no ``bisect``, and the whole descent
+  unrolled per depth. A generic loop over the levels measured ~280 ns per lookup more,
+  which is the difference between beating a flat grid and losing to it.
+* **The table holds the answer, not a pointer to it.** One ``int16`` per root cell: a
+  zone id for a cell a single zone covers, ``ABSENT`` for a cell with no coverage, and
+  otherwise the index of a child block. 86 % of root cells are answered by that one
+  read. The block array is the same tri-state one level down, with a candidate list
+  index where the table had a block index.
 * **Only the candidate lists are stored, each distinct one once.** Duplicates carry
   *equal* offsets into the shared payload rather than an index to a shared entry, so a
   repeated list costs a lookup exactly what a unique one costs.
-* **The file is stored base-7, the table is used base-8.** H3 digits only take 0-6, so a
-  third of the base-8 slots can never be addressed. Which ones follow from the resolution
-  and never from the data, so the file omits them and :func:`expand_compact` drops the
-  compact block into the corner of the padded table - a slice assignment, an order of
-  magnitude cheaper than scattering through an index array. The *table* keeps its padding:
-  addressing it base-7 per query costs more than the padding is worth.
+* **Cells are exact, and that is where the selectivity comes from.** A cell owns the
+  integer points ``[x0, x1] x [y0, y1]`` of :func:`cell_bounds`, so it owns its north
+  and east edges and not its south or west - the point-in-polygon kernel's own
+  convention, which ``tests/test_point_in_polygon_boundary_convention.py`` pins. A zone
+  whose polygons only reach across a cell edge therefore is not a candidate in it, and
+  the index tests 57 % fewer polygons per random query than the H3 index it replaced.
+  A kernel change moving boundary points to the other polygon would make these cells
+  misanswer one-unit strips along every aligned border, which is why that test is the
+  one this layout rests on.
 
-The four arrays live in **one** file rather than one file each, and in a raw layout rather than
-``.npy``: they are a single structure with cross-references, four files load ~1.6x slower and four
-``.npy`` files ~3x, and a ``.npy`` carries neither of the two markers that let a stale data
-directory be rejected. :func:`write_shortcuts_binary` records the measurement.
+The five arrays live in **one** file rather than one file each, and in a raw layout rather
+than ``.npy``: they are a single structure with cross-references, four files load ~1.6x
+slower and four ``.npy`` files ~3x, and a ``.npy`` carries neither of the two markers that
+let a stale data directory be rejected. :func:`write_shortcuts_binary` records the
+measurement.
 
 Everything the layout assumes is checked where the data is produced -
-``timezonefinder._data_integrity.validate_shortcut_index`` - and never when a finder is built. In
-particular the bit arithmetic above is confirmed against h3's public
-``get_base_cell_number`` / ``cell_to_child_pos`` over every cell that exists, which turns
-an encoding h3-py does not promise as API into an invariant that fails loudly at build
-time instead of silently returning a neighbour's timezone.
+``timezonefinder._data_integrity.validate_shortcut_index`` - and never when a finder is
+built.
 """
 
 from collections.abc import Iterator
@@ -44,9 +53,15 @@ from pathlib import Path
 from typing import Final
 
 import numpy as np
-from h3.api import numpy_int as h3
 
-from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
+from timezonefinder.configs import (
+    COORD2INT_FACTOR,
+    DEFAULT_DATA_DIR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
+    SHORTCUT_BLOCK_SIDE,
+    SHORTCUT_ROOT_COLUMNS,
+)
 from timezonefinder.layout import incompatible_layout_error
 
 
@@ -63,7 +78,7 @@ class ShortcutOverflowError(ValueError):
 # DATA_FORMAT_VERSION with it (tests/test_data_version.py pins the pairing). Deliberately
 # not tied to the package version, for the same reason as POLYGON_LAYOUT_VERSION: a
 # `bin_file_location` directory compiled once stays readable across ordinary releases.
-SHORTCUT_LAYOUT_VERSION: Final[int] = 2
+SHORTCUT_LAYOUT_VERSION: Final[int] = 3
 
 #: Stamped into the file so a truncated, foreign or pre-guard file is rejected rather
 #: than read as coordinates that happen to parse.
@@ -71,33 +86,51 @@ FILE_IDENTIFIER: Final[bytes] = b"TZSC"
 
 SHORTCUT_FILE_NAME: Final[str] = "shortcuts.bin"
 
-# H3's index encoding, at the one resolution this index is built for.
-SLOT_BASE_CELL_SHIFT: Final[int] = 45
-SLOT_BASE_CELL_MASK: Final[int] = 0x7F
-SLOT_DIGIT_BITS: Final[int] = 3
-SLOT_DIGITS_SHIFT: Final[int] = SLOT_BASE_CELL_SHIFT - SLOT_DIGIT_BITS * SHORTCUT_H3_RES
-SLOT_DIGITS_MASK: Final[int] = (1 << (SLOT_DIGIT_BITS * SHORTCUT_H3_RES)) - 1
-SLOT_STRIDE: Final[int] = SLOT_DIGITS_MASK + 1
-NUM_BASE_CELLS: Final[int] = 122
 
-# The slot is one contiguous bit field, which is why the lookup is a shift and a mask
-# rather than the two shifts, two masks, multiply and add it reads as. H3 puts the base
-# cell immediately above the digits, so
-#
-#     base * SLOT_STRIDE + digits  ==  (base << digit_bits) | digits
-#
-# and those bits are already adjacent in the cell id: the whole slot is the field from
-# SLOT_DIGITS_SHIFT upwards, seven bits of base cell on top of the digits. That is an
-# identity over any 64-bit value, not a property of the cells that exist, and it is worth
-# ~5 % of a unique-zone query. `test_the_slot_is_one_contiguous_bit_field` pins it.
-SLOT_MASK: Final[int] = (1 << (SLOT_DIGIT_BITS * SHORTCUT_H3_RES + 7)) - 1
-#: Slots in the table the lookup indexes. ``122 * 8**res``.
-SLOT_TABLE_SIZE: Final[int] = NUM_BASE_CELLS * SLOT_STRIDE
+# --- the grid the cells are made of ---------------------------------------------------
 
-#: H3 digits take 0-6, so the file stores ``122 * 7**res`` slots and the reader pads.
-COMPACT_DIGIT_BASE: Final[int] = 7
-COMPACT_STRIDE: Final[int] = COMPACT_DIGIT_BASE**SHORTCUT_H3_RES
-COMPACT_TABLE_SIZE: Final[int] = NUM_BASE_CELLS * COMPACT_STRIDE
+#: Root cells across the full longitude span, and rows across the latitude span. The
+#: rows follow from the columns because the cells are square in degrees: half as much
+#: latitude as longitude.
+ROOT_COLUMNS: Final[int] = SHORTCUT_ROOT_COLUMNS
+ROOT_ROWS: Final[int] = ROOT_COLUMNS // 2
+ROOT_CELLS: Final[int] = ROOT_COLUMNS * ROOT_ROWS
+
+#: Side of the block a refined root cell holds, in child cells.
+BLOCK_SIDE: Final[int] = SHORTCUT_BLOCK_SIDE
+BLOCK_CELLS: Final[int] = BLOCK_SIDE * BLOCK_SIDE
+#: ``& BLOCK_MASK`` is the child's position within its block, which is why the side has
+#: to be a power of two.
+BLOCK_MASK: Final[int] = BLOCK_SIDE - 1
+
+CHILD_COLUMNS: Final[int] = ROOT_COLUMNS * BLOCK_SIDE
+CHILD_ROWS: Final[int] = ROOT_ROWS * BLOCK_SIDE
+CHILD_CELLS: Final[int] = CHILD_COLUMNS * CHILD_ROWS
+
+#: Full coordinate span of each axis, in the scaled integers everything here works in.
+X_SPAN: Final[int] = 2 * MAX_LNG_VAL_INT
+Y_SPAN: Final[int] = 2 * MAX_LAT_VAL_INT
+
+#: Width of one cell per level. Whole numbers of coordinate units, which is the property
+#: that makes a cell one floor division: 0.9375 and 0.234375 degrees both divide the
+#: integer span exactly.
+ROOT_WIDTH: Final[int] = X_SPAN // ROOT_COLUMNS
+CHILD_WIDTH: Final[int] = X_SPAN // CHILD_COLUMNS
+
+# A cell owns `(c * w, (c + 1) * w]` of the shifted axis - its north and east edges and
+# not its south or west, the kernel's convention - so the column of a coordinate is
+# `ceil(x' / w) - 1` for `x' = x + span/2`. Folding the `- 1` into the shift turns that
+# into the single floor division `(x + SHIFT) // w` the lookup runs.
+X_SHIFT: Final[int] = MAX_LNG_VAL_INT - 1
+Y_SHIFT: Final[int] = MAX_LAT_VAL_INT - 1
+
+if X_SPAN % CHILD_COLUMNS or Y_SPAN % CHILD_ROWS:
+    raise AssertionError(
+        f"a grid of {CHILD_COLUMNS}x{CHILD_ROWS} finest cells is not a whole number of "
+        "coordinate units wide; the lookup's floor division would not address them"
+    )
+if BLOCK_SIDE & BLOCK_MASK:
+    raise AssertionError(f"the block side {BLOCK_SIDE} is not a power of two")
 
 #: Table value for a cell no polygon covers. Custom data can leave cells uncovered, so
 #: this is a real state and not only padding. ``-1`` is available for it because a stored
@@ -105,86 +138,136 @@ COMPACT_TABLE_SIZE: Final[int] = NUM_BASE_CELLS * COMPACT_STRIDE
 #: therefore stored as a zone id - so the entry indices start at 0 and map to ``-2``.
 ABSENT: Final[int] = -1
 
-#: The table's dtype. Zone ids and entry indices share it; both are guarded at build time.
+#: The dtype of both levels. Zone ids, block indices and entry indices share it; all
+#: three are guarded at build time.
 TABLE_DTYPE: Final[np.dtype] = np.dtype(np.int16)
 
 #: Boundary polygon ids, as stored in the payload.
 PAYLOAD_DTYPE: Final[np.dtype] = np.dtype(np.uint16)
 
-# Everything outside the slot bits of a cell id at this resolution: mode 1, the
-# resolution field, and the unused digits, which H3 sets to 7. Reconstructing a cell id
-# from a slot is what lets the index be iterated (reporting, tests) without storing keys.
-SLOT_INVARIANT: Final[int] = (
-    (1 << 59)
-    | (SHORTCUT_H3_RES << 52)
-    | ((1 << (SLOT_DIGIT_BITS * (15 - SHORTCUT_H3_RES))) - 1)
-)
-
-# header: identifier, layout version, then the four int64 the reader needs to make sense of
-# the arrays. Sized so that the int16 table starts 8-byte aligned.
+# header: identifier, layout version, then the six int64 the reader needs to make sense
+# of the arrays. Sized so that the int16 table starts 8-byte aligned.
 #
-# The H3 resolution is one of them because nothing else in the file records it, and it
-# changes what every slot *means* without changing anything a reader would notice: a
-# resolution 3 file read by resolution 4 code indexes a table of the wrong size with the
-# wrong bits and answers with a different cell's timezone. The layout version does not
-# cover it - the layout is identical at every resolution.
-_HEADER_SIZE: Final[int] = 40
+# The grid shape is in there because nothing else in the file records it, and it changes
+# what every cell *means* without changing anything a reader would notice: a 192-column
+# file read by 384-column code indexes a table of the wrong size with the wrong
+# arithmetic and answers with a different cell's timezone. The layout version does not
+# cover it - the layout is identical at every grid shape.
+_HEADER_SIZE: Final[int] = 56
 
 
-def slot_of(hex_id: int) -> int:
-    """Table index of one H3 cell id, by arithmetic alone - no memory touched."""
-    return (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK
+def shifted(lng: float, lat: float) -> tuple[int, int]:
+    """A coordinate as the shifted integer pair the cell arithmetic divides.
 
+    The two lines no polygon owns as spelled are rewritten exactly as
+    :func:`timezonefinder.utils.query2int` rewrites them, so that the cell a point falls
+    in agrees with the polygons it is tested against: -180 degrees reads as +180, which
+    here is the last column rather than the first, and -90 as the point one unit north,
+    which clamping the row at zero gives. Only those two spellings can go negative after
+    the shift - ``x + X_SHIFT < 0`` holds for ``x == -MAX_LNG_VAL_INT`` and nothing else -
+    so the rewrite needs no range check.
 
-def slots_of(hex_ids: np.ndarray) -> np.ndarray:
-    """Table indices of an array of H3 cell ids."""
-    return (hex_ids >> SLOT_DIGITS_SHIFT) & SLOT_MASK
-
-
-def compact_slots_of(hex_ids: np.ndarray) -> np.ndarray:
-    """File indices of an array of H3 cell ids: the same order, without the holes."""
-    digits = np.zeros_like(hex_ids)
-    for digit in range(SHORTCUT_H3_RES):
-        shift = SLOT_BASE_CELL_SHIFT - SLOT_DIGIT_BITS * (digit + 1)
-        digits = digits * COMPACT_DIGIT_BASE + ((hex_ids >> shift) & 7)
-    base = (hex_ids >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
-    return base * COMPACT_STRIDE + digits
-
-
-def cell_of_slot(slot: int) -> int:
-    """The H3 cell id a table slot addresses - the inverse of :func:`slot_of`."""
-    base, digits = divmod(slot, SLOT_STRIDE)
-    return (
-        SLOT_INVARIANT | (base << SLOT_BASE_CELL_SHIFT) | (digits << SLOT_DIGITS_SHIFT)
-    )
-
-
-def expand_compact(compact: np.ndarray, fill: int) -> np.ndarray:
-    """Compact base-7 file table -> the base-8 table the lookup indexes.
-
-    A base-8 slot is exactly the C-order ravel of a ``(122,) + (8,) * res`` array, so the
-    base-7 block lands correctly when dropped into its corner. That slice assignment is
-    an order of magnitude cheaper than scattering through a computed index array, and it
-    is the whole of what loading the table costs.
-
-    ``fill`` is what the unreachable slots get. No valid cell addresses them, so it cannot
-    change an answer - but it must still be the value that *means* "nothing here", or a
-    table whose padding reads as zone id 0 is one nobody can assert over.
+    Off the query path: the lookups inline this, because a call per query is a
+    measurable share of the one stage every query pays. It is here for the tooling that
+    asks which cell a coordinate falls in, and so that the rewrite is written down once.
     """
-    shape = (NUM_BASE_CELLS,) + (8,) * SHORTCUT_H3_RES
-    block = (slice(None),) + (slice(0, COMPACT_DIGIT_BASE),) * SHORTCUT_H3_RES
-    out = np.full(shape, fill, dtype=compact.dtype)
-    out[block] = compact.reshape(
-        (NUM_BASE_CELLS,) + (COMPACT_DIGIT_BASE,) * SHORTCUT_H3_RES
+    x = int(lng * COORD2INT_FACTOR) + X_SHIFT
+    if x < 0:
+        x += X_SPAN
+    y = int(lat * COORD2INT_FACTOR) + Y_SHIFT
+    if y < 0:
+        y = 0
+    return x, y
+
+
+def root_cell_of(x: int, y: int) -> int:
+    """The root cell a shifted integer pair falls in, as a cell id."""
+    return (y // ROOT_WIDTH) * ROOT_COLUMNS + x // ROOT_WIDTH
+
+
+def child_cell_of(x: int, y: int) -> int:
+    """The finest-level cell a shifted integer pair falls in, as a cell id.
+
+    Addresses a cell whether or not its root refines; whether that cell is stored is the
+    index's business, not the grid's.
+    """
+    return ROOT_CELLS + (y // CHILD_WIDTH) * CHILD_COLUMNS + x // CHILD_WIDTH
+
+
+def is_root_cell(cell_id: int) -> bool:
+    """Whether a cell id names a root cell rather than one of the finer ones.
+
+    Cell ids number the root grid first and the finest grid after it, so the level is the
+    id's own magnitude and no cell id means two things. The numbering is a property of the
+    *grid* and not of the data: it does not move when a different root cell happens to
+    refine, which is what lets a fixture or a measurement record cell ids at all.
+    """
+    return cell_id < ROOT_CELLS
+
+
+def cell_bounds(cell_id: int) -> tuple[int, int, int, int]:
+    """The first and last integer coordinate a cell owns: ``(x0, y0, x1, y1)``.
+
+    Inclusive on both ends and in unshifted coordinates, so it is directly what the
+    converter intersects polygons with and what an audit probes. A cell owns its north
+    and east edges and not its south or west, so ``x0`` is one unit east of the
+    neighbour's ``x1``.
+    """
+    if is_root_cell(cell_id):
+        row, col = divmod(cell_id, ROOT_COLUMNS)
+        width = ROOT_WIDTH
+    else:
+        row, col = divmod(cell_id - ROOT_CELLS, CHILD_COLUMNS)
+        width = CHILD_WIDTH
+    return (
+        col * width - MAX_LNG_VAL_INT + 1,
+        row * width - MAX_LAT_VAL_INT + 1,
+        (col + 1) * width - MAX_LNG_VAL_INT,
+        (row + 1) * width - MAX_LAT_VAL_INT,
     )
-    return out.reshape(-1)
 
 
-def compact_of_expanded(table: np.ndarray) -> np.ndarray:
-    """The inverse of :func:`expand_compact` - what the file holds, from the table."""
-    shape = (NUM_BASE_CELLS,) + (8,) * SHORTCUT_H3_RES
-    block = (slice(None),) + (slice(0, COMPACT_DIGIT_BASE),) * SHORTCUT_H3_RES
-    return table.reshape(shape)[block].reshape(-1)
+def cell_bounds_of(cell_ids: np.ndarray) -> tuple[np.ndarray, ...]:
+    """:func:`cell_bounds` over an array of cell ids, as four arrays, levels mixed.
+
+    What the converter hands ``shapely.box`` and what an audit probes: one array per
+    bound beats a list of tuples, because every consumer builds boxes in bulk.
+    """
+    ids = np.asarray(cell_ids, dtype=np.int64)
+    root = ids < ROOT_CELLS
+    columns = np.where(root, ROOT_COLUMNS, CHILD_COLUMNS)
+    width = np.where(root, ROOT_WIDTH, CHILD_WIDTH)
+    row, col = np.divmod(np.where(root, ids, ids - ROOT_CELLS), columns)
+    return (
+        col * width - MAX_LNG_VAL_INT + 1,
+        row * width - MAX_LAT_VAL_INT + 1,
+        (col + 1) * width - MAX_LNG_VAL_INT,
+        (row + 1) * width - MAX_LAT_VAL_INT,
+    )
+
+
+def child_cells_of(root_cell_id: int) -> np.ndarray:
+    """The ``BLOCK_CELLS`` finest-level cell ids one root cell refines into.
+
+    In block order - row-major within the block - which is the order the block array
+    stores them in, so the two can be zipped.
+    """
+    row, col = divmod(root_cell_id, ROOT_COLUMNS)
+    rows = row * BLOCK_SIDE + np.arange(BLOCK_SIDE, dtype=np.int64)
+    cols = col * BLOCK_SIDE + np.arange(BLOCK_SIDE, dtype=np.int64)
+    return (ROOT_CELLS + rows[:, None] * CHILD_COLUMNS + cols[None, :]).reshape(-1)
+
+
+def parent_cell_of(child_cell_id: int) -> int:
+    """The root cell id a finest-level cell id belongs to."""
+    row, col = divmod(child_cell_id - ROOT_CELLS, CHILD_COLUMNS)
+    return (row // BLOCK_SIDE) * ROOT_COLUMNS + col // BLOCK_SIDE
+
+
+def block_position_of(child_cell_id: int) -> int:
+    """Where a finest-level cell sits inside its parent's block, in ``0 .. BLOCK_CELLS``."""
+    row, col = divmod(child_cell_id - ROOT_CELLS, CHILD_COLUMNS)
+    return (row & BLOCK_MASK) * BLOCK_SIDE + (col & BLOCK_MASK)
 
 
 class ShortcutIndex:
@@ -202,26 +285,40 @@ class ShortcutIndex:
 
     That tri-state is the lookup's own vocabulary - a cell is covered by one zone, by
     none, or by several - so branching on it is domain logic. **How** it is encoded (the
-    cell a coordinate falls in, the slot arithmetic, the ``-(entry + 2)`` entry index, the
-    CSR bounds) stops here, which is what lets the cells and the storage change without
-    touching ``timezonefinder.py``.
+    cell a coordinate falls in, the grid arithmetic, the descent into a block, the
+    ``-(entry + 2)`` entry index, the CSR bounds) stops here, which is what let the cells
+    change from H3 hexagons to this grid tree without touching ``timezonefinder.py``.
 
     The arrays stay public because the build-time checks in ``timezonefinder/_data_integrity.py``
     and the format tests legitimately inspect them; the query path does not.
     """
 
-    __slots__ = ("table", "starts", "ends", "last_change", "payload")
+    __slots__ = (
+        "table",
+        "blocks",
+        "starts",
+        "ends",
+        "last_change",
+        "payload",
+        "_root",
+        "_block",
+    )
 
     def __init__(
         self,
         table: np.ndarray,
+        blocks: np.ndarray,
         starts: np.ndarray,
         ends: np.ndarray,
         last_change: np.ndarray,
         payload: np.ndarray,
     ) -> None:
-        #: ``int16`` per slot: ``>= 0`` zone id, ``ABSENT`` uncovered, else ``-(entry + 2)``
+        #: ``int16`` per root cell: ``>= 0`` zone id, ``ABSENT`` uncovered, else
+        #: ``-(block + 2)``
         self.table = table
+        #: ``int16`` per child cell of every refined root cell, ``BLOCK_CELLS`` at a
+        #: time: ``>= 0`` zone id, ``ABSENT`` uncovered, else ``-(entry + 2)``
+        self.blocks = blocks
         #: start of each distinct candidate list in ``payload``
         self.starts = starts
         #: end of each distinct candidate list; a view of the same CSR array as ``starts``
@@ -230,66 +327,134 @@ class ShortcutIndex:
         self.last_change = last_change
         #: every distinct candidate list, back to back
         self.payload = payload
+        # The same two levels as memoryviews, for the scalar descent alone. Indexing a
+        # memoryview of int16 yields a Python int directly, where `int(array[i])` builds
+        # a numpy scalar and unwraps it. That is worth 6 % of a whole random
+        # `timezone_at` and 8 % of a unique-cell one, winning 52 and 55 of 61 paired
+        # rounds (`benchmarks/candidate_comparison.py`), because the root read is the
+        # single largest stage of a query that needs no geometry. Nothing but the arrays
+        # themselves is resident - a memoryview is a view - and the batch path needs the
+        # arrays for its gathers, so each pair of names refers to one allocation.
+        self._root = memoryview(table)
+        self._block = memoryview(blocks)
 
     # --- the query contract -------------------------------------------------------
 
     def entry_at(self, lng: float, lat: float) -> int:
         """What the cell holding a coordinate resolves to, as the tri-state above.
 
-        The lookups hand this the coordinate and never see a cell id, so replacing the
-        cells is a change to this class alone. Moving the cell computation here costs a
-        query nothing: written as one expression, inlining what :meth:`entry_of` and
-        :func:`slot_of` do, it executes exactly the calls and bytecode the lookups did
-        when they computed the cell themselves - a further call, or the cell id stored in
-        a local, would add to the one stage every query pays.
+        The lookups hand this the coordinate and never see a cell, so replacing the cells
+        is a change to this class alone. Written as one unrolled descent rather than as
+        calls to :func:`shifted` and :func:`root_cell_of`: this is the one stage every
+        query pays, and a Python call per level measured ~280 ns of it.
+
+        The two lines no polygon owns as spelled are rewritten here as
+        :func:`timezonefinder.utils.query2int` rewrites them for the geometry - -180
+        degrees wraps to the *last* column, not clamped to the first, and -90 clamps to
+        row 0, which is the point one unit north. A tree that clamped the longitude
+        instead would answer the far side of the globe there;
+        ``tests/test_minus_180_meridian_and_minus_90_parallel.py`` fails on it.
         """
-        return int(
-            self.table[
-                (h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES) >> SLOT_DIGITS_SHIFT)
-                & SLOT_MASK
-            ]
-        )
+        x = int(lng * COORD2INT_FACTOR) + X_SHIFT
+        if x < 0:
+            x += X_SPAN
+        y = int(lat * COORD2INT_FACTOR) + Y_SHIFT
+        if y < 0:
+            y = 0
+        entry = self._root[(y // ROOT_WIDTH) * ROOT_COLUMNS + x // ROOT_WIDTH]
+        if entry >= ABSENT:
+            return entry
+        return self._block[
+            (-2 - entry) * BLOCK_CELLS
+            + ((y // CHILD_WIDTH) & BLOCK_MASK) * BLOCK_SIDE
+            + ((x // CHILD_WIDTH) & BLOCK_MASK)
+        ]
 
     def entries_at(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
         """What the cells holding many coordinates resolve to, as the same tri-state.
 
-        The batch sibling of :meth:`entry_at`. The slot arithmetic and the table read
-        are one numpy operation each for the whole batch; what cannot join them is
-        ``h3.latlng_to_cell`` - h3-py exposes no vectorised form, so N points cost N
-        scalar C calls, and that is nearly the whole cost of a batched lookup once the
-        cells resolve to a single zone.
-        """
-        # bound once outside the loop: N attribute lookups are a measurable share of a
-        # stage that is otherwise a single C call per point
-        latlng_to_cell = h3.latlng_to_cell
-        resolution = SHORTCUT_H3_RES
-        hex_ids = np.fromiter(
-            (
-                latlng_to_cell(lat, lng, resolution)
-                for lat, lng in zip(lats.tolist(), lngs.tolist(), strict=True)
-            ),
-            dtype=np.uint64,
-            count=lngs.shape[0],
-        )
-        return self.table[slots_of(hex_ids)]
+        The batch sibling of :meth:`entry_at`, and the whole of it is numpy: the scaling,
+        the two floor divisions and the table gather run once over the batch. That is
+        what the H3 index could not do - ``h3.latlng_to_cell`` has no vectorised form, so
+        N points cost N scalar C calls - and it is why a 256-point batch of random points
+        resolves 3.4x faster on this index.
 
-    def entry_of(self, hex_id: int) -> int:
+        The descent is the only part that is not uniform, and it runs on the points that
+        need it rather than on the batch: one gather for every point whose root cell
+        refines, whatever the batch's mix.
+        """
+        x = (lngs * COORD2INT_FACTOR).astype(np.int64)
+        x += X_SHIFT
+        # the -180 meridian, and only it, lands at -1 here; wrapping it by a full span
+        # puts it in the last column, which is the +180 meridian's
+        np.add(x, X_SPAN, out=x, where=x < 0)
+        y = (lats * COORD2INT_FACTOR).astype(np.int64)
+        y += Y_SHIFT
+        np.maximum(y, 0, out=y)
+        entries = self.table[(y // ROOT_WIDTH) * ROOT_COLUMNS + x // ROOT_WIDTH]
+        refined = np.flatnonzero(entries < ABSENT)
+        if refined.size:
+            # int64 throughout: a block index times BLOCK_CELLS leaves int16 long before
+            # the table's own range does
+            blocks = -2 - entries[refined].astype(np.int64)
+            entries[refined] = self.blocks[
+                blocks * BLOCK_CELLS
+                + ((y[refined] // CHILD_WIDTH) & BLOCK_MASK) * BLOCK_SIDE
+                + ((x[refined] // CHILD_WIDTH) & BLOCK_MASK)
+            ]
+        return entries
+
+    def entry_of(self, cell_id: int) -> int:
         """What a cell resolves to, for a caller that already holds the cell id.
 
         The lookups ask :meth:`entry_at`; this form serves the tooling that walks cells
         rather than points - the converter-side scripts and the tests.
-        """
-        return int(self.table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
 
-    def entries_of(self, hex_ids: np.ndarray) -> np.ndarray:
+        :raises ValueError: if ``cell_id`` names a finest-level cell whose root does not
+            refine. Such a cell has no stored value, and reading one would answer with
+            an unrelated block's.
+        """
+        if is_root_cell(cell_id):
+            return int(self.table[cell_id])
+        parent = int(self.table[parent_cell_of(cell_id)])
+        if parent >= ABSENT:
+            raise ValueError(
+                f"cell {cell_id} is a finest-level cell, but its root cell "
+                f"{parent_cell_of(cell_id)} stores an answer of its own rather than a "
+                "block of children. Ask for the root cell instead."
+            )
+        return int(
+            self.blocks[(-2 - parent) * BLOCK_CELLS + block_position_of(cell_id)]
+        )
+
+    def entries_of(self, cell_ids: np.ndarray) -> np.ndarray:
         """What each of many cells resolves to, as the same tri-state integers.
 
-        The batch sibling of :meth:`entry_of`, and it lives here for the same reason
-        that one does: the slot arithmetic and the table are this class's business, so
-        a caller that indexed ``table`` itself would pin the layout from outside. Two
-        numpy calls for the whole batch, whatever its size.
+        The batch sibling of :meth:`entry_of`, and it lives here for the same reason that
+        one does: the grid arithmetic and the arrays are this class's business, so a
+        caller that indexed ``table`` itself would pin the layout from outside. Takes the
+        two levels mixed, since :meth:`items` yields them mixed.
         """
-        return self.table[slots_of(hex_ids)]
+        ids = np.asarray(cell_ids, dtype=np.int64)
+        out = np.empty(ids.shape, dtype=TABLE_DTYPE)
+        root = ids < ROOT_CELLS
+        out[root] = self.table[ids[root]]
+        children = ids[~root] - ROOT_CELLS
+        if children.size:
+            rows, cols = np.divmod(children, CHILD_COLUMNS)
+            parents = (rows // BLOCK_SIDE) * ROOT_COLUMNS + cols // BLOCK_SIDE
+            blocks = -2 - self.table[parents].astype(np.int64)
+            if np.any(blocks < 0):
+                raise ValueError(
+                    "a finest-level cell id was asked for whose root cell stores an "
+                    "answer of its own rather than a block of children"
+                )
+            out[~root] = self.blocks[
+                blocks * BLOCK_CELLS
+                + (rows & BLOCK_MASK) * BLOCK_SIDE
+                + (cols & BLOCK_MASK)
+            ]
+        return out
 
     def candidates_of(self, entry: int) -> np.ndarray:
         """The boundary polygon ids to test, for an ``entry`` below ``ABSENT``."""
@@ -316,41 +481,111 @@ class ShortcutIndex:
         """How many *distinct* candidate lists the index stores."""
         return len(self.last_change)
 
+    @property
+    def nr_of_blocks(self) -> int:
+        """How many root cells refine, which is how many child blocks are stored."""
+        return len(self.blocks) // BLOCK_CELLS
+
     def polygons_of_entry(self, entry_idx: int) -> np.ndarray:
         """The candidate polygon ids of one distinct entry, by its own index.
 
-        Addressed by entry index rather than by the table's encoding of it, which is what
+        Addressed by entry index rather than by the encoding of it, which is what
         separates it from :meth:`candidates_of`: the build side iterates entries, the
-        query side follows a table value.
+        query side follows a stored value.
         """
         return self.payload[self.starts[entry_idx] : self.ends[entry_idx]]
 
-    def value_of(self, hex_id: int) -> int | np.ndarray | None:
+    def cell_at(self, lng: float, lat: float) -> int:
+        """The id of the cell a coordinate's answer is stored in.
+
+        The leaf, so the level depends on whether the point's root cell refines. Not on
+        the query path - :meth:`entry_at` answers without ever naming a cell - but it is
+        what lets tooling and tests address the one cell a point reads.
+        """
+        x, y = shifted(lng, lat)
+        root = root_cell_of(x, y)
+        if int(self.table[root]) >= ABSENT:
+            return root
+        return child_cell_of(x, y)
+
+    def replacing(self, cell_id: int, value: int) -> "ShortcutIndex":
+        """A copy of this index in which ``cell_id`` resolves to ``value``.
+
+        Loaded index arrays are the dataset and are frozen, so changing one cell means a
+        new index rather than a write. One array is copied and the rest are shared, since
+        they are read-only in both.
+
+        What it is for: the packaged ocean zones cover every cell, so ``ABSENT`` is a
+        state only custom data reaches, and the tests that have to reach it would
+        otherwise each re-derive which array a cell lives in - the one thing this class
+        exists to keep inside it.
+        """
+        if is_root_cell(cell_id):
+            table = self.table.copy()
+            table[cell_id] = value
+            table.flags.writeable = False
+            return ShortcutIndex(
+                table,
+                self.blocks,
+                self.starts,
+                self.ends,
+                self.last_change,
+                self.payload,
+            )
+        parent = int(self.table[parent_cell_of(cell_id)])
+        if parent >= ABSENT:
+            raise ValueError(
+                f"cell {cell_id}'s root cell does not refine, so the cell is not stored"
+            )
+        blocks = self.blocks.copy()
+        blocks[(-2 - parent) * BLOCK_CELLS + block_position_of(cell_id)] = value
+        blocks.flags.writeable = False
+        return ShortcutIndex(
+            self.table, blocks, self.starts, self.ends, self.last_change, self.payload
+        )
+
+    def value_of(self, cell_id: int) -> int | np.ndarray | None:
         """What one cell resolves to: a zone id, a candidate list, or ``None``.
 
         Reporting and test-side convenience, not the query path - the callers that care
-        about speed dispatch on the raw table value instead of building this union.
+        about speed dispatch on the raw stored value instead of building this union.
         """
-        zone_id = int(self.table[slot_of(hex_id)])
-        if zone_id >= 0:
-            return zone_id
-        if zone_id == ABSENT:
+        entry = self.entry_of(cell_id)
+        if entry >= 0:
+            return entry
+        if entry == ABSENT:
             return None
-        return self.polygons_of_entry(-(zone_id + 2))
+        return self.polygons_of_entry(-(entry + 2))
 
     def items(self) -> Iterator[tuple[int, int | np.ndarray]]:
-        """Every covered cell, in slot order, as ``(cell id, zone id | polygon ids)``.
+        """Every covered cell the index stores, as ``(cell id, zone id | polygon ids)``.
 
-        Slot order is ascending cell id: the base cell occupies the high bits of both.
+        The leaves and only the leaves: a root cell that refines is not itself an answer,
+        and its children are yielded instead. In ascending cell id, which puts every root
+        leaf before every finer one - the ids number the grids in that order.
         """
-        for slot in np.flatnonzero(self.table != ABSENT):
-            zone_id = int(self.table[slot])
-            value = zone_id if zone_id >= 0 else self.polygons_of_entry(-(zone_id + 2))
-            yield cell_of_slot(int(slot)), value
+        table = self.table
+        for cell_id in np.flatnonzero(table != ABSENT).tolist():
+            value = int(table[cell_id])
+            if value >= 0:
+                yield cell_id, value
+        blocks = self.blocks
+        # child cell ids ascend with the *grid*, not with the block array, so the block
+        # order has to be mapped back through the parents rather than walked
+        for parent in np.flatnonzero(table < ABSENT).tolist():
+            base = (-2 - int(table[parent])) * BLOCK_CELLS
+            for position, child in enumerate(child_cells_of(parent).tolist()):
+                value = int(blocks[base + position])
+                if value == ABSENT:
+                    continue
+                yield (
+                    child,
+                    value if value >= 0 else self.polygons_of_entry(-(value + 2)),
+                )
 
     def as_mapping(self) -> dict[int, int | np.ndarray]:
         """Materialise the index as the cell -> value dict reports and tests work over."""
-        return dict(self.items())
+        return dict(sorted(self.items()))
 
 
 def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
@@ -361,11 +596,11 @@ def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
 def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
     """Read a shortcut index file.
 
-    Nothing is derived here beyond padding the table: the file holds what the lookup
-    indexes, which is why loading it is a fraction of a millisecond.
+    Nothing is derived here: the file holds exactly what the lookup indexes, which is why
+    loading it is a fraction of a millisecond.
 
-    :raises ValueError: if the file carries no known identifier or an unreadable layout
-        version.
+    :raises ValueError: if the file carries no known identifier, an unreadable layout
+        version, or a grid this reader's arithmetic does not address.
     """
     with open(file_path, "rb") as f:
         buf = f.read()
@@ -383,25 +618,27 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
             "shortcut index file", layout_version, SHORTCUT_LAYOUT_VERSION, file_path
         )
 
-    resolution, nr_entries, offset_width, length_width = (
-        int(v) for v in np.frombuffer(buf, dtype=np.int64, count=4, offset=8)
+    root_columns, block_side, nr_blocks, nr_entries, offset_width, length_width = (
+        int(v) for v in np.frombuffer(buf, dtype=np.int64, count=6, offset=8)
     )
-    if resolution != SHORTCUT_H3_RES:
+    if (root_columns, block_side) != (ROOT_COLUMNS, BLOCK_SIDE):
         raise ValueError(
-            f"the shortcut index {file_path} is built for H3 resolution {resolution}, but "
-            f"this timezonefinder reads resolution {SHORTCUT_H3_RES}. Every slot in it "
-            f"means a different cell, so reading it would return a neighbour's timezone "
-            f"rather than an error. Regenerate this data directory with "
+            f"the shortcut index {file_path} is built for a grid of {root_columns} root "
+            f"columns refining into {block_side}x{block_side} blocks, but this "
+            f"timezonefinder reads {ROOT_COLUMNS} and {BLOCK_SIDE}x{BLOCK_SIDE}. Every "
+            f"cell in it means a different region, so reading it would return another "
+            f"cell's timezone rather than an error. Regenerate this data directory with "
             f"scripts/file_converter.py from the current checkout."
         )
     pos = _HEADER_SIZE
     # `.copy()`, never `np.ascontiguousarray`: the latter hands back an already-contiguous
     # view unchanged, and a surviving view keeps the whole file buffer alive.
-    table = expand_compact(
-        np.frombuffer(buf, dtype=TABLE_DTYPE, count=COMPACT_TABLE_SIZE, offset=pos),
-        fill=ABSENT,
-    )
-    pos += COMPACT_TABLE_SIZE * TABLE_DTYPE.itemsize
+    table = np.frombuffer(buf, dtype=TABLE_DTYPE, count=ROOT_CELLS, offset=pos).copy()
+    pos += ROOT_CELLS * TABLE_DTYPE.itemsize
+    blocks = np.frombuffer(
+        buf, dtype=TABLE_DTYPE, count=nr_blocks * BLOCK_CELLS, offset=pos
+    ).copy()
+    pos += nr_blocks * BLOCK_CELLS * TABLE_DTYPE.itemsize
     # One CSR array read as two views: entry i spans bounds[i]:bounds[i+1]. The distinct
     # entries are packed back to back, so no length column exists to disagree with it.
     bounds = np.frombuffer(
@@ -420,9 +657,9 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
     # publicly reachable for build-time checks and reporting, so freeze every owner
     # before handing out views. In particular, cells with identical candidate lists
     # share one payload range, and starts/ends share the bounds array.
-    for array in (table, bounds, last_change, payload):
+    for array in (table, blocks, bounds, last_change, payload):
         array.flags.writeable = False
-    return ShortcutIndex(table, bounds[:-1], bounds[1:], last_change, payload)
+    return ShortcutIndex(table, blocks, bounds[:-1], bounds[1:], last_change, payload)
 
 
 def narrowest_dtype_for(max_value: int, *, what: str) -> np.dtype:
@@ -445,9 +682,9 @@ def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -
     """Guard a narrow column, with the message that makes choosing it by fit safe.
 
     For the columns whose width is *fixed* by the format rather than chosen by fit -
-    which is the slot table, and only it. The two data-dependent columns need no such
-    guard: their width is derived from the maximum they have to hold, so it fits by
-    construction. Called by the builder, never when a finder is constructed.
+    which is the root table and the block array, both ``int16``. The two data-dependent
+    columns need no such guard: their width is derived from the maximum they have to hold,
+    so it fits by construction. Called by the builder, never when a finder is constructed.
 
     The message is the deliverable, not the assertion: whoever hits this is regenerating
     the data years from now and needs to be told what overflowed, what the ceiling was and
@@ -508,30 +745,53 @@ def build_shortcut_index(
 ) -> ShortcutIndex:
     """Build the index from the compiled cell -> zone id | polygon ids mapping.
 
+    The mapping holds the tree's **leaves**, keyed by the cell ids
+    :func:`root_cell_of` and :func:`child_cell_of` produce: a root cell a single zone
+    covers, and the finest-level cells of every root cell that several zones can own.
+    Which root cells refine is therefore the mapping's own shape, read off the child keys
+    it carries, and the block indices follow in ascending parent order so that one input
+    always compiles to one file.
+
     :param mapping: what ``scripts/shortcuts.py`` compiles: a cell covered by a single
-        zone maps to that zone id, any other covered cell to its candidate polygon ids.
+        zone maps to that zone id, a finest-level cell several zones can own to its
+        candidate polygon ids.
     :param poly_zone_ids: zone id per boundary polygon, needed to precompute
         ``last_change``.
     :raises ShortcutOverflowError: if a value no longer fits the column that holds it.
+    :raises ValueError: if the mapping is not a tree this layout can hold.
     """
-    keys = np.sort(np.fromiter(mapping.keys(), dtype=np.int64, count=len(mapping)))
-    compact_slots = compact_slots_of(keys)
-    table = np.full(COMPACT_TABLE_SIZE, ABSENT, dtype=TABLE_DTYPE)
+    table = np.full(ROOT_CELLS, ABSENT, dtype=np.int64)
+    parents = sorted(
+        {parent_cell_of(cell) for cell in mapping if not is_root_cell(cell)}
+    )
+    block_of = {parent: i for i, parent in enumerate(parents)}
+    blocks = np.full(len(parents) * BLOCK_CELLS, ABSENT, dtype=np.int64)
+    for parent, block in block_of.items():
+        table[parent] = -(block + 2)
 
-    unique_slots: list[int] = []
-    unique_zone_ids: list[int] = []
-    list_slots: list[int] = []
-    # distinct candidate lists, in first-seen (= slot) order
+    # distinct candidate lists, in first-seen (= ascending cell id) order
     entry_of: dict[bytes, int] = {}
-    entry_index: list[int] = []
     entry_payloads: list[np.ndarray] = []
 
-    for key, compact_slot in zip(keys, compact_slots, strict=True):
-        hex_id = int(key)
-        value = mapping[hex_id]
+    for cell_id in sorted(mapping):
+        value = mapping[cell_id]
+        root = is_root_cell(cell_id)
+        if root:
+            if cell_id in block_of:
+                raise ValueError(
+                    f"root cell {cell_id} stores an answer of its own and also has "
+                    "finest-level cells in the mapping. A root cell either answers or "
+                    "refines; the lookup reads its one stored value as whichever the "
+                    "sign says, so it cannot be both."
+                )
+            position = cell_id
+            level_table = table
+        else:
+            position = block_of[parent_cell_of(cell_id)] * BLOCK_CELLS
+            position += block_position_of(cell_id)
+            level_table = blocks
         if isinstance(value, (int, np.integer)):
-            unique_slots.append(int(compact_slot))
-            unique_zone_ids.append(int(value))
+            level_table[position] = int(value)
             continue
         poly_ids = np.asarray(value, dtype=PAYLOAD_DTYPE)
         if len(poly_ids) == 0:
@@ -540,39 +800,53 @@ def build_shortcut_index(
             continue
         if len(poly_ids) == 1:
             raise ValueError(
-                f"cell {hex_id:#x} stores a single candidate polygon. A single candidate "
+                f"cell {cell_id} stores a single candidate polygon. A single candidate "
                 "is unambiguous and has to be stored as a zone id - "
-                "scripts.shortcuts.compute_unique_shortcut_mapping is what guarantees "
-                "that - and the index needs the one-candidate case to stay impossible, "
-                "since that is what leaves a spare table value to mean 'no cell here'."
+                "scripts.shortcuts.compile_shortcut_mapping is what guarantees that - "
+                "and the index needs the one-candidate case to stay impossible, since "
+                "that is what leaves a spare table value to mean 'no cell here'."
             )
-        list_slots.append(int(compact_slot))
+        if root:
+            raise ValueError(
+                f"root cell {cell_id} stores a candidate list. Only a finest-level cell "
+                "may: a root cell several zones can own refines, and the lookup reads a "
+                "negative root value as the index of its block of children."
+            )
         key_bytes = poly_ids.tobytes()
         found = entry_of.get(key_bytes)
         if found is None:
             found = len(entry_payloads)
             entry_of[key_bytes] = found
             entry_payloads.append(poly_ids)
-        entry_index.append(found)
+        level_table[position] = -(found + 2)
 
-    zone_id_column = np.asarray(unique_zone_ids, dtype=np.int64)
     check_fits(
-        zone_id_column,
+        table[table >= 0],
         TABLE_DTYPE,
-        what="a unique cell's zone id",
-        remedy="Widen the slot table to int32.",
+        what="a root cell's zone id",
+        remedy="Widen the root table and the block array to int32.",
     )
-    markers = -(np.asarray(entry_index, dtype=np.int64) + 2)
     check_fits(
-        -markers,
+        -table[table < ABSENT],
+        TABLE_DTYPE,
+        what="a child block index",
+        remedy=(
+            "Refine fewer root cells, by making the root grid finer, or widen the root "
+            "table and the block array to int32."
+        ),
+    )
+    check_fits(
+        blocks[blocks >= 0],
+        TABLE_DTYPE,
+        what="a finest-level cell's zone id",
+        remedy="Widen the root table and the block array to int32.",
+    )
+    check_fits(
+        -blocks[blocks < ABSENT],
         TABLE_DTYPE,
         what="a distinct entry index",
-        remedy="Widen the slot table to int32.",
+        remedy="Widen the root table and the block array to int32.",
     )
-    if unique_slots:
-        table[unique_slots] = zone_id_column.astype(TABLE_DTYPE)
-    if list_slots:
-        table[list_slots] = markers.astype(TABLE_DTYPE)
 
     payload = (
         np.concatenate(entry_payloads)
@@ -589,7 +863,8 @@ def build_shortcut_index(
         dtype=np.int64,
     )
     return ShortcutIndex(
-        expand_compact(table, fill=ABSENT),
+        table.astype(TABLE_DTYPE),
+        blocks.astype(TABLE_DTYPE),
         bounds[:-1],
         bounds[1:],
         last_change,
@@ -605,7 +880,7 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
     narrowest that holds its column's maximum, and ``timezonefinder/_data_integrity.py`` asserts
     over the committed file that it still is.
 
-    **One file, and a raw layout rather than four ``.npy`` arrays.** The obvious
+    **One file, and a raw layout rather than ``.npy`` arrays.** The obvious
     alternative is one file per array, self-described by the ``.npy`` header the way
     ``zone_ids.npy`` and its neighbours next to it are. Measured over the packaged data,
     loading the identical structure: **one raw file 0.081 ms, four raw files 0.129 ms
@@ -620,9 +895,10 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
       ``docs/data_format.rst`` records as still undetectable across a format change,
       losing what makes a stale ``bin_file_location`` directory fail loudly instead of
       answering with wrong timezones.
-    * these four arrays are **one structure with cross-references** - the table indexes
-      the bounds, the bounds index the payload - so four files can be individually stale
-      or mismatched where one cannot, and the separability buys nothing that reads them.
+    * these arrays are **one structure with cross-references** - the table indexes the
+      blocks, the blocks index the bounds, the bounds index the payload - so separate
+      files can be individually stale or mismatched where one cannot, and the
+      separability buys nothing that reads them.
 
     What a ``.npy`` would genuinely add is the dtype of each array, and the header's two
     width fields already carry that in 16 bytes. None of this argues against ``.npy`` for
@@ -647,7 +923,9 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
         + np.array([SHORTCUT_LAYOUT_VERSION], dtype=np.uint32).tobytes()
         + np.array(
             [
-                SHORTCUT_H3_RES,
+                ROOT_COLUMNS,
+                BLOCK_SIDE,
+                index.nr_of_blocks,
                 index.nr_of_entries,
                 offset_dtype.itemsize,
                 length_dtype.itemsize,
@@ -658,7 +936,8 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
     assert len(header) == _HEADER_SIZE
     with open(output_file, "wb") as f:
         f.write(header)
-        f.write(compact_of_expanded(index.table).astype(TABLE_DTYPE).tobytes())
+        f.write(index.table.astype(TABLE_DTYPE).tobytes())
+        f.write(index.blocks.astype(TABLE_DTYPE).tobytes())
         f.write(bounds.astype(offset_dtype).tobytes())
         f.write(index.payload.astype(PAYLOAD_DTYPE).tobytes())
         f.write(index.last_change.astype(length_dtype).tobytes())

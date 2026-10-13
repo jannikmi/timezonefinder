@@ -35,7 +35,7 @@ Batch Lookups
 
 See :doc:`benchmark_results_batch_break_even` for the batch size at which ``timezone_names_at()`` starts beating a loop of ``timezone_at()`` calls, and the size beyond which a larger batch buys nothing more - auto-generated from the ``scripts/measure_batch_break_even.py`` sweep (``make batch-break-even``).
 
-Both numbers depend on your hardware *and* on your coordinates, because points sharing an H3 cell are answered together: that page carries the figures for uniformly random points on one machine, and the script takes ``--points your.csv`` to measure yours.
+Both numbers depend on your hardware *and* on your coordinates, because points sharing a shortcut cell are answered together: that page carries the figures for uniformly random points on one machine, and the script takes ``--points your.csv`` to measure yours.
 
 
 Point in Polygon Checks
@@ -111,7 +111,7 @@ holding both, ``using_numba()`` is ``False``. To ask whether the *extra* is pres
 environment - ``importlib.util.find_spec("numba")`` - not the finder.
 
 **Which path is fastest remains a measurement**, not a property of the dispatch - it has moved as the
-kernels and the data format moved, and it is not one answer for every workload, since a query the H3
+kernels and the data format moved, and it is not one answer for every workload, since a query the
 shortcut index answers outright never reaches a point-in-polygon test at all. Read it off
 :doc:`benchmark_results_acceleration_paths`, which is regenerated with the rest of the reports.
 

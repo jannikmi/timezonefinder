@@ -117,7 +117,7 @@ channels** (all of them, and not only the first, are what the warning above is a
    compiled before that rule left such ties to chance, so the first release built with it can
    change answers even where no boundary moved: such a point here, and - because the tie can
    decide which zone a cell tests last - every ``TimezoneFinderL`` answer in a few cells.
-3. **Shortcut composition and ordering.** The H3 shortcut index is regenerated for every dataset.
+3. **Shortcut composition and ordering.** The shortcut index is regenerated for every dataset.
    Which cells exist, which candidates a cell holds and in which order they are tested are all
    outputs of that run - and the rules that run follows are code, so a code-side optimization
    reaches you through this channel too, as the section on code releases below describes.
@@ -184,13 +184,18 @@ final zone sound: a point that reaches it is inside none of the earlier zones' p
 coverage forces it inside one of the final zone's.
 
 This half is only as strong as that certification, and it is worth knowing what it assumes. The
-envelope is derived from the H3 cell's spherical cap and padded by one integer coordinate unit,
-with cells at the poles or across the antimeridian refused outright; the cap radius is the largest
-centre-to-vertex distance plus one percent, which bounds the cell because distance to a fixed point
-along a great-circle arc is largest at an endpoint - an argument, not a machine-checked proof. The
-containment tests themselves are planar operations in the quantized coordinate frame standing in
-for a spherical cell. Everything unproven fails closed: invalid or repaired geometry is rejected,
-and any geometry error refuses the cell.
+envelope is the cell's own rectangle in the quantized coordinate frame, grown by one integer
+coordinate unit on each side, so every point the cell can be asked about lies strictly inside it -
+an arithmetic fact rather than an argument. The containment tests are planar operations in that
+same frame, which is the frame the point-in-polygon kernel works in, so they are not standing in
+for anything. Everything unproven fails closed: invalid or repaired geometry is rejected, and any
+geometry error refuses the cell.
+
+Until the shortcut cells became rectangles this paragraph said rather less. The envelope was then
+derived from an H3 cell's circumscribed spherical cap, which bounded the cell by an argument about
+great-circle arcs rather than by construction, and cells at the poles or across the antimeridian
+had to be refused outright because the conversion broke there. Those cells now certify or fail on
+their geometry like any other.
 
 **Both arguments are asserted by tests, not only argued here.**
 ``tests/test_ordering_answer_invariance.py`` drives the real lookup over the committed
@@ -198,12 +203,14 @@ ambiguous-cell points: a within-zone shuffle cannot move an answer, a point cont
 zone's candidates survives any permutation, and - so that neither of those asserts nothing - a
 cross-zone rotation does move answers. It also pins ``TimezoneFinderL`` to the final candidate's
 zone. ``tests/test_shortcut_ordering.py`` covers the converter side: the restricted mode's answer
-over every hit pattern, the gate's overlap and coverage refusals, and its refusal of pole and
-antimeridian cells before any geometry is read.
+over every hit pattern, the gate's overlap and coverage refusals, that a cell's region is exactly
+the rectangle it owns, and that a pole or antimeridian cell is judged on its geometry like any
+other rather than refused before it is read.
 
 What no test establishes is the certification itself - that a positive verdict really implies
-coverage and disjointness for every point H3 assigns to the cell, which is where the cap-radius
-argument above carries the weight.
+coverage and disjointness for every point the cell is asked about. What carries that is the
+envelope containing the cell by construction, which is why it is stated above rather than left
+implicit.
 
 Both arguments are about the **packaged** data, whose ocean zones cover the globe. If you compile
 your own data and it leaves areas uncovered, a point inside none of a cell's candidates is
@@ -222,10 +229,13 @@ Three things can move an answer here, and the third is the one that surprises pe
    order in which geometry is tested are all fair game for performance work, and changing them
    changes how *ambiguity* is resolved.
 
-All three are described in the :doc:`changelog <6_changelog>`. The third is not hypothetical: 9.0.0
-reordered candidate polygons by the work a full lookup needs, which changed what
+All three are described in the :doc:`changelog <6_changelog>`. The third is not hypothetical:
+9.0.0 reordered candidate polygons by the work a full lookup needs, which changed what
 ``TimezoneFinderL`` returns in a multi-zone cell, and moved the shortcut index from H3 resolution 3
-to 4, which changed which cells are multi-zone at all.
+to 4, which changed which cells are multi-zone at all. The release that replaced those hexagons
+with an aligned grid tree changed the cells again, and therefore ``TimezoneFinderL``'s answer
+cell by cell - while leaving every ``TimezoneFinder`` answer in place, which is the guarantee above
+doing its work rather than a coincidence.
 
 Note how such a change reaches you. The ordering optimizer and the shortcut builder live in the
 code repository (``scripts/``) but their *output* ships in ``timezonefinder-data``, so an

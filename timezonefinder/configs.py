@@ -24,7 +24,8 @@ import timezonefinder_data
 __all__ = [
     "DEFAULT_DATA_DIR",
     "PACKAGE_DIR",
-    "SHORTCUT_H3_RES",
+    "SHORTCUT_ROOT_COLUMNS",
+    "SHORTCUT_BLOCK_SIDE",
     "OCEAN_TIMEZONE_PREFIX",
     "COORD2INT_FACTOR",
     "INT2COORD_FACTOR",
@@ -62,9 +63,26 @@ __all__ = [
 ]
 
 # SHORTCUT SETTINGS
-# H3 resolution level for spatial indexing shortcuts
-# Determines the granularity of the H3 cell grid used for fast lookups
-SHORTCUT_H3_RES: int = 4
+# The shape of the grid tree the shortcut index is built on: how many root cells span
+# the full longitude range, and how many child cells a root cell several zones can own
+# refines into per axis. 384 columns is 0.9375 degrees, and one level of 4x4 blocks
+# reaches 0.234375 degrees where zones meet. `timezonefinder/shortcut_index.py` derives
+# the rows, the cell widths and the lookup's arithmetic from these two numbers.
+#
+# Measured rather than chosen: against the H3 resolution-4 index this replaced, and
+# against flat grids, deeper trees, linear quadtrees and a tile pyramid, this shape was
+# the only one ahead of H3 on every axis at less than its footprint - 29-30 % faster per
+# scalar and 3.4x per batch random lookup, 57 % fewer polygon tests, 507 KB against
+# 617 KB on disk and 1,031 KB resident. A 1.875-degree root with two levels of 4x4 is
+# slightly faster still and spends 55 % more disk than H3, which "replace, never add"
+# refuses. The runs and the refused variants are in
+# `contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`;
+# `prototypes/latlng_index_bench.py` re-measures the family.
+#
+# Both numbers are stamped into the index file, because changing either changes what
+# every cell *means* without changing the layout a reader would notice.
+SHORTCUT_ROOT_COLUMNS: int = 384
+SHORTCUT_BLOCK_SIDE: int = 4
 
 # Pattern for identifying ocean timezones (fixed-offset zones for international waters)
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
@@ -131,7 +149,7 @@ UNKNOWN_DATA_VERSION = "unknown"
 # into one field written into every binary would rewrite the 63 MB coordinate file to
 # record a shortcut-format change that did not touch its layout, and those binaries
 # are committed.
-DATA_FORMAT_VERSION: Final[int] = 3
+DATA_FORMAT_VERSION: Final[int] = 4
 
 # What this generation is made of: the per-file layout versions in force when
 # DATA_FORMAT_VERSION was last bumped. Restated rather than imported, because
@@ -142,7 +160,7 @@ DATA_FORMAT_VERSION: Final[int] = 3
 # tests/test_data_version.py asserts it; nothing else would notice.
 DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
     "POLYGON_LAYOUT_VERSION": 3,
-    "SHORTCUT_LAYOUT_VERSION": 2,
+    "SHORTCUT_LAYOUT_VERSION": 3,
 }
 
 
@@ -304,8 +322,8 @@ IdArrayLike: TypeAlias = npt.ArrayLike
 # lists is derived from this alias rather than written out again.
 OnInvalid: TypeAlias = Literal["raise", "skip"]
 
-# hexagon id to list of polygon ids
-ShortcutMapping: TypeAlias = dict[int, np.ndarray]
+# grid-tree cell id to the zone id covering it or the polygon ids to test in it
+ShortcutMapping: TypeAlias = dict[int, int | np.ndarray]
 CoordPairs: TypeAlias = list[tuple[float, float]]
 CoordLists: TypeAlias = list[list[float]]
 IntLists: TypeAlias = list[list[int]]
