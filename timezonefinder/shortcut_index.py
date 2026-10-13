@@ -584,8 +584,14 @@ class ShortcutIndex:
                 )
 
     def as_mapping(self) -> dict[int, int | np.ndarray]:
-        """Materialise the index as the cell -> value dict reports and tests work over."""
-        return dict(sorted(self.items()))
+        """Materialise the index as the cell -> value dict reports and tests work over.
+
+        Sorted by cell id explicitly, not by the pair: a value may be an array, and a
+        tuple comparison that ever reached the second element would raise on one rather
+        than order it. It cannot today, because cell ids are distinct - which is exactly
+        the kind of reason that stops being true quietly.
+        """
+        return dict(sorted(self.items(), key=lambda item: item[0]))
 
 
 def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:

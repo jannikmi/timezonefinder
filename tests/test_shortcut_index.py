@@ -547,6 +547,35 @@ def test_two_root_cells_naming_one_block_is_caught(tmp_path):
 
 
 @pytest.mark.unit
+def test_a_block_naming_a_candidate_list_that_is_not_stored_is_caught(tmp_path):
+    """The block level's half of the same guard, and the deeper of the two reads.
+
+    A negative value means a child block on the root level and a candidate list on the
+    block level; nothing in the number says which, so each level has to be checked
+    against the array it addresses. This is the one the query follows furthest: the entry
+    index goes straight into the CSR bounds, so an index past the last entry reads two
+    offsets from beyond the array and slices the payload with them.
+    """
+    source = bytearray(get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes())
+    _, _, nr_blocks, nr_entries, _, _ = _packaged_header()
+    blocks_at = _HEADER_SIZE + ROOT_CELLS * TABLE_DTYPE.itemsize
+    blocks = np.frombuffer(
+        bytes(source),
+        dtype=TABLE_DTYPE,
+        count=nr_blocks * BLOCK_CELLS,
+        offset=blocks_at,
+    )
+    listed = int(np.flatnonzero(blocks < ABSENT)[0])
+    at = blocks_at + listed * TABLE_DTYPE.itemsize
+    source[at : at + TABLE_DTYPE.itemsize] = np.array(
+        [-(nr_entries + 2)], dtype=TABLE_DTYPE
+    ).tobytes()
+
+    with pytest.raises(DataIntegrityError, match="points at candidate list"):
+        validate_shortcut_index(_data_dir_with_shortcut_file(tmp_path, bytes(source)))
+
+
+@pytest.mark.unit
 def test_a_zone_count_past_the_id_width_is_caught(tmp_path):
     """Two widths carry a zone id - the shortcut levels and a batch lookup's answer
     array - and both are ``int16`` because that is what the dataset fits, not because
