@@ -70,8 +70,14 @@ Inputs are the committed fixtures in ``tests/fixtures/benchmarks/``, so two runs
 same commit execute the same workload.
 
 
-FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2 free-threading build, data 2026c,
-fixture set v3; the 2026-10-13 re-take is the first block below)
+FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2, data 2026c, fixture set v3; the
+2026-10-13 re-take is the first block below)
+
+**This script cannot measure a free-threaded interpreter**, whichever one it is run
+on: ``line_profiler`` is imported at module scope and has not declared ``Py_mod_gil``,
+so loading it re-enables the GIL for the whole process. Run on a free-threading build
+of 3.14.2 it reads within a few percent of the standard build for that reason, not
+because free threading is free. A figure here is a GIL-enabled figure.
 
 **2026-10-13: the shortcut index was replaced, and this instrument changed shape with
 it.** The H3 hexagons became an aligned grid tree, so the ladder's ``h3.latlng_to_cell``
