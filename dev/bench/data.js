@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791948257236,
+  "lastUpdate": 1791975367574,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14406,6 +14406,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3804",
             "unit": "lookups/sec",
             "extra": "min of 82 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ce045b3c6e53b0e782ba717ce15a91ae6e7d0f4",
+          "message": "Reject GH-364: no native candidate loop (#719)\n\nThe maintainer decided to close GH-364 as its entry recommended. The\npolygon offset table already took the coordinate fetch the loop targeted,\nwhat remains is single-digit percent of a mixed workload for an L-sized C\nsurface, and free-threading does not need it. The entry stays in Closed\nwith the counts and the revive condition, so it is not re-proposed on them.\n\nFT-5 no longer points at issue #364 for detail; its entry already carries\nthe artifact arithmetic and the cibuildwheel identifiers.\n\n\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-14T12:55:21+02:00",
+          "tree_id": "1b5f1928bb88ad7528d8f72965ba6f13e58c3219",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0ce045b3c6e53b0e782ba717ce15a91ae6e7d0f4"
+        },
+        "date": 1791975365708,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1350630.77157446,
+            "range": "± 19482",
+            "unit": "lookups/sec",
+            "extra": "min of 459 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1682589.5726381023,
+            "range": "± 27744",
+            "unit": "lookups/sec",
+            "extra": "min of 585 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 296027.82756382093,
+            "range": "± 4457",
+            "unit": "lookups/sec",
+            "extra": "min of 97 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7284063.925227587,
+            "range": "± 358337",
+            "unit": "lookups/sec",
+            "extra": "min of 1305 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 58940022.65350153,
+            "range": "± 4472596",
+            "unit": "lookups/sec",
+            "extra": "min of 6690 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 400481.47484708996,
+            "range": "± 8071",
+            "unit": "lookups/sec",
+            "extra": "min of 118 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6927299.379306852,
+            "range": "± 549120",
+            "unit": "lookups/sec",
+            "extra": "min of 1458 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 42087542.08908508,
+            "range": "± 2133131",
+            "unit": "lookups/sec",
+            "extra": "min of 7958 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 398441.488149649,
+            "range": "± 5876",
+            "unit": "lookups/sec",
+            "extra": "min of 116 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
