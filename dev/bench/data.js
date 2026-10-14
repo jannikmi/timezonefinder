@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791975367574,
+  "lastUpdate": 1791975369777,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -27761,6 +27761,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ce045b3c6e53b0e782ba717ce15a91ae6e7d0f4",
+          "message": "Reject GH-364: no native candidate loop (#719)\n\nThe maintainer decided to close GH-364 as its entry recommended. The\npolygon offset table already took the coordinate fetch the loop targeted,\nwhat remains is single-digit percent of a mixed workload for an L-sized C\nsurface, and free-threading does not need it. The entry stays in Closed\nwith the counts and the revive condition, so it is not re-proposed on them.\n\nFT-5 no longer points at issue #364 for detail; its entry already carries\nthe artifact arithmetic and the cibuildwheel identifiers.\n\n\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-14T12:55:21+02:00",
+          "tree_id": "1b5f1928bb88ad7528d8f72965ba6f13e58c3219",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0ce045b3c6e53b0e782ba717ce15a91ae6e7d0f4"
+        },
+        "date": 1791975369175,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.5217838287353516,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.5219621658325195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.7826862335205078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.7834529876708984,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.36915588378906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.36987495422363,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
           }
         ]
       }
