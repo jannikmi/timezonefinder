@@ -25,7 +25,7 @@ is wrong in general. It claims three narrower things:
    of *ε* is not a small error spread over all queries. It is a large error applied to the queries
    within *ε* of a border, and those are the only queries whose answer is in doubt at all.
 2. **The benefits it would buy are already mostly bought by other means**, all of them lossless:
-   the H3 shortcut index, the latitude block index, bit-packed coordinate frames and memory mapping.
+   the shortcut index, the latitude block index, bit-packed coordinate frames and memory mapping.
 3. **The remaining gap is a price some users should pay, and a well-maintained package already
    offers that trade.** Offering both trades in one package would weaken the guarantee this one
    exists to provide.
@@ -41,7 +41,7 @@ A uniformly drawn coordinate is usually hundreds of kilometres from the nearest 
 this package and a simplified one.
 
 All of the uncertainty sits in a thin band along the borders. Accuracy there is the product.
-Speed away from the borders is close to a solved problem: most H3 cells are covered by a single
+Speed away from the borders is close to a solved problem: most shortcut cells are covered by a single
 zone, and the shortcut index answers those without touching geometry.
 
 Border queries are also more common than their share of the Earth's surface suggests. Borders often
@@ -124,7 +124,7 @@ What simplification would buy, and how the package gets it anyway
      - What is done instead, losslessly
    * - Lookup speed
      - Fewer edges per point-in-polygon test.
-     - The **H3 shortcut** answers most queries without any geometry. The **latitude block index**
+     - The **shortcut index** answers most queries without any geometry. The **latitude block index**
        skips every block of 128 vertices that cannot cross the query's latitude, so the cost of a
        ray cast grows only slightly with polygon size (:doc:`benchmark_results_polygon`).
    * - Memory

@@ -326,7 +326,7 @@ def load_points_csv(path: Path) -> list[tuple[float, float]]:
     """A caller's own coordinates, two columns of ``lng,lat``, an optional header row.
 
     The point of accepting these: break-even is a property of the workload as much as of
-    the machine, because the batch path answers every point of an H3 cell from one
+    the machine, because the batch path answers every point of a shortcut cell from one
     lookup. A clustered stream - a delivery round, a city - breaks even sooner than the
     uniformly random fixture, and only the caller's own points can say where.
     """
@@ -393,7 +393,7 @@ def prepare_pool(
     """Distinct batches of ``batch_size`` points each, for one rung.
 
     ``rng.sample`` - so no point appears twice *inside* a batch. With replacement, the
-    points sharing an H3 cell would be resolved once for the whole batch and the saving
+    points sharing a shortcut cell would be resolved once for the whole batch and the saving
     would grow with ``N``: it would fake exactly the curve being measured. Batches
     overlap each other freely, which costs nothing and is what lets the top rungs have
     more than one batch at all.
@@ -819,10 +819,10 @@ def main() -> None:
     if DEBUG:
         # the same guard benchmarks/conftest.py and measure_query_latency.py apply
         raise RuntimeError(
-            "scripts.configs.DEBUG is True, which overrides SHORTCUT_H3_RES to a much "
-            "coarser resolution. That changes how many points reach the geometry at "
-            "all - which is simultaneously this measurement's asymptote and its "
-            "crossing point - so a sweep taken under DEBUG must never be published."
+            "scripts.configs.DEBUG is True, which stops the parse after a handful of "
+            "zones. That changes how many points reach the geometry at all - which is "
+            "simultaneously this measurement's asymptote and its crossing point - so a "
+            "sweep taken under DEBUG must never be published."
         )
 
     sizes = [int(size) for size in args.sizes.split(",") if size.strip()]

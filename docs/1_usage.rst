@@ -33,7 +33,9 @@ The functionality of these global functions is equivalent to the respective meth
 .. note::
    **Concurrent lookups are safe**, through the global functions and on any shared ``TimezoneFinder``. The global functions create their shared instance exactly once, under a lock. The data a lookup reads is loaded once and never modified, and the few small arrays some lookups build on first use and keep on the instance are read-only and identical whichever thread builds them, so two threads racing to build one only duplicate that work.
 
-   **For parallel throughput, still create one ``TimezoneFinder`` per thread**, as shown in the warning box below. Threads sharing one instance contend on its objects, so where the GIL is disabled a shared instance scales far worse with the thread count than per-thread instances do. An instance cannot be passed between processes: create one in each worker.
+   **On a free-threaded build the GIL stays disabled.** Nothing this package installs re-enables it, so lookups run on all threads at once; ``tests/test_free_threading.py`` is what says so, on a free-threaded interpreter in CI. A dependency shipping without ``Py_mod_gil`` would turn it back on for the whole process, which is what that test refuses.
+
+   **For parallel throughput, still create one ``TimezoneFinder`` per thread**, as shown in the warning box below. Threads sharing one instance contend on its objects - reference counts above all, not a lock - so a shared instance scales far worse with the thread count than per-thread instances do: 1.60x against 4.84x at eight threads. An instance cannot be passed between processes: create one in each worker.
 
    **Releasing a finder is not a lookup.** ``cleanup()``, and leaving a ``with TimezoneFinder() as tf:`` block, frees the data every lookup reads, so on a shared instance it must wait until every thread using it has finished.
 
@@ -275,7 +277,7 @@ Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than 
 .. note::
 
     What a batch amortises is the per-call overhead, not the geometry.
-    Points whose H3 cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time, and ``h3``'s cell lookup has no vectorised form.
+    Points whose cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time.
     ``examples/batch_processing.py`` demonstrates the whole API.
 
     That overhead has to be paid back, so a batch below a certain size is *slower* per point than the scalar method, and above a certain size a bigger batch stops helping.
@@ -380,7 +382,7 @@ Roughly 1 % of points on land fall in two zones.
     This is the only lookup that tests every candidate polygon of the point's cell, so
     it is slower than ``timezone_at()``.
     ``timezone_at()`` itself is unchanged - it still stops at the first match.
-    A point whose H3 cell a single zone covers is answered from the index with a
+    A point whose cell a single zone covers is answered from the index with a
     one-element list and no geometry at all.
 
 .. note::

@@ -2,7 +2,7 @@
 Core TimezoneFinder implementation.
 
 This module provides the TimezoneFinder and TimezoneFinderL classes for offline
-timezone lookups from geographic coordinates. The module uses H3-based spatial
+timezone lookups from geographic coordinates. The module uses grid-based spatial
 shortcuts and optimized polygon-based algorithms for fast, accurate results.
 
 Core classes:
@@ -73,7 +73,7 @@ class AbstractTimezoneFinder(ABC):
 
     Provides shared functionality for timezone lookups including:
     - Timezone name/ID mapping
-    - H3 spatial indexing for shortcut lookups
+    - a longitude/latitude-aligned grid tree for shortcut lookups
     - Boundary polygon management
     - Coordinate validation
 
@@ -96,7 +96,7 @@ class AbstractTimezoneFinder(ABC):
         zone_names: the dataset's names, and every way a zone id becomes one
         timezone_names: List of all available timezone names (a view onto ``zone_names``)
         zone_ids: NumPy array mapping boundary polygons to timezone IDs
-        shortcuts: H3-indexed lookup of the timezones that can cover a point
+        shortcuts: grid-indexed lookup of the timezones that can cover a point
         data_location: Path to the timezone data directory
     """
 
@@ -508,7 +508,7 @@ class AbstractTimezoneFinder(ABC):
 
     @abstractmethod
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
-        """The zone id of a point whose H3 cell several timezones cover.
+        """The zone id of a point whose shortcut cell several timezones cover.
 
         Reached only for ``entry < ABSENT``: a cell a single zone covers and a cell no
         zone covers are both answered by the shortcut table itself. Both
@@ -536,10 +536,10 @@ class AbstractTimezoneFinder(ABC):
         back to something else. :meth:`timezone_names_at` is the convenience on top.
 
         What a batch amortises is the per-call overhead, not the geometry. Validation, the
-        integer scaling and the shortcut lookup run once over the whole batch as numpy
-        operations; ambiguous points still fall through to the point-in-polygon loop one
-        at a time, and ``h3``'s cell lookup has no vectorised form, so it stays a loop
-        too. Expect the win to be largest on points whose cell a single zone covers.
+        integer scaling and the whole shortcut lookup - the cell arithmetic included -
+        run once over the batch as numpy operations; ambiguous points still fall through
+        to the point-in-polygon loop one at a time. Expect the win to be largest on
+        points whose cell a single zone covers.
 
         :param lngs: longitudes in degrees, as any 1-D array-like. A C-contiguous
             ``float64`` numpy array is used without copying.
@@ -1451,7 +1451,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         it as "most likely second".
 
         Only this method pays for the full candidate loop; :meth:`timezone_at` is
-        untouched. A point whose H3 cell a single zone covers is answered from the
+        untouched. A point whose shortcut cell a single zone covers is answered from the
         shortcut index with a one-element list and no geometry at all, exactly as
         :meth:`timezone_at` answers it - so with custom data leaving areas uncovered
         this inherits that method's caveat rather than

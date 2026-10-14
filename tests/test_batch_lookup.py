@@ -12,7 +12,6 @@ policies, and the sentinel that stands where the scalar method answers ``None``.
 
 import numpy as np
 import pytest
-from h3.api import numpy_int as h3
 
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -31,8 +30,8 @@ from timezonefinder import (
     timezone_names_at,
     timezone_names_at_land,
 )
-from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
-from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
+from timezonefinder.configs import ZONE_ID_RESULT_DTYPE
+from timezonefinder.shortcut_index import ABSENT
 from timezonefinder.utils import is_ocean_timezone
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
@@ -464,23 +463,17 @@ def test_an_unknown_policy_is_rejected(finder):
 @pytest.mark.unit
 def test_a_cell_no_zone_covers_answers_the_same_as_the_scalar_lookup():
     """The packaged data covers every cell (ocean zones), so this is the branch custom
-    data reaches and the packaged data cannot. One slot is blanked to reach it, and the
+    data reaches and the packaged data cannot. One cell is blanked to reach it, and the
     point of the test is that both paths agree on what an uncovered cell means."""
     lng, lat = 13.358, 52.5061
     with TimezoneFinder(in_memory=True) as tf:
-        slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        assert tf.shortcuts.table[slot] != ABSENT, "the cell is covered to begin with"
+        cell = tf.shortcuts.cell_at(lng, lat)
+        assert tf.shortcuts.entry_of(cell) != ABSENT, (
+            "the cell is covered to begin with"
+        )
         # Loaded index state is immutable. Replace it with purpose-built test state
         # instead of mutating the dataset the finder loaded.
-        table = tf.shortcuts.table.copy()
-        table[slot] = ABSENT
-        tf.shortcuts = ShortcutIndex(
-            table,
-            tf.shortcuts.starts,
-            tf.shortcuts.ends,
-            tf.shortcuts.last_change,
-            tf.shortcuts.payload,
-        )
+        tf.shortcuts = tf.shortcuts.replacing(cell, ABSENT)
 
         assert tf.timezone_at(lng=lng, lat=lat) is None
         assert tf.timezone_ids_at(lngs=[lng], lats=[lat])[0] == NO_ZONE_ID
@@ -673,10 +666,10 @@ def test_the_cluster_really_does_share_cells(finder):
     lngs, lats = _clustered_points(7.5886, 47.5596, 500)
     cells = np.fromiter(
         (
-            h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+            finder.shortcuts.cell_at(lng, lat)
             for lng, lat in zip(lngs, lats, strict=True)
         ),
-        dtype=np.uint64,
+        dtype=np.int64,
         count=len(lngs),
     )
     entries = finder.shortcuts.entries_of(cells)

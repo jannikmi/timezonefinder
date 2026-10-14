@@ -21,11 +21,13 @@ A single ``timezone_at()`` call runs this sequence:
 1. **Validate and scale.** Longitude and latitude are validated, then multiplied by 10\ :sup:`7` and
    truncated to ``int32``. The polygon data is stored the same way, so the whole geometric path is
    integer arithmetic - no floating point, and no conversion per candidate polygon.
-2. **H3 shortcut.** The cell id's own bits index a precomputed table - one ``int16`` per H3 cell at
-   resolution 4 (~288k cells worldwide), with no keys stored and no search. If every polygon
-   intersecting that cell belongs to one timezone, the table holds the zone id and the answer is
-   returned immediately, with no geometry touched at all. This is the majority case and it is why
-   the package is fast despite carrying full-resolution polygons.
+2. **Grid-tree shortcut.** One integer division per axis gives the cell, which indexes a
+   precomputed table directly - one ``int16`` per cell of a 384 x 192 grid of 0.9375-degree cells,
+   with no keys stored and no search. If every polygon intersecting that cell belongs to one
+   timezone, the table holds the zone id and the answer is returned immediately, with no geometry
+   touched at all. Where several zones meet, the entry names a 4 x 4 block of 0.234375-degree
+   children instead and one more division and read resolve it. The direct answer is the majority
+   case and it is why the package is fast despite carrying full-resolution polygons.
 3. **Candidate list.** Otherwise the table names the list of polygons that intersect the cell - a
    handful, out of the thousand-odd the dataset contains. Their zone ids are fetched, and the scan
    stops at the last zone change: once no *other* zone can still be matched, the remaining polygons
@@ -58,7 +60,7 @@ Most modules are self-describing. The ones that carry the design:
     an answer.
 
 ``configs.py``
-    Central types and runtime constants - coordinate scaling, the H3 resolution, FlatBuffers layout.
+    Central types and runtime constants - coordinate scaling, the shortcut grid, FlatBuffers layout.
     Declared once here so the runtime and the data converter cannot drift apart.
 
 ``utils.py`` / ``utils_numba.py`` / ``utils_clang.py``

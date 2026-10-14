@@ -44,6 +44,13 @@ Building the resolution 4 index takes ~40 s; the comparison itself is seconds.
 
 FINDINGS (2026-08-23, `bc2029a`, Apple arm64, Python 3.14.2, data 2026c)
 
+
+**This script does not import against the current tree**, and is kept for its findings
+rather than for its code: ``SHORTCUT_H3_RES``, the slot arithmetic and the five-array
+``ShortcutIndex`` it builds no longer exist. The question it was written to answer is
+settled - see the shortcut index decisions - so reproduce a figure against the commit it
+names, and do not re-point the script at the current index without re-measuring.
+
 **The timing comparison never ran, because the correctness gate refused - and that was the
 answer.** Of 8,000 fixture points the two indices disagreed on one, and inspection showed
 resolution 4 to be the wrong one there:

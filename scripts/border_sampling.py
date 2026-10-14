@@ -298,7 +298,7 @@ class BorderGeometry:
         """Distance in metres to every ring that could be within ``search_m``.
 
         Bounding boxes do the pruning, over **every** ring in the dataset - the
-        H3 shortcut index is deliberately not consulted here. It answers "which
+        shortcut index is deliberately not consulted here. It answers "which
         polygons might *contain* this point", which is a different question: a
         border a few metres away can belong to a polygon that overlaps a
         neighbouring cell and not this one, and at a cell edge the nearest

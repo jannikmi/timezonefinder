@@ -10,71 +10,71 @@
   },
   "latest_recorded_validation": {
     "acceleration_path": "clang",
-    "calibration_observations": 1016,
+    "calibration_observations": 918,
     "cpu": "Apple M1 Pro",
     "data_version": "2026d",
-    "date": "2026-10-09",
-    "decision": "retain the production coefficients in this change; the fitted order is faster on every seed in the cells it changes, but those cells take 0.2-1.8% of fixture queries, so adoption waits for the next shortcut-index rebuild (PERF-10)",
+    "date": "2026-10-13",
+    "decision": "retain the production coefficients: this is the first calibration against the aligned grid tree that replaced the H3 index in format 4, and it withdraws PERF-10 rather than adopting it. Re-ordering every eligible cell with the fitted set changes 1,524 of 50,584 and leaves every answer identical, but the whole-query A/B over those cells reads unresolved on all 8 seeds (median -1.2 %, -0.7 to -2.0 %, 43-45 of 61 rounds), where the same comparison on the H3 index read 3.3-4.0 % faster on every seed. The fit is also degenerate on this index's ambiguous population: hole-union probe and PIP dispatch are perfectly collinear, so it assigns ~0.02 ns to a PIP dispatch and 493 ns to the probe in front of it, and hole-bbox collapses to zero. An unresolved A/B over 0.12 % of random queries, from a fit that prices a kernel call at nothing, is not evidence for changing published data.",
     "fitted_coefficients_ns": {
-      "active_vertex": 1.143124838799024,
-      "bbox": 133.7607681468201,
-      "block_probe": 0.5160658056604961,
-      "hole_bbox": 100.24162201961808,
-      "hole_lookup": 258.3551341105951,
-      "hole_union_probe": 54.306183060667244,
-      "pip_dispatch": 446.2685200264443
+      "active_vertex": 1.1519942982473939,
+      "bbox": 151.3364486689001,
+      "block_probe": 0.4717858010776764,
+      "hole_bbox": 0.0,
+      "hole_lookup": 555.1820206981168,
+      "hole_union_probe": 492.7263460560566,
+      "pip_dispatch": 0.02023584735686792
     },
-    "fixture_version": 3,
-    "held_out_median_absolute_error_ns": 32.20364801718824,
-    "held_out_observations": 359,
-    "held_out_p95_absolute_error_ns": 109.28555337080921,
+    "fixture_version": 4,
+    "held_out_median_absolute_error_ns": 31.14325484595213,
+    "held_out_observations": 280,
+    "held_out_p95_absolute_error_ns": 108.94703281112969,
     "ordering": {
       "area_only": {
         "best_round_change_range": [
-          0.44230300296921565,
-          0.46120242409677803
+          0.4597389138210324,
+          0.48124969119411
         ],
-        "changed_area_share_of_sphere": 0.0027427219529230786,
-        "changed_cells": 788,
-        "eligible_cells": 30439,
+        "changed_area_share_of_sphere": 0.0007427791322247433,
+        "changed_cells": 700,
+        "eligible_cells": 50584,
         "fixture_query_share_in_changed_cells": {
-          "ambiguous_shortcut": 0.025,
-          "on_land": 0.0047,
-          "random": 0.0026,
+          "ambiguous_shortcut": 0.0132,
+          "on_land": 0.001,
+          "random": 0.0012,
           "unique_shortcut": 0.0
         },
-        "median_best_round_change": 0.4551014367322541,
+        "median_best_round_change": 0.4730683094241571,
         "modeled_change_ns_per_query": {
-          "fitted": 1002.685117001811,
-          "production": 1205.415228426396
+          "fitted": 501.3404683786408,
+          "production": 1528.3817142857142
         },
-        "points": 15760,
+        "points": 14000,
         "verdicts": {
           "slower": 8
         }
       },
       "calibrated": {
         "best_round_change_range": [
-          -0.040077324156838956,
-          -0.03318641423253865
+          -0.01996056841535132,
+          -0.00735725570476542
         ],
-        "changed_area_share_of_sphere": 0.0022617232414136163,
-        "changed_cells": 646,
-        "eligible_cells": 30439,
+        "changed_area_share_of_sphere": 0.0015097844524883028,
+        "changed_cells": 1524,
+        "eligible_cells": 50584,
         "fixture_query_share_in_changed_cells": {
-          "ambiguous_shortcut": 0.0176,
-          "on_land": 0.0042,
-          "random": 0.0024,
+          "ambiguous_shortcut": 0.0256,
+          "on_land": 0.0025,
+          "random": 0.0012,
           "unique_shortcut": 0.0
         },
-        "median_best_round_change": -0.034514455907521835,
+        "median_best_round_change": -0.011955420061081579,
         "modeled_change_ns_per_query": {
-          "fitted": -71.52503059034818,
-          "production": 84.21950464396285
+          "fitted": -80.20613384122125,
+          "production": 160.64255249343833
         },
-        "points": 12920,
+        "points": 30480,
         "verdicts": {
-          "faster": 8
+          "unresolved": 8
         }
       }
     },

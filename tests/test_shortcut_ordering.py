@@ -3,7 +3,8 @@
 import itertools
 from types import SimpleNamespace
 
-import h3.api.numpy_int as h3
+import math
+
 import numpy as np
 import pytest
 from shapely import Polygon, box
@@ -12,7 +13,6 @@ from scripts.shortcut_ordering import (
     ACTIVE_VERTEX,
     BBOX,
     BLOCK_PROBE,
-    CELL_AREA_RTOL,
     HOLE_BBOX,
     HOLE_LOOKUP,
     HOLE_UNION_PROBE,
@@ -21,11 +21,24 @@ from scripts.shortcut_ordering import (
     CheckCost,
     ShortcutOrderer,
     DEFAULT_COST_COEFFICIENTS,
+    cell_envelope,
     cell_region,
     spherical_area,
 )
 from scripts.shortcuts import check_shortcut_sorting, optimise_shortcut_ordering
-from timezonefinder.configs import COORD2INT_FACTOR, POLYGON_BLOCK_SIZE
+from timezonefinder.configs import (
+    COORD2INT_FACTOR,
+    INT2COORD_FACTOR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
+    POLYGON_BLOCK_SIZE,
+)
+from timezonefinder.shortcut_index import (
+    cell_bounds,
+    child_cell_of,
+    root_cell_of,
+    shifted,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -55,29 +68,46 @@ def test_spherical_area_rectangles_holes_and_latitude_distortion():
     )
 
 
-@pytest.mark.parametrize(
-    "cell",
-    list(h3.get_pentagons(4))
-    + [
-        h3.latlng_to_cell(lat, lng, 4)
-        for lat, lng in [
-            (0, 0),
-            (60, 0),
-            (89.9, 0),
-            (-89.9, 0),
-            (0, 179.99),
-            (80, 179.99),
-        ]
-    ],
-)
-def test_cell_area_converges_at_poles_date_line_and_pentagons(cell):
-    region = cell_region(int(cell))
+CELL_PROBES = [
+    (0.0, 0.0),
+    (0.0, 60.0),
+    (0.0, 89.9),
+    (0.0, -89.9),
+    (179.99, 0.0),
+    (-179.99, 0.0),
+    (179.99, 80.0),
+    (-180.0, -90.0),
+]
+
+
+@pytest.mark.parametrize("lng, lat", CELL_PROBES)
+@pytest.mark.parametrize("level", ["root", "finest"])
+def test_the_cell_region_is_the_exact_rectangle_the_cell_owns(lng, lat, level):
+    """Exact, not converged - which is the whole difference the aligned grid makes.
+
+    The H3 version of this test asserted that subdividing great-circle arcs brought the
+    represented area within 1e-6 of H3's own, and had to list pentagons, both poles and
+    the date line as the cases that might not converge. A cell is now a rectangle of the
+    very plane the areas are integrated in, so its spherical area has a closed form and
+    the two must agree to floating point - at a pole and at the plane's edge like
+    anywhere else, because neither is a special case any more.
+    """
+    cell = (root_cell_of if level == "root" else child_cell_of)(*shifted(lng, lat))
+    region = cell_region(cell)
     assert region.is_valid
-    assert spherical_area(region) == pytest.approx(
-        h3.cell_area(cell, unit="rads^2"), rel=CELL_AREA_RTOL
+    x0, y0, x1, y1 = cell_bounds(cell)
+    # Green's theorem over a planar lat/lng box reduces to this, and `spherical_area`
+    # is that integral written out for an arbitrary ring
+    expected = (math.radians((x1 - (x0 - 1)) * INT2COORD_FACTOR)) * (
+        math.sin(math.radians(y1 * INT2COORD_FACTOR))
+        - math.sin(math.radians((y0 - 1) * INT2COORD_FACTOR))
     )
-    assert region.bounds[0] >= -180 * COORD2INT_FACTOR
+    assert spherical_area(region) == pytest.approx(expected, rel=1e-12)
+    assert region.bounds[0] >= -180 * COORD2INT_FACTOR - 1
     assert region.bounds[2] <= 180 * COORD2INT_FACTOR
+    # the gate's envelope contains every integer point the cell owns, with a unit to spare
+    envelope = cell_envelope(cell)
+    assert envelope.contains(region)
 
 
 def test_integrated_cost_uses_intersection_area():
@@ -202,7 +232,7 @@ def synthetic_orderer(polygons, zones):
 
 
 def test_geometric_safety_is_independent_of_objective_approximation():
-    cell = h3.latlng_to_cell(0, 0, 4)
+    cell = root_cell_of(*shifted(0.0, 0.0))
     assert synthetic_orderer(
         [rectangle(-5, 0, -5, 5), rectangle(0, 5, -5, 5)], [0, 1]
     ).safe_to_reorder(cell, [0, 1])
@@ -229,27 +259,58 @@ def refusing_orderer():
     return orderer
 
 
-@pytest.mark.parametrize(
-    "lat, lng",
-    [(89.9, 0.0), (-89.9, 0.0), (0.0, 179.99), (0.0, -179.99)],
-)
-def test_the_safety_gate_refuses_seam_cells_before_consulting_geometry(lat, lng):
-    """A cell whose cap reaches a pole or crosses the antimeridian has no envelope.
+@pytest.mark.parametrize("lng, lat", CELL_PROBES + [(90.0, 0.0)])
+def test_the_safety_gate_reads_the_geometry_of_a_seam_cell_like_any_other(lng, lat):
+    """No cell is refused before its geometry is read.
 
-    Asserted by making the geometry unreadable rather than by the verdict alone: a
-    covering, disjoint candidate set is refused at a seam for *either* reason - the
-    bail-out, or a coverage test over a rectangle running past +-180 - so a verdict-only
-    test passes with the bail-outs deleted. What must hold is that neither containment
-    test is reached, because certification is what lets the converter change a final
-    zone the query then returns untested.
+    The H3 gate derived its envelope from a circumscribed spherical cap, and the
+    conversion broke where the cap reached a pole or spanned the antimeridian - so those
+    cells bailed out before any geometry was read. A cell is now its own rectangle
+    everywhere, so there is nothing left to bail out of.
+
+    Asserted by making the geometry unreadable, so that reaching it is what fails. A
+    verdict-only test cannot tell "refused early" from "refused on the geometry".
     """
-    assert not refusing_orderer().safe_to_reorder(
-        h3.latlng_to_cell(lat, lng, 4), [0, 1]
-    )
     with pytest.raises(AssertionError, match="was consulted"):
-        # The control: away from both seams the gate does read the geometry, so the
-        # refusals above are the seam checks and not a stub that refuses everything.
-        refusing_orderer().safe_to_reorder(h3.latlng_to_cell(0, 90, 4), [0, 1])
+        refusing_orderer().safe_to_reorder(root_cell_of(*shifted(lng, lat)), [0, 1])
+
+
+def test_the_gate_can_pass_at_the_edges_of_the_domain():
+    """Reaching the geometry is not the same as being able to pass, and this is the half
+    that was missing.
+
+    ``cell_envelope`` grows the cell by one unit, and the top row ends at exactly +90
+    degrees while the last column ends at +180 - so without the clip to the coordinate
+    domain the envelope asks for coverage where no polygon can be, and ``covers`` is
+    False for all 384 top-row and 192 last-column root cells whatever their geometry.
+    That is the H3 gate's pole and antimeridian refusals surviving the port as an
+    arithmetic accident, and the test above cannot see it: those cells do read their
+    geometry, and still always refuse.
+
+    So: two synthetic zones tiling the entire legal domain exactly and disjointly - the
+    most admissible input there is - must be admitted at every edge, not only inside.
+    """
+    legal = box(-MAX_LNG_VAL_INT, -MAX_LAT_VAL_INT, MAX_LNG_VAL_INT, MAX_LAT_VAL_INT)
+    west = box(-MAX_LNG_VAL_INT, -MAX_LAT_VAL_INT, 0, MAX_LAT_VAL_INT)
+    east = box(0, -MAX_LAT_VAL_INT, MAX_LNG_VAL_INT, MAX_LAT_VAL_INT)
+    refused = []
+    for lng, lat in [
+        (0.0, 0.0),
+        (-179.99, 0.0),
+        (179.99, 0.0),
+        (0.0, -89.99),
+        (0.0, 89.99),
+        (179.99, 89.99),
+        (-179.99, -89.99),
+    ]:
+        cell = root_cell_of(*shifted(lng, lat))
+        assert legal.covers(cell_envelope(cell)), (
+            f"the envelope of the cell at ({lng}, {lat}) leaves the coordinate domain, "
+            "so no geometry can ever cover it"
+        )
+        if not synthetic_orderer([west, east], [0, 1]).safe_to_reorder(cell, [0, 1]):
+            refused.append((lng, lat))
+    assert not refused, f"a tiling of the whole domain was refused at {refused}"
 
 
 def test_hole_union_gate_skips_all_individual_hole_costs():

@@ -3,7 +3,6 @@
 import json
 from types import SimpleNamespace
 
-import h3.api.basic_int as h3
 import numpy as np
 import pytest
 
@@ -17,7 +16,7 @@ from scripts.audit_shortcut_candidates import (
     source_edge_points,
 )
 from timezonefinder import TimezoneFinder
-from timezonefinder.shortcut_index import ABSENT
+from timezonefinder.shortcut_index import ABSENT, cell_bounds
 from timezonefinder.utils import coord2int
 
 pytestmark = pytest.mark.unit
@@ -27,7 +26,12 @@ def test_missing_shortcut_is_found_without_using_the_shortcut_as_oracle():
     finder = TimezoneFinder(in_memory=True)
     try:
         assert omission_at(finder, 13.4, 52.5) is None
-        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
+        finder.shortcuts = SimpleNamespace(
+            entry_at=lambda *_: ABSENT,
+            # the witness records which cell the omission is in; the oracle is still
+            # the polygons alone
+            cell_at=finder.shortcuts.cell_at,
+        )
         finding = omission_at(finder, 13.4, 52.5)
         assert finding is not None
         assert finding["missing_polygon_ids"]
@@ -58,7 +62,12 @@ def test_holes_are_checked_before_reporting_a_bbox_candidate(monkeypatch):
     try:
         # A point in an exterior bbox is insufficient: the polygon predicate must run.
         monkeypatch.setattr(TimezoneFinder, "inside_of_polygon", lambda *a: False)
-        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
+        finder.shortcuts = SimpleNamespace(
+            entry_at=lambda *_: ABSENT,
+            # the witness records which cell the omission is in; the oracle is still
+            # the polygons alone
+            cell_at=finder.shortcuts.cell_at,
+        )
         assert omission_at(finder, 13.4, 52.5) is None
     finally:
         finder.cleanup()
@@ -67,7 +76,12 @@ def test_holes_are_checked_before_reporting_a_bbox_candidate(monkeypatch):
 def test_limits_count_omissions_beyond_the_retained_witnesses():
     finder = TimezoneFinder(in_memory=True)
     try:
-        finder.shortcuts = SimpleNamespace(entry_at=lambda *_: ABSENT)
+        finder.shortcuts = SimpleNamespace(
+            entry_at=lambda *_: ABSENT,
+            # the witness records which cell the omission is in; the oracle is still
+            # the polygons alone
+            cell_at=finder.shortcuts.cell_at,
+        )
         report = audit_points(finder, [(13.4, 52.5)] * 4, max_points=3, witness_limit=1)
         assert report["points_checked"] == 3
         assert report["points_with_omissions"] == 3
@@ -93,15 +107,45 @@ def test_invalid_replay_coordinates_fail(point):
         omission_at(None, *point)
 
 
-@pytest.mark.parametrize("cell", [0x8400001FFFFFFFF, *h3.get_pentagons(4)])
-def test_cell_probes_include_vertices_and_both_sides_of_edges(cell):
-    points = list(cell_edge_points([cell]))
-    boundary = h3.cell_to_boundary(cell)
-    assert len(points) == 3 * len(boundary)
-    assert points[: len(boundary)] == [(lng, lat) for lat, lng in boundary]
-    memberships = {h3.latlng_to_cell(lat, lng, 4) for lng, lat in points}
-    assert cell in memberships
-    assert len(memberships) > 1
+def test_cell_probes_cover_every_stored_cell_corner_and_edge_midpoint():
+    """Every grid line is probed from both sides, which is what the edge rule needs.
+
+    A cell owns its north and east edges and not its south or west, so the point that
+    tests the rule on one side of a line is the neighbour's own corner on the other.
+    Enumerating corners therefore covers both sides without inventing a point - and
+    every probe has to land on the intended integer, which is what
+    ``query_coordinate`` is for.
+    """
+    finder = TimezoneFinder(in_memory=True)
+    try:
+        index = finder.shortcuts
+        probes = []
+        for cell_id, _ in index.items():
+            probes.append(cell_id)
+            if len(probes) == 40:
+                break
+        subset = {cell: None for cell in probes}
+
+        class OnlySome:
+            def items(self):
+                return ((cell, None) for cell in subset)
+
+        points = list(cell_edge_points(OnlySome()))
+        assert len(points) == 8 * len(subset)
+        for cell_id in subset:
+            x0, y0, x1, y1 = cell_bounds(cell_id)
+            corners = {(coord2int(lng), coord2int(lat)) for lng, lat in points}
+            assert (x0, y0) in corners
+            assert (x1, y1) in corners
+        # The grid line between two adjacent cells is probed from both sides, because
+        # the eastern cell's x0 is the western cell's x1 plus one and both are corners.
+        xs = {coord2int(lng) for lng, _ in points}
+        shared_lines = sum(1 for x in xs if x + 1 in xs)
+        assert shared_lines >= len(subset) - 1, (
+            "adjacent cells' corners must land either side of the line they share"
+        )
+    finally:
+        finder.cleanup()
 
 
 def test_source_edges_keep_the_planar_antimeridian_frame_and_include_holes():
@@ -149,5 +193,5 @@ def test_replay_cli_records_identity_and_returns_failure_on_omissions(
     assert report["probe_mode"] == "replay"
     assert report["data_sha256"]
     assert report["replay_sha256"]
-    assert report["h3_versions"]
+    assert report["grid"]["root_columns"]
     assert report["acceleration_path"] in {"clang", "numba", "python"}

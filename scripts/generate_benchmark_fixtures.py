@@ -56,7 +56,7 @@ from tests.auxiliaries import (
     get_rnd_query_pt_area_weighted,
 )
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.configs import SHORTCUT_BLOCK_SIDE, SHORTCUT_ROOT_COLUMNS
 from timezonefinder.utils import coord2int
 
 DEFAULT_SEED = 42
@@ -105,7 +105,7 @@ def generate_shortcut_points(
     n_unique: int,
     n_ambiguous: int,
 ) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
-    """Classify random points by whether their H3 shortcut resolves to a
+    """Classify random points by whether their shortcut cell resolves to a
     unique zone (no PIP needed) or an ambiguous polygon array (PIP path)."""
     print(
         f"generating {n_unique:,} unique-shortcut and {n_ambiguous:,} "
@@ -195,9 +195,9 @@ def generate(
     """
     if DEBUG:
         warnings.warn(
-            "scripts.configs.DEBUG is True: SHORTCUT_H3_RES is overridden for data "
-            "generation scripts and the fixtures produced now are not valid for "
-            "normal (non-debug) benchmark runs.",
+            "scripts.configs.DEBUG is True, so the parse stops after a handful of "
+            "zones and the fixtures produced now are not valid for normal "
+            "(non-debug) benchmark runs.",
             stacklevel=2,
         )
 
@@ -231,7 +231,8 @@ def generate(
         "seed": seed,
         "debug": DEBUG,
         "data_version": read_data_version(),
-        "shortcut_h3_res": SHORTCUT_H3_RES,
+        "shortcut_root_columns": SHORTCUT_ROOT_COLUMNS,
+        "shortcut_block_side": SHORTCUT_BLOCK_SIDE,
         "pip_strata": list(PIP_STRATA),
         "pip_strata_percentiles": list(PIP_STRATA_PERCENTILES),
         "counts": {

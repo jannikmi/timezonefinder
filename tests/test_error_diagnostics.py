@@ -9,12 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from scripts.helper_classes import Boundaries
 from scripts.reporting import load_binary_data
-from scripts.timezone_data import PolygonCollection
 from tests.auxiliaries import run_command
 from tests.test_flatbuf_format_guard import build_collection
 from timezonefinder import TimezoneFinder
@@ -148,23 +146,5 @@ def test_unknown_zone_name_error_is_deliberately_unchained(tf: TimezoneFinder):
 
     error = exc_info.value
     assert "Nonexistent/Zone" in str(error)
-    assert error.__cause__ is None
-    assert error.__suppress_context__
-
-
-@pytest.mark.unit
-def test_missing_original_polygons_names_the_polygon():
-    """The cache miss that enters the handler is not the cause of the failure."""
-    triangle = np.array([[0, 1, 0], [0, 0, 1]], dtype=np.int32)
-    collection = PolygonCollection(polygons=[triangle], lengths=[3])
-    assert collection.original_polygons is None
-
-    with pytest.raises(RuntimeError) as exc_info:
-        collection.polygon_vertex_hexes(poly_nr=0, res=3)
-
-    error = exc_info.value
-    message = str(error)
-    assert "polygon 0" in message
-    assert "resolution 3" in message
     assert error.__cause__ is None
     assert error.__suppress_context__

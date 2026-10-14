@@ -41,10 +41,9 @@ For installation within a Conda environment see instructions at `conda-forge fee
 Dependencies
 ------------
 
-Five runtime dependencies, each carrying part of the lookup:
+Four runtime dependencies, each carrying part of the lookup:
 
 * ``numpy`` - the arrays the polygon data is read into
-* ``h3`` - the hexagonal grid the shortcut index is built on
 * ``cffi`` - builds and binds the optional C extension
 * ``flatbuffers`` - reads the packaged binary data without unpacking it
 * ``timezonefinder-data`` - the boundary data itself

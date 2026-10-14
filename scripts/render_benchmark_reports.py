@@ -801,7 +801,7 @@ def render_acceleration_paths(
     reporter.add_text(
         "``TimezoneFinder.timezone_at()`` in memory, over the same committed point "
         "fixtures the other pages use. The kernel ratio above **bounds** these and "
-        "does not predict them: the H3 shortcut index answers a unique-shortcut query "
+        "does not predict them: the shortcut index answers a unique-shortcut query "
         "outright, so no point-in-polygon test runs at all and the two paths are "
         "measuring the same code."
     )
@@ -997,7 +997,7 @@ def render_batch_break_even(
     )
     reporter.add_text(
         f"``{batch_api}()`` amortises validation, the integer scaling and the shortcut "
-        f"table read over a whole batch, but still pays one ``h3`` cell lookup per point "
+        f"table read over a whole batch, and the cell arithmetic vectorises with it "
         f"and still resolves ambiguous points one at a time. So it is faster per point "
         f"than calling ``{scalar_api}()`` in a loop only once the batch is large enough "
         f"to pay back its own fixed cost. This page is where that happens, and where "
@@ -1131,7 +1131,7 @@ def render_batch_break_even(
     reporter.add_section("What this does not say", level=1)
     reporter.add_text(
         "**Both answers are properties of the workload, not only of the library.** The "
-        "batch path answers every point that falls in one H3 cell from a single lookup, "
+        "batch path answers every point that falls in one shortcut cell from a single lookup, "
         "so a clustered stream - a delivery round, a city, a sensor network - amortises "
         "sooner than the uniformly random points measured here, which share almost "
         "nothing. Random points are the conservative case."
@@ -1493,7 +1493,7 @@ def render_timezone_finding(
         ratio = speedup_ratio(ambiguous["stats"]["mean"], unique["stats"]["mean"])
         reporter.add_text(
             f"* Ambiguous-shortcut points are {ratio:.1f}x slower than unique-shortcut "
-            "points (in-memory): a unique shortcut resolves directly from the H3 index, "
+            "points (in-memory): a unique shortcut resolves directly from the index, "
             "while an ambiguous one falls through to the full point-in-polygon check."
         )
 
@@ -1918,7 +1918,7 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             "Wall clock of a fresh ``python -c`` that imports one package and "
             "answers exactly one lookup. This is the honest form of a "
             "*startup time* row, because the two packages spend that time in "
-            "completely different places: this one imports NumPy and H3 and "
+            "completely different places: this one imports NumPy and "
             "builds its index when a finder is constructed, while tzfpy imports "
             "in about a millisecond and deserialises its index inside the "
             "**first query**. Timing construction alone would score the second "
@@ -2068,7 +2068,7 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
         "Every figure below is a **delta**, measured in a fresh subprocess per "
         "configuration against a baseline taken once the package is imported. "
         "The import itself dominates any of them and is reported separately: it "
-        "is the cost of NumPy and H3, paid once per process whichever finder "
+        "is the cost of NumPy, paid once per process whichever finder "
         "you build."
     )
     # Two whole paragraphs rather than one with a conditional clause: the long one

@@ -42,7 +42,7 @@ package, so only the first process in a fresh environment pays it and later
 ones pay a cache load. The parent's median over repetitions is what discards
 that first process; see :func:`scripts.measure_acceleration_paths.measure_startup`.
 
-The parent still hands in a point whose H3 cell holds more than one zone, so
+The parent still hands in a point whose shortcut cell holds more than one zone, so
 the timed query is a real geometry lookup rather than one the shortcut index
 answers outright.
 """

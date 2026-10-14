@@ -11,22 +11,23 @@ timezonefinder
 
 This is a python package providing offline timezone lookups for WGS84 coordinates.
 In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
-It combines preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
+It combines preprocessed polygon data, grid-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
 
 
 How it works
 ------------
 
 A lookup scales the coordinates to 32-bit integers (x 10\ :sup:`7`, ~1.1 cm steps), finds the
-point's H3 hexagon at resolution 4 (~288k cells worldwide), and reads a precomputed shortcut for that
-cell. Most cells are covered by a single timezone, so the answer is returned immediately with no
-geometry touched at all. Only an ambiguous cell falls through to the polygons it lists: bounding-box
+point's cell in an aligned grid tree - 384 x 192 cells of 0.9375 degrees, each refining into a 4 x 4
+block of 0.234375-degree cells where several zones meet - by one integer division per axis, and reads
+a precomputed shortcut for that cell. Most cells are covered by a single timezone, so the answer is
+returned immediately with no geometry touched at all. Only an ambiguous cell falls through to the polygons it lists: bounding-box
 rejection first, then a ray-casting point-in-polygon test - holes before the outer ring, since holes
 are smaller and can reject the polygon outright. :doc:`architecture` walks through the full pipeline;
 :doc:`data_format` documents the binary layouts.
 
 The central trade-off: **the boundary polygons are never simplified**, so border accuracy is limited
-only by the source dataset. The H3 index is what makes carrying full-resolution geometry affordable,
+only by the source dataset. The shortcut index is what makes carrying full-resolution geometry affordable,
 and :doc:`benchmarking_methodology` describes how the resulting numbers are measured.
 
 Since the dataset includes ocean zones, every coordinate on earth matches some timezone -
