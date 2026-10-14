@@ -12,7 +12,7 @@ Amend existing memory instead of appending corrective history. An amendment that
 
 ## Keeping it small
 
-State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. Link the authoritative code, test, schema, or public documentation instead of copying it.
+State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. **The test is whether the sentence states a mechanism or an episode.** What an incident teaches is almost always a mechanism, and a mechanism states in the present tense — not "this bit four pages after one loader change" but "a figure quoted in prose is typically quoted in three more places before anyone re-measures". Write the mechanism and delete the episode; a rule that needs the episode in order to be believed is a rule that has not been stated yet. Link the authoritative code, test, schema, or public documentation instead of copying it.
 
 **A change that deletes code records the invariant the deletion establishes, never the deletion.** "The converter stopped keeping a second copy of every source ring when the vertex cache went" is an anecdote that ages the moment it is written and that nothing re-reads; "the converter must not keep a second copy of the source rings" is a rule the next contributor can follow and a reviewer can apply. So: ask what a removal makes true from now on, write it in the present tense in the matching `development/` module, and delete the rest.
 

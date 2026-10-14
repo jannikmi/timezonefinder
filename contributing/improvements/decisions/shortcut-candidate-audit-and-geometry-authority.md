@@ -24,9 +24,9 @@ At the maintainer's request, `update_data.sh` runs all three untruncated audit s
 
 Sampling, a subdivision depth or an empirical pad cannot justify a negative answer. Retaining uncertain candidates is safe but costs index space and query work; replacing an ambiguous cell with one unconditional zone requires a separate full-coverage proof.
 
-## Upstream authority evaluation
+## Borrowing a coverage predicate from a library
 
-**No H3 coverage mode - released or geodesic - can be this package's candidate authority, and the reason is the source geometry rather than H3.** The boundaries are planar longitude/latitude rings, and a cell whose edges are rectangles in that same frame asks a planar question of them. Geodesic mode does not merely bound cells more conservatively: it reinterprets *source* segments as great-circle arcs, which is a different polygon. The witness, on H3 4.5.0 at resolution 4: the rectangle `[(-10,60),(10,60),(10,61),(-10,61)]` contains `(0,60.05)`, in cell `8409a05ffffffff`; the released planar modes return that cell among their overlap and bbox-overlap sets, while `CONTAINMENT_OVERLAPPING | FLAG_GEODESIC_MASK` returns 129 cells and excludes it. This is a source-semantics witness, not a packaged lookup defect. **Any externally-owned coverage predicate must enclose the original planar source geometry rather than silently reinterpret it** - which is the test to apply to the next such offer, in whatever library it arrives.
+**An externally-owned containment or coverage predicate can only be this package's candidate authority if it encloses the original *planar* source geometry.** The boundaries are planar longitude/latitude rings and a cell is a rectangle in that same frame, so a candidate rule asks a planar question of them. A *geodesic* predicate does not merely bound a cell more conservatively: it reinterprets the source segments as great-circle arcs, which is a different polygon — a rectangle spanning twenty degrees of longitude contains a point near its own edge that a geodesic containment mode excludes, and both answers are correct about their own geometry. Whatever library the next such offer arrives in, that is the test to apply to it, and a mode that is conservative about *cells* is not thereby conservative about this package's *polygons*.
 
 ## Packaged-data evidence
 
