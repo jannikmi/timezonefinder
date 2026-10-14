@@ -400,21 +400,18 @@ What a stage's share does and does not bound
 ``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
 asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
 
-Read it asymmetrically and the ladder tells you where to look. Through release 9.0.0 the one it
-pointed at was the prologue: coordinate validation and the H3 cell computation together were the
-majority of a query that needed no geometry at all, before any lookup logic ran. The shortcut
-*table read* behind them was in single digits of a random workload - so making it infinitely fast
-could win at most that, and the part inside a single machine's 3-9 % jitter was not reliably
-measurable. Making it *slower* was not bounded the same way: one plausible redesign of the same
-stage (``np.searchsorted`` over sorted keys) measured **+93 % of a unique query**, and since the
-large majority of a random workload is answered on that path, a regression there is amplified into
-the mixed figure rather than diluted out of it.
+Where the ladder points is the **prologue** - coordinate validation and the cell computation,
+before any lookup logic runs - because on a workload most of whose queries need no geometry, that
+is nearly all of the query. The committed ``FINDINGS`` block in
+``prototypes/query_stage_profile.py`` carries the current per-stage figures; this page describes
+how to read them rather than restating them.
 
-That is also what was acted on. Replacing the hexagons with an aligned grid tree removed the H3
-call outright - the cell is now integer arithmetic inside the same stage as the table read - and
-the two stages the ladder named as the opportunity became one. The committed ``FINDINGS`` block in
-``prototypes/query_stage_profile.py`` carries the current figures, re-measured on the new index;
-this page describes how to read them rather than restating them.
+Read a small share asymmetrically. A stage the ladder puts in single digits of a random workload
+bounds what removing it could win, and the part of that inside a single machine's 3-9 % jitter is
+not reliably measurable at all. Making such a stage *slower* is not bounded the same way: one
+plausible redesign of the shortcut table read (``np.searchsorted`` over sorted keys) measured
+**+93 % of a unique query**, and since the large majority of a random workload is answered on that
+path, a regression there is amplified into the mixed figure rather than diluted out of it.
 
 The rule that follows, for any stage the ladder puts in single digits: ask whether a change keeps
 it roughly free, never whether it makes it faster, and decide on a whole-query A/B rather than on

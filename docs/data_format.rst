@@ -187,7 +187,7 @@ Polygon Data
   coordinates (see `Latitude Block Index`_)
 * ``block_bases.npy``, ``block_widths.npy``, ``nr_vertices.npy``: what decodes a
   payload - the coordinate frame each block's residuals are relative to, and the ring
-  sizes a packed payload's length no longer gives (see `Block Coordinate Frames`_)
+  sizes a packed payload's length does not give (see `Block Coordinate Frames`_)
 * ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
   unsigned integers (``uint16`` by default, ``uint8`` for datasets with less than 256 timezones); pass
   ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
@@ -360,7 +360,7 @@ unpacked.
        *length*, so ``0`` is a block that is constant on that axis and occupies no
        words for it
    * - ``nr_vertices.npy``
-     - ``uint32``, one entry per ring. A packed payload's length no longer gives the
+     - ``uint32``, one entry per ring. A packed payload's length does not give the
        vertex count - the byte count depends on the widths - and only the ragged last
        block's size depends on it
 
@@ -379,10 +379,10 @@ so no edge is ever read through two frames.
 
 The y origin costs nothing to read: a kernel has already loaded ``block_ranges[b][0]``
 to decide whether the block survives the latitude test at all. What it costs instead is
-a check that can no longer be made after the fact - a lower bound that is also a frame
-origin cannot be re-derived from a decode that used it - so the converter refuses to
-encode a block whose latitudes its index does not describe, and that is where the two are
-held together.
+a check that cannot be made after the fact - a lower bound that is also a frame origin
+cannot be re-derived from a decode that used it - so the converter refuses to encode a
+block whose latitudes its index does not describe, and that is where the two are held
+together.
 
 Why the query moves instead of the vertices
 -------------------------------------------
@@ -396,10 +396,10 @@ the unpacked kernel documents, and the answers are identical rather than merely 
 unpacked one over the real query pairs the committed fixtures produce.
 
 Two consequences worth knowing. ``get_geometry()`` decodes, so it costs a pass over the
-ring where it used to hand out a view - it is not a lookup path and never was. And
-``in_memory=True`` now holds the *packed* payload rather than pre-decoded rings, which is
-the same code path as the mapped mode with a heap buffer instead of a mapping, and ~32 MB
-where it used to hold ~63 MB.
+ring rather than handing out a view - it is not a lookup path and never was. And
+``in_memory=True`` holds the *packed* payload rather than pre-decoded rings, which is the
+same code path as the mapped mode with a heap buffer instead of a mapping, at roughly
+half the resident bytes decoded rings would take.
 
 **Two grids, and the difference matters.** The *encoding* is unchanged: a coordinate is
 still a 32-bit integer scaled by 10\ :sup:`7`, and a query is still placed on that grid
@@ -548,16 +548,16 @@ This provides several performance benefits:
 Why these cells
 ~~~~~~~~~~~~~~~
 
-Through release 9.0.0 this index was built on `H3 hexagons <https://github.com/uber/h3-py>`__ at resolution 4. The aligned grid tree replaced it because it is faster and smaller on every axis measured. Two properties account for that, and both come from the cells rather than from the storage:
+Two properties of the cells carry the index's performance, and both are about the cells rather than about how they are stored:
 
-* **A cell is arithmetic.** An H3 cell came from a library call that could not be vectorised and cost about half of a query that needed no geometry. A grid cell is a floor division, and a batch of them is one NumPy expression.
-* **A cell is tight.** The cells are defined in the same integer coordinates the point-in-polygon kernel reads, and each owns its north and east edges and not its south or west — the kernel's own convention. So a zone whose polygons only reach *across* a cell edge is not a candidate inside it, where a spherical cell had to be over-approximated. Fewer candidates per cell means fewer cells that need geometry at all. The rule never leaves out a polygon the kernel can place a cell's point inside; it does admit one whose interior enters the cell without reaching any of its integer points, a sliver under ~1.1 cm wide, which costs that cell one bounding-box rejection.
+* **A cell is arithmetic.** Finding it is a floor division per axis of coordinates the lookup has already scaled, so it touches no memory and needs no key array — and a batch of them is one NumPy expression, which is most of why a batch lookup is worth using.
+* **A cell is tight.** The cells are defined in the same integer coordinates the point-in-polygon kernel reads, and each owns its north and east edges and not its south or west — the kernel's own convention. So a zone whose polygons only reach *across* a cell edge is not a candidate inside it. Fewer candidates per cell means fewer cells that need geometry at all. The rule never leaves out a polygon the kernel can place a cell's point inside; it does admit one whose interior enters the cell without reaching any of its integer points, a sliver under ~1.1 cm wide, which costs that cell one bounding-box rejection.
 
 Alignment matters too: the ocean timezones meet on the 7.5 degree meridians, and a grid whose cell edges fall on them does not mix two ocean zones into one cell.
 
-The shape — how coarse the root grid is, how many levels it refines, and how large a block is — was chosen by measurement over the whole family, against an H3 control ordered by the same converter rule. ``prototypes/latlng_index_bench.py`` is that sweep: it compiled each candidate from the packaged boundaries and answered through the real query path, reporting counts and times. It is kept as the record of the question rather than as a tool that still runs against this tree - it was written against the index it replaced. A flat grid of the finest cells spends bytes on every cell of the open ocean; a deeper tree is slightly faster again and costs more disk than the H3 index it replaced. The decision and the refused variants are recorded in ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``.
+The shape — how coarse the root grid is, how many levels it refines, and how large a block is — is a measured choice over the whole family of aligned indexes, each compiled from the packaged boundaries and answered through the real query path. Two refusals are worth knowing, because they are the obvious shapes to reach for: a flat grid of the finest cells, which spends two bytes on every cell of the open ocean, and a deeper tree, which is slightly faster again and costs more disk than the index it would replace. ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`` records the sweep and every refusal.
 
-**The exactness rests on the kernel's edge convention**, which ``tests/test_point_in_polygon_boundary_convention.py`` pins on every kernel. A kernel change moving boundary points to the other polygon would make these cells misanswer one-unit strips along every aligned border while every sampled test still passed, so that test is what this layout is built on.
+**The tightness rests on the kernel's edge convention**, which ``tests/test_point_in_polygon_boundary_convention.py`` pins on every kernel. A kernel change moving boundary points to the other polygon would make these cells misanswer one-unit strips along every aligned border while every sampled test still passed, so that test is what this layout is built on.
 
 The two lines no polygon owns as spelled are handled before the division: ``-180`` degrees reads as ``+180``, which is the *last* column rather than the first, and ``-90`` as the point one unit north, which is row 0. ``docs/result_stability.rst`` says why, and ``tests/test_minus_180_meridian_and_minus_90_parallel.py`` fails on a tree that clamps the longitude instead of wrapping it.
 
@@ -710,7 +710,7 @@ The nearest claim that *is* true concerns testing rather than candidacy: because
 
 * **Most of them are hole rings.** 175 of the 206 are the ring some hole is stored as a reference to (see `Holes as Boundary References`_), so their coordinates serve the *surrounding* polygon's hole test, which is very much performed.
 * **The remainder are the largest polygons in the dataset.** A zone that is the biggest in every cell listing it is, by construction, a mainland — the 31 survivors are around a sixth of all vertices, and include the main polygons of ``America/Toronto``, ``Europe/Berlin``, ``Europe/Moscow`` and ``Asia/Shanghai``. A bounding box is not a degraded outline of those: it averages well over twice the polygon's own area, so :meth:`~timezonefinder.TimezoneFinder.get_geometry` would answer a rectangle largely covering other countries, in the same return type and without an error. :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` degrades further still — it tests every candidate with no early break, so with the ring gone it would match nothing and return ``None`` across most of the zone.
-* **It would make an API's output depend on the index.** Which polygons qualify follows from which cells happened to come out unique and from how shortcut candidates happened to be sorted. The index is a candidate *filter*, free to be reordered, rebuilt or replaced — and has been: the cells changed from H3 hexagons to an aligned grid tree outright. Deriving ``get_geometry``'s output from its structure would turn a future index change into a silent change in what the geometry API returns.
+* **It would make an API's output depend on the index.** Which polygons qualify follows from which cells happened to come out unique and from how shortcut candidates happened to be sorted. The index is a candidate *filter*, free to be reordered, rebuilt or replaced — including its cells. Deriving ``get_geometry``'s output from its structure would turn an index change into a silent change in what the geometry API returns.
 
 This is the boundary-polygon counterpart of `Holes without a twin`_, and it fails in the same way: covering the query path is not the same question as covering the public API.
 

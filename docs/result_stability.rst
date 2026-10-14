@@ -192,11 +192,9 @@ same frame, which is the frame the point-in-polygon kernel works in, so they are
 for anything. Everything unproven fails closed: invalid or repaired geometry is rejected, and any
 geometry error refuses the cell.
 
-Until the shortcut cells became rectangles this paragraph said rather less. The envelope was then
-derived from an H3 cell's circumscribed spherical cap, which bounded the cell by an argument about
-great-circle arcs rather than by construction, and cells at the poles or across the antimeridian
-had to be refused outright because the conversion broke there. Those cells now certify or fail on
-their geometry like any other.
+A cell at a pole or at the antimeridian certifies or fails on its geometry like any other. There is
+no seam in the certification, because the cells are rectangles of the coordinate plane rather than
+regions whose enclosure has to be derived.
 
 **Both arguments are asserted by tests, not only argued here.**
 ``tests/test_ordering_answer_invariance.py`` drives the real lookup over the committed
@@ -230,19 +228,18 @@ Three things can move an answer here, and the third is the one that surprises pe
    order in which geometry is tested are all fair game for performance work, and changing them
    changes how *ambiguity* is resolved.
 
-All three are described in the :doc:`changelog <6_changelog>`. The third is not hypothetical:
-9.0.0 reordered candidate polygons by the work a full lookup needs, which changed what
-``TimezoneFinderL`` returns in a multi-zone cell, and moved the shortcut index from H3 resolution 3
-to 4, which changed which cells are multi-zone at all. The release that replaced those hexagons
-with an aligned grid tree changed the cells again, and therefore ``TimezoneFinderL``'s answer cell
-by cell.
+All three are described in the :doc:`changelog <6_changelog>`, which is where to look for whether a
+particular release moved an answer and which. The third is not hypothetical: reordering candidate
+polygons by the work a full lookup needs changes what ``TimezoneFinderL`` returns in a multi-zone
+cell, and changing which cells the index is made of changes which cells are multi-zone at all - and
+therefore ``TimezoneFinderL``'s answer, cell by cell. Both have happened in a minor release.
 
 **Replacing the cells is the one channel the guarantee above does not cover, and it is worth being
 precise about why.** That guarantee is about what the *optimizer* may reorder within a given set of
 cells. The order it starts from - the legacy one it keeps wherever the gate refuses - ranks a cell's
 zones by how many vertices each has *inside that cell*, so it is a function of the cell. Make the
-cells smaller and a zone that dominated a hexagon may not dominate the rectangle, and the order
-flips without the optimizer touching it. Where some candidate contains the point and only one zone
+cells smaller and a zone that dominated the larger cell may not dominate the smaller one, and the
+order flips without the optimizer touching it. Where some candidate contains the point and only one zone
 does, that changes nothing, because the answer is then the geometry's. It can change the answer in
 exactly the two places where it is the order that decides:
 

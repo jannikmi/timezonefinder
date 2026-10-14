@@ -33,7 +33,7 @@ The functionality of these global functions is equivalent to the respective meth
 .. note::
    **Concurrent lookups are safe**, through the global functions and on any shared ``TimezoneFinder``. The global functions create their shared instance exactly once, under a lock. The data a lookup reads is loaded once and never modified, and the few small arrays some lookups build on first use and keep on the instance are read-only and identical whichever thread builds them, so two threads racing to build one only duplicate that work.
 
-   **On a free-threaded build the GIL stays disabled.** Nothing this package installs re-enables it, so lookups run on all threads at once; ``tests/test_free_threading.py`` is what says so, on a free-threaded interpreter in CI. Through release 9.0.0 the ``h3`` dependency shipped without ``Py_mod_gil`` and turned the GIL back on for the whole process.
+   **On a free-threaded build the GIL stays disabled.** Nothing this package installs re-enables it, so lookups run on all threads at once; ``tests/test_free_threading.py`` is what says so, on a free-threaded interpreter in CI. A dependency shipping without ``Py_mod_gil`` would turn it back on for the whole process, which is what that test refuses.
 
    **For parallel throughput, still create one ``TimezoneFinder`` per thread**, as shown in the warning box below. Threads sharing one instance contend on its objects - reference counts above all, not a lock - so a shared instance scales far worse with the thread count than per-thread instances do: 1.60x against 4.84x at eight threads. An instance cannot be passed between processes: create one in each worker.
 
