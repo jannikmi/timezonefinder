@@ -69,14 +69,14 @@ __all__ = [
 # reaches 0.234375 degrees where zones meet. `timezonefinder/shortcut_index.py` derives
 # the rows, the cell widths and the lookup's arithmetic from these two numbers.
 #
-# Measured rather than chosen: against the H3 resolution-4 index this replaced, and
-# against flat grids, deeper trees, linear quadtrees and a tile pyramid, this shape was
-# the only one ahead of H3 on every axis at less than its footprint - faster per scalar
-# lookup, several times faster per batch, far fewer polygon tests, and about half the
-# resident index arrays. A 1.875-degree root with two levels of 4x4 is slightly faster
-# still and spends more disk than H3, which "replace, never add" refuses. The sizes the
-# shipped index actually reaches are in `docs/data_report.rst`; the runs, the exact
-# figures and the refused variants are in
+# Measured rather than chosen, over the whole family: flat grids aligned and not, grid
+# trees of several depths and block sizes, linear quadtrees and a tile pyramid, each
+# answered through the real query path. **Refused, so do not re-propose without new
+# evidence:** a flat grid of the finest cells, which spends two bytes on every cell of
+# the open ocean; a deeper tree, which is slightly faster and costs more disk than the
+# index it replaces, against a "replace, never add" footprint bound; and a cell reached
+# by search rather than by arithmetic. The sizes the shipped index reaches are in
+# `docs/data_report.rst`; the runs, the exact figures and every refused variant are in
 # `contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`;
 # `prototypes/latlng_index_bench.py` re-measures the family.
 #

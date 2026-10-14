@@ -528,9 +528,9 @@ def sample_cell_points(
     """Points uniform on the sphere inside one grid cell.
 
     No rejection loop and no polar or antimeridian case: the cell is an axis-aligned
-    rectangle, so sampling the sine of the latitude uniformly and the longitude
-    uniformly *is* the uniform spherical distribution over it. That is what the
-    hexagons needed the rejection for - their box was not the cell.
+    rectangle, so sampling the sine of the latitude uniformly and the longitude uniformly
+    *is* the uniform spherical distribution over it. A cell shape whose bounding box is
+    not the cell would need the rejection back.
     """
     x0, y0, x1, y1 = cell_bounds(cell)
     lng_low, lng_high = x0 * INT2COORD_FACTOR, x1 * INT2COORD_FACTOR

@@ -17,11 +17,10 @@ Two facts make the rule tight, and both are the cells' doing rather than this mo
 
 * **A cell is an axis-aligned rectangle of integer coordinates**, ``[x0, x1] x [y0, y1]``
   from ``timezonefinder.shortcut_index.cell_bounds``, so "can this polygon own one of
-  those points" is a planar question about two rectangles and a ring. The H3 cells this
-  replaced were spherical hexagons that could straddle the coordinate plane's cut and
-  enclose a pole, so the same question needed a half-turn rotation, polar special cases,
-  per-cell vertex caching and three separate overlap tests - and still answered only
-  "might" rather than "does".
+  those points" is a planar question about two rectangles and a ring. No cell wraps the
+  coordinate plane's cut or encloses a pole, so nothing here needs a rotated frame, a
+  polar case or a per-cell cache - and a cell shape that lost that property would need
+  all three back before any of this were sound.
 * **The kernel's edge convention decides the edges**, and it is pinned by
   ``tests/test_point_in_polygon_boundary_convention.py``: a polygon contains a point on
   its north or east boundary and never one on its south or west. So a polygon that only

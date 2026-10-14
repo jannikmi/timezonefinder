@@ -9,10 +9,10 @@ update, not a bad rule on the next commit. This file is the rule's own unit test
 the oracle is the real kernel over every integer point of the cell rather than a second
 statement of the rule.
 
-The replaced H3 rule had 458 lines of such tests (``tests/hex_utils_test.py``, deleted
-with the geometry it covered). Without this file both of these mutations of
-``owned_pairs``'s ``outer`` box passed the whole 2,544-test suite. Both are checked
-rather than asserted - the failures below are what they actually produce:
+**The candidate rule needs its own unit tests, and the whole-suite pass rate does not
+supply them.** Without this file both of these mutations of ``owned_pairs``'s ``outer``
+box passed every other test in the repository. Both are checked rather than asserted -
+the failures below are what they actually produce:
 
 * ``box(x0 - 0.5, y0 - 0.5, x1, y1)`` -> ``box(x0, y0, x1, y1)``, dropping the half-unit
   shift that matches the kernel's edge convention. That **introduces omissions**, and

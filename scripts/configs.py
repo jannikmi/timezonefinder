@@ -233,11 +233,10 @@ def validate_data_distribution_version(
 # Parse only the first few zones, for a conversion that finishes while a change is
 # being debugged (`DEBUG_ZONE_CTR_STOP` below, applied in `scripts.timezone_data`).
 #
-# It no longer coarsens the shortcut grid as it coarsened the H3 resolution: compiling
-# the whole grid tree takes seconds rather than the minutes the hexagons took, so there
-# is nothing left to buy - and the grid shape is stamped into the index file and
-# derived from it by the runtime reader, so an override here would have been a silent
-# no-op rather than a coarser index.
+# **It must not coarsen the shortcut grid.** The grid shape is stamped into the index
+# file and the runtime reader derives its arithmetic from `timezonefinder.configs`, so
+# an override of it here is a silent no-op rather than a coarser index. Compiling the
+# whole grid costs seconds, so there is nothing to buy either.
 DEBUG = False
 # DEBUG = True
 

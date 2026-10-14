@@ -33,11 +33,10 @@ belongs here is why it is shaped that way:
   and east edges and not its south or west - the point-in-polygon kernel's own
   convention, which ``tests/test_point_in_polygon_boundary_convention.py`` pins. A zone
   whose polygons only reach across a cell edge therefore is not a candidate in it, and
-  the index offers far fewer candidate polygons per random query than the H3 index it
-  replaced. A kernel change moving boundary points to the other polygon would make these
-  cells
-  misanswer one-unit strips along every aligned border, which is why that test is the
-  one this layout rests on.
+  which is where the index's selectivity comes from. A kernel change moving boundary
+  points to the other polygon would make these cells misanswer one-unit strips along
+  every aligned border while every sampled test still passed, which is why that test is
+  the one this layout rests on.
 
 The five arrays live in **one** file rather than one file each, and in a raw layout rather
 than ``.npy``: they are a single structure with cross-references, four files load ~1.6x
@@ -288,8 +287,9 @@ class ShortcutIndex:
     That tri-state is the lookup's own vocabulary - a cell is covered by one zone, by
     none, or by several - so branching on it is domain logic. **How** it is encoded (the
     cell a coordinate falls in, the grid arithmetic, the descent into a block, the
-    ``-(entry + 2)`` entry index, the CSR bounds) stops here, which is what let the cells
-    change from H3 hexagons to this grid tree without touching ``timezonefinder.py``.
+    ``-(entry + 2)`` entry index, the CSR bounds) stops here, which is what lets the
+    cells be replaced without touching ``timezonefinder.py``. Keep it that way: a lookup
+    method that computes a cell pins the layout from outside.
 
     The arrays stay public because the build-time checks in ``timezonefinder/_data_integrity.py``
     and the format tests legitimately inspect them; the query path does not.
@@ -376,10 +376,9 @@ class ShortcutIndex:
         """What the cells holding many coordinates resolve to, as the same tri-state.
 
         The batch sibling of :meth:`entry_at`, and the whole of it is numpy: the scaling,
-        the two floor divisions and the table gather run once over the batch. That is
-        what the H3 index could not do - ``h3.latlng_to_cell`` has no vectorised form, so
-        N points cost N scalar C calls - and it is why a 256-point batch of random points
-        resolves 3.4x faster on this index.
+        the two floor divisions and the table gather run once over the batch. **Keep every
+        stage of it vectorised** - this is most of what a batch lookup buys, and one
+        per-point call here would put the loop back.
 
         The descent is the only part that is not uniform, and it runs on the points that
         need it rather than on the batch: one gather for every point whose root cell

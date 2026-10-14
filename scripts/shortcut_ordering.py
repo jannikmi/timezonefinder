@@ -14,11 +14,10 @@ integrals over clipped geometry. The approximations are these, explicitly:
    A(ring)=abs(sum_edges -dlambda * mean_edge(sin(phi))). For a linear edge,
    mean(sin(phi))=sin(mid_phi)*sinc(dphi/(2*pi)). Holes subtract; components add.
    A cell is an axis-aligned rectangle of that same plane, so its region is
-   exact and its area closes the same integral - where the H3 hexagons this
-   replaced had great-circle edges that had to be subdivided until the
-   represented area converged on H3's own, a check that was never a
-   boundary-distance certificate. No cell now wraps the plane's cut or encloses
-   a pole, so neither needs representing. Overlay roundoff and ignoring the tiny
+   exact and its area closes the same integral: no subdivision, no area
+   convergence check, and no wrapped or polar cell to represent. A cell shape
+   with curved edges would need all three, and an area check is not a
+   boundary-distance certificate. Overlay roundoff and ignoring the tiny
    query-quantization strips (one coordinate unit, ~1.1 cm) remain geometric
    errors. Small positive regions are not dropped by a probability threshold.
 3. The work proxy is a positive sum of rectangular indicator functions:
@@ -59,11 +58,9 @@ integrals over clipped geometry. The approximations are these, explicitly:
 6. Correctness is separate from that approximate objective. The cell's own
    rectangle, grown one unit on each side and clipped to the coordinate domain,
    certifies coverage and absence of cross-zone positive-area overlap before
-   allowing final-zone changes or interleaving. It is exact rather than a
-   conservative circumscribed cap, which is what the hexagons needed, so it
-   admits more cells than that gate did - including the polar and antimeridian
-   cells the cap conversion had to refuse outright. The clip is what makes that
-   last clause true rather than merely intended: see `cell_envelope`.
+   allowing final-zone changes or interleaving. It encloses the cell exactly
+   rather than conservatively, and the clip is what keeps it admissible at the
+   edges of the domain: see `cell_envelope`.
    Otherwise preserve legacy zone priority and final zone, optimizing only
    within tested zone blocks. Block survivors depend on the zone's hit union,
    so this preserves zone answers even where the proxy geometry is inaccurate.
@@ -159,11 +156,10 @@ def cell_region(cell: int) -> BaseGeometry:
 
     A cell owns the integer points ``cell_bounds`` gives, so as a region of query
     positions it is ``(x0 - 1, x1] x (y0 - 1, y1]`` - half-open on the sides it
-    does not own, which an area integral does not distinguish anyway. Exactness
-    is what the aligned grid buys here: the H3 version of this function
-    subdivided great-circle arcs until the represented area converged on H3's,
-    then had to stitch a polar cap onto rings winding round a pole and unwrap
-    rings crossing the plane's cut. A rectangle needs none of it.
+    does not own, which an area integral does not distinguish anyway. Nothing is
+    approximated, so nothing has to converge: no arc subdivision, no polar cap
+    stitched onto a ring winding round a pole, no unwrapping across the plane's
+    cut. A cell shape needing any of those needs its own area certificate too.
     """
     x0, y0, x1, y1 = cell_bounds(cell)
     return box(x0 - 1, y0 - 1, x1, y1)
@@ -177,14 +173,12 @@ def cell_envelope(cell: int) -> BaseGeometry:
     absorbs the query quantization the region above ignores.
 
     **Clipped to the coordinate domain, which is not cosmetic.** The top row's cells end
-    at exactly +90 degrees and the last column's at +180, so an unclipped +1 would ask
-    the gate to find coverage beyond where any polygon can be - and ``covers`` would be
-    False for every one of them, whatever their geometry. That is how the H3 gate's
-    pole and antimeridian refusals would have survived the port into a rectangle that
-    has no reason for them: silently, as an arithmetic accident rather than a decision,
-    over the 384 top-row and 192 last-column root cells and all of their children.
-    ``tests/test_shortcut_ordering.py::test_the_gate_can_pass_at_the_edges_of_the_domain``
-    is what says they are reachable.
+    at exactly +90 degrees and the last column's at +180, so an unclipped +1 asks the
+    gate to find coverage beyond where any polygon can be, and ``covers`` is False for
+    every one of those cells whatever their geometry - a refusal that reads as a
+    geometric verdict and is not one, over the whole top row and last column and all of
+    their children. ``tests/test_shortcut_ordering.py::test_the_gate_can_pass_at_the_edges_of_the_domain``
+    is what says they stay reachable.
     """
     x0, y0, x1, y1 = cell_bounds(cell)
     return box(

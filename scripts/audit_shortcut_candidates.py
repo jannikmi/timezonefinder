@@ -50,9 +50,9 @@ def cell_edge_points(index: ShortcutIndex) -> Iterator[tuple[float, float]]:
     east edges and its neighbour owns the other side of the same line - which is the
     property the candidate rule turns on. The midpoints are there because a *polygon*
     boundary can cross a cell edge between its corners, and nothing about a corner says
-    what happens there; the H3 stream this replaced sampled each curved edge for the same
-    reason, and dropping to corners alone would have narrowed the audit while the rule
-    under it changed.
+    what happens there. **Probe the edges as well as the corners**: a stream that covers
+    only corners narrows this audit without saying so, and this is the only check that
+    runs over a whole compiled dataset.
 
     ``query_coordinate`` is what makes a probe land on the intended integer: a float that
     truncates to it, not the nearest float to the division. Coordinates outside the valid

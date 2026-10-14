@@ -9,7 +9,7 @@
 
 - End-to-end or targeted reviews covered `scripts/reporting.py`, `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py`, `scripts/timezone_data.py`, and `scripts/measure_memory.py`.
 - They also covered `scripts/generate_benchmark_fixtures.py`, `scripts/benchmark_utils.py`, `scripts/file_converter.py`, `scripts/data_integrity.py`, `scripts/check_data_dependency.py`, and `scripts/data_releases.py`.
-- `scripts/hex_utils.py`, including the `Hex` cache properties, `scripts/shortcuts.py`, and `scripts/utils.py` received targeted review. `hex_utils.py` and most of `shortcuts.py` were deleted with the H3 index in format 4; `scripts/grid_cells.py` and the rewritten `shortcuts.py` are unreviewed by this surface record.
+- `scripts/utils.py` received targeted review. **Unreviewed by this record:** `scripts/grid_cells.py` and `scripts/shortcuts.py`, which together are the whole candidate-compilation path and therefore the highest-value gap on this surface.
 - Converter invocation was compared across `Makefile`, `update_data.sh`, and `docs/2_use_cases.rst`.
 - `update_data.sh` was read end to end around tag resolution and download, together with `scripts/upstream_release.py`.
 

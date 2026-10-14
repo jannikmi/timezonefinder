@@ -3,8 +3,8 @@
 ## Related memory
 
 - [PREC-1](prec-1-order-overlapping-zones-by-containment-in-every-cell.md) — where the containment precedence rule this item introduced now lives, applied through the candidate ordering in every cell instead of only in covered ones.
-- [GEOM-3](geom-3-conservatively-repair-shortcut-candidate-generation.md) — the full-cell coverage proof an unconditional answer needs, which is the opposite of the exclusion proof GEOM-3 itself repairs.
-- Closed PR #652 — the converter half, implemented and measured: `Hex.covers_cell`, `scripts/zone_precedence.py`, and two full 2026c compiles diffed against each other.
+- [GEOM-3](geom-3-conservatively-repair-shortcut-candidate-generation.md) — the full-cell coverage proof an unconditional answer needs, which is the opposite of the no-omission proof GEOM-3 carries.
+- Closed PR #652 — the converter half, implemented and measured: a whole-cell coverage test, a zone-precedence pass, and two full 2026c compiles diffed against each other.
 
 ## The proposal
 

@@ -255,11 +255,11 @@ def test_convert2ints():
 def test_convert2ints_from_source_rounds_onto_the_source_grid():
     """The default conversion is for transient geometry; stored rings ask for the grid.
 
-    Both exist because both are needed: an H3 cell's boundary is computed here and has
-    as many decimals as a float carries, while a *stored* boundary coordinate has to sit
-    on the grid the packed payload counts residuals in. Converting the first the second
-    way raises - which is how this got the wrong way round once, and what
-    `scripts/hex_utils.py` would hit again.
+    Both exist because both are needed: a coordinate computed at conversion time has as
+    many decimals as a float carries, while a *stored* boundary coordinate has to sit on
+    the grid the packed payload counts residuals in. Converting the first the second way
+    raises, so a converter-side caller that picks the wrong one fails loudly rather than
+    quantizing geometry that was never on the grid.
     """
     coords = ([13.358, -0.5], [52.5186, 0.25])
     assert convert2ints(coords, from_source=True) == [

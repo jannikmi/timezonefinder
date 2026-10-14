@@ -178,9 +178,9 @@ def test_query2int_scales_as_coord2int_off_the_two_unowned_lines(lng, lat):
 # gives returned the exact value. That is a wrong answer that reports success -
 # ``coord2int(300.0)`` came back as -1,294,967,296, a *negative* longitude for a
 # positive input - and it differed by backend, so no single-backend run could see it.
-# Nothing on the query path could reach it, because `validate_coordinates` runs first;
-# `scripts/hex_utils.py` and `scripts/generate_benchmark_fixtures.py` call it without
-# that guard. The decorator is gone and both backends are exact now, which is what this
+# Nothing on the query path could reach it, because `validate_coordinates` runs first -
+# but converter-side callers reach `coord2int` without that guard, so it has to be exact
+# over the whole float domain rather than over the validated one. The decorator is gone and both backends are exact now, which is what this
 # pins - the property tests above cannot, because they are bounded to the validated
 # domain, i.e. exactly the range where the two forms agreed.
 _OUT_OF_DOMAIN = st.floats(
