@@ -16,4 +16,4 @@ Most modules are self-describing; the non-obvious ones:
 
 ## Runtime Lookup Flow
 
-Coordinates → scaled int32 (×10^7) → H3 shortcut map yields candidate polygons → bounding-box rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocean zones (`Etc/GMT±XX`) guarantee a match for any coordinate unless `timezone_at_land` is used.
+Coordinates → scaled int32 (×10^7) → the shortcut index yields a zone outright or a candidate polygon list → bounding-box rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocean zones (`Etc/GMT±XX`) guarantee a match for any coordinate unless `timezone_at_land` is used.

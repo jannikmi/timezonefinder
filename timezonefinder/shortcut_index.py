@@ -613,9 +613,9 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
         buf = f.read()
 
     if buf[:4] != FILE_IDENTIFIER:
-        # Written before this format existed, when the index was a FlatBuffers file under
-        # a different name. Reported as layout version 0 rather than as a corrupt file,
-        # since that is what it is for everyone who will ever hit this.
+        # A file written before this format carried an identifier at all. Reported as
+        # layout version 0 rather than as a corrupt file, since an outdated index is what
+        # it is for everyone who will ever hit this.
         raise incompatible_layout_error(
             "shortcut index file", 0, SHORTCUT_LAYOUT_VERSION, file_path
         )

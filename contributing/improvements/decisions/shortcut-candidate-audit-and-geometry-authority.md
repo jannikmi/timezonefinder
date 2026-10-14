@@ -10,42 +10,34 @@ Reports retain data hashes, the grid shape, the Python version, the backend, cou
 
 At the maintainer's request, `update_data.sh` runs all three untruncated audit streams once after conversion, before returning binaries or preparing a release. An omission or audit error stops the update before CI builds the data wheel. Reports live under `tmp/`, outside the packaged data; failure diagnostics include replay coordinates and missing IDs. Ordinary pytest/tox runs do not repeat these expensive streams: `tests/test_shortcut_candidate_coverage.py` executes the update script with external commands stubbed to verify all streams run and each failure blocks preparation, while the audit's unit tests check real missing-candidate detection and CLI failure. This intentionally leaves ordinary code PRs without a full sampled geometry census; rerun the diagnostic streams when changing candidate generation or the oracle.
 
-## Exclusion audit
+## What a candidate rule has to prove
 
-**Discharged by construction, 2026-10-13.** An exclusion is now a planar predicate over two rectangles and a ring rather than evidence about a spherical cell, because a cell is an axis-aligned rectangle of the integer coordinates the kernel reads, and no candidate is propagated from a coarser level. The rule is *tight, not exact*: it over-includes a polygon whose interior enters the cell without reaching one of its integer points, and never omits one the kernel can place a cell's point inside. Over-inclusion costs a bounding-box rejection, so the obligations are discharged in the direction that mattered. What is left is a smaller certification question, carried by [GEOM-3](../items/lookup-geometry-and-data-format/geom-3-conservatively-repair-shortcut-candidate-generation.md).
+**The shipped rule discharges this by construction.** An exclusion is a planar predicate over two rectangles and a ring, because a cell is an axis-aligned rectangle of the integer coordinates the kernel reads and no candidate is inherited from a coarser level. The rule is *tight, not exact*: it over-includes a polygon whose interior enters the cell without reaching one of its integer points, and never omits one the kernel can place a cell's point inside. Over-inclusion costs a bounding-box rejection, so what remains is a smaller certification question, carried by [GEOM-3](../items/lookup-geometry-and-data-format/geom-3-conservatively-repair-shortcut-candidate-generation.md).
 
-**The table stays because it is the clearest statement of what any candidate rule has to prove**, and the next index - or a custom-data path - has to answer the same questions in its own frame. Each row is a way of answering "this polygon cannot own a point of this cell" that does not establish it: bounds that enclose reported vertices rather than assigned coordinates, a positive-only membership witness read as a negative, a planar relation standing in for coverage of every assigned coordinate, a sampled parent union, and an exclusion inherited from a coarser level. Recorded against the H3 rule between 2026-09-10 and 2026-10-12, where absence of a witness did not discharge them.
+**The list below stays because the next index - or a custom-data path - has to answer the same questions in its own frame**, and each entry is a way of answering "this polygon cannot own a point of this cell" that does not establish it. A rule whose cells are not rectangles of the query's own coordinates owes all five.
 
-| Site | Required invariant and current gap |
-| --- | --- |
-| `Hex.is_poly_candidate` | Disjoint bounds exclude a polygon only if the cell bounds enclose every assigned query after integer conversion. `get_corrected_hex_boundaries` bounds reported vertices; great-circle edges can reach farther in latitude. Pole/antimeridian longitude widening does not fix ordinary curved latitude extrema. |
-| `Hex.lies_in_cell`, exterior | Failure of all tests must prove no overlap. Source-vertex membership is a positive witness only; planar cell-vertex and segment tests cannot exclude a polygon intersecting the real cell outside the chord ring. Skipping edge tests for unrotatable special cells proves still less. |
-| `Hex.lies_in_cell`, holes | Rejection requires the whole real cell to be inside a hole. `fully_contained_in_hole` proves a planar-ring relation, even after rotation, not coverage of all assigned coordinates. |
-| `Hex.true_parents` | The inherited parent union must cover every child point. Mapping only reported child vertices to the coarser resolution is sampling, not a demonstrated covering union. |
-| `Hex.poly_candidates` / `_init_candidates` | Resolution zero starts with all polygons; each recursive union and subsequent bbox exclusion must preserve that covering invariant. A polygon removed at any ancestor cannot be recovered by leaf overlap tests. Caching does not repair that loss. |
+- **Bounds that enclose reported vertices rather than assigned coordinates.** A cell's edges may reach farther than its vertices do, and the query coordinate is quantised after the cell is assigned, so disjoint bounds exclude a polygon only if the cell's bounds enclose *every* coordinate the cell will be asked about.
+- **A positive membership witness read as a negative.** That a source vertex lies in the cell proves the polygon is a candidate; that none does proves nothing, because a polygon can cross the cell between its vertices. Nor can a special case that skips the edge tests prove less than the tests it skipped.
+- **A planar relation standing in for coverage.** "The cell's ring lies inside this hole" is a relation between two rings; rejection needs the whole cell, every assigned coordinate of it, to be inside the hole.
+- **A sampled parent union.** Mapping a child's reported vertices to a coarser level and taking the union there is sampling, not a demonstrated covering union.
+- **An exclusion inherited from a coarser level.** If each level starts from its parent's candidates, every ancestor's union must provably cover every descendant point: a polygon dropped at an ancestor cannot be recovered by a leaf test, and caching does not repair the loss.
 
-The repair must cover quantized query coordinates as well as spherical assignment. Sampling, a subdivision depth or an empirical pad cannot justify a negative answer. Retaining uncertain candidates is safe but costs index space and query work; replacing an ambiguous cell with one unconditional zone requires a separate full-coverage proof.
+Sampling, a subdivision depth or an empirical pad cannot justify a negative answer. Retaining uncertain candidates is safe but costs index space and query work; replacing an ambiguous cell with one unconditional zone requires a separate full-coverage proof.
 
 ## Upstream authority evaluation
 
-**Moot for the index, decided 2026-10-12:** the grid tree replacing H3 has rectangular cells aligned with longitude and latitude, the same frame as the planar source edges, so no H3 coverage mode — released or geodesic — will be a candidate authority, and adopting uber/h3#1178 was withdrawn with issue #657 closed. The evaluation below stays as the reason not to re-propose an H3 or great-circle authority for planar source geometry.
-
-Verified 2026-09-10: [H3 #1052](https://github.com/uber/h3/pull/1052) closed unmerged and was replaced by the still-open [#1178](https://github.com/uber/h3/pull/1178), head `b7d298225f36c4e8de8e3514e096d9b2c6be9ac3`. Its isolated shared-library build passed the five `Geodesic|SphereCap` CTest suites. No project dependency changed.
-
-Geodesic mode is not a drop-in conservative predicate for this package: it also changes source segments into great-circle arcs. Reproduce with the longitude/latitude rectangle `[(-10,60),(10,60),(10,61),(-10,61)]` at resolution 4 and point `(0,60.05)`, cell `8409a05ffffffff`. The point lies inside the source rectangle. Released H3 4.5.0 returns 54 full, 132 overlap and 169 bbox-overlap cells; overlap and bbox-overlap include the query cell. The isolated branch's planar modes give the same counts, while flags `CONTAINMENT_OVERLAPPING | FLAG_GEODESIC_MASK` return 129 cells and exclude it. This is a source-semantics witness, not a packaged lookup defect. Any H3-owned solution must enclose the original planar source geometry, not silently reinterpret it.
+**No H3 coverage mode - released or geodesic - can be this package's candidate authority, and the reason is the source geometry rather than H3.** The boundaries are planar longitude/latitude rings, and a cell whose edges are rectangles in that same frame asks a planar question of them. Geodesic mode does not merely bound cells more conservatively: it reinterprets *source* segments as great-circle arcs, which is a different polygon. The witness, on H3 4.5.0 at resolution 4: the rectangle `[(-10,60),(10,60),(10,61),(-10,61)]` contains `(0,60.05)`, in cell `8409a05ffffffff`; the released planar modes return that cell among their overlap and bbox-overlap sets, while `CONTAINMENT_OVERLAPPING | FLAG_GEODESIC_MASK` returns 129 cells and excludes it. This is a source-semantics witness, not a packaged lookup defect. **Any externally-owned coverage predicate must enclose the original planar source geometry rather than silently reinterpret it** - which is the test to apply to the next such offer, in whatever library it arrives.
 
 ## Packaged-data evidence
 
-The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose one-time dataset validation over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. A green sampled audit cannot establish a full-coverage predicate, one of the reasons PERF-7 was withdrawn.
+The dated reports linked below identify the actual bytes and sample streams, and the counts in them are the record rather than anything restated here. They measure diagnostic cost, not converter or query performance, and they change no candidate set. **A green sampled audit cannot establish a full-coverage predicate** - one of the reasons PERF-7 was withdrawn - and enumerating every edge still does not test every coordinate.
 
-On 2026-09-10, data 2026c, H3 4.5.0, Python 3.14.2 with Numba on macOS arm64:
+On data 2026d against the shipped index, Python 3.14.2, clang backend, macOS arm64, all three streams exhausted with zero omissions:
 
-| Stream | Points | Omissions | Seconds |
-| --- | ---: | ---: | ---: |
-| [H3 cell edges](../measurements/shortcut-candidates-cell-edges-2026-09-10.json) | 5,186,160 | 0 | 68.80 |
-| [Source edges](../measurements/shortcut-candidates-source-edges-2026-09-10.json) | 16,375,460 | 0 | 168.39 |
-| [Coordinate seams](../measurements/shortcut-candidates-seams-2026-09-10.json) | 124 | 0 | 0.05 |
+| Stream | Points |
+| --- | ---: |
+| [Cell edges](../measurements/shortcut-candidates-cell-edges-2026-10-13.json) | 1,854,384 |
+| [Source edges](../measurements/shortcut-candidates-source-edges-2026-10-13.json) | 16,505,010 |
+| [Coordinate seams](../measurements/shortcut-candidates-seams-2026-10-13.json) | 124 |
 
-Re-run on 2026-10-13 against the grid-tree index, data 2026d, same machine: zero omissions on all three streams, over a cell-edge stream of the same order as the H3 one and an unchanged source-edge stream. The counts are in the dated reports.
-
-These are single audit wall-clock runs, with concurrent local work, not performance comparisons. Enumerating every edge does not test every coordinate or solve every intersection. Backend regression tests deliberately remove candidates to ensure a zero-miss result is not a vacuous test of the oracle.
+These are single audit wall-clock runs with concurrent local work, not performance comparisons. Backend regression tests deliberately remove candidates, so that a zero-miss result is not a vacuous test of the oracle.
