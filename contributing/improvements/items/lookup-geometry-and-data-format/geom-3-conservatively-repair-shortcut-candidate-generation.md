@@ -16,7 +16,7 @@ Parked. Reopen for a reproducible missing-candidate counterexample, or for a pro
 
 ## Work if reopened
 
-Use `scripts/audit_shortcut_candidates.py` to establish witnesses and to compare any change. The [audit and geometry-authority record](../../decisions/shortcut-candidate-audit-and-geometry-authority.md) holds what the audit does and does not establish, and why no H3 coverage mode — released or geodesic — is an authority for planar source geometry. Preserve source geometry and holes. A certification requiring a new dependency remains subject to the improvement-pass dependency boundary.
+Use `scripts/audit_shortcut_candidates.py` to establish witnesses and to compare any change. The [audit and geometry-authority record](../../decisions/shortcut-candidate-audit-and-geometry-authority.md) holds what the audit does and does not establish, and why no upstream spherical-coverage API is an authority for planar source geometry. Preserve source geometry and holes. A certification requiring a new dependency remains subject to the improvement-pass dependency boundary.
 
-- **Size:** M — a certification argument and its witnesses, against the L-sized numerical enclosure the hexagon repair would have needed.
+- **Size:** M — a certification argument and its witnesses.
 - **Status:** parked — the rule is tight rather than conservative since format 4, and omission-free in every sweep run against it; reopen for a counterexample or for an optimization needing certified full-cell coverage.
