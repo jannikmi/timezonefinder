@@ -5,15 +5,13 @@
 FINDINGS (2026-10-11, Apple M1 Pro, Python 3.14.2, data 2026d, fixture set v3)
 ==============================================================================
 
-**Written against the H3 shortcut index, which format 4 replaced with an aligned grid
-tree (2026-10-13).** It does not import as it stands: ``SHORTCUT_H3_RES``, the slot
-arithmetic and the five-array ``ShortcutIndex`` it builds are all gone. The findings
-below are kept as the record of a question that has since been answered and shipped;
-reproduce them against the commit each names rather than against this tree.
+**This script does not import against the current tree**, and is kept for its findings
+rather than for its code: it builds both the H3 index it compared against and a
+five-array ``ShortcutIndex``, neither of which still exists. It is the sweep the shipped
+index was chosen from, so reproduce a figure against the commit it names.
 
 **An aligned grid tree beats the resolution-4 H3 index on every axis measured, at less
-than H3's footprint; the maintainer decided to adopt it on 2026-10-12, and it shipped as
-the package's index.** The chosen shape - a
+than H3's footprint; and it is the package's index.** The chosen shape - a
 dense grid of 0.9375-degree root cells whose cells several zones can own refine into one
 level of 4x4 blocks - takes 507 KB on disk and in memory against H3's 617 KB and
 1,031 KB, tests 57 % and 42 % fewer polygons per random and on-land query than an H3

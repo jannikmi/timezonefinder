@@ -28,11 +28,11 @@ converter, and never by a user.
 
 FINDINGS (2026-08-23, `5e6916b`, Apple arm64, Python 3.14.2, data 2026c)
 
-**Written against the H3 shortcut index, which format 4 replaced with an aligned grid
-tree (2026-10-13).** It does not import as it stands: ``SHORTCUT_H3_RES``, the slot
-arithmetic and the five-array ``ShortcutIndex`` it builds are all gone. The findings
-below are kept as the record of a question that has since been answered and shipped;
-reproduce them against the commit each names rather than against this tree.
+**This script does not import against the current tree**, and is kept for its findings
+rather than for its code: ``SHORTCUT_H3_RES``, the slot arithmetic and the five-array
+``ShortcutIndex`` it builds no longer exist. The question it was written to answer is
+settled - see the shortcut index decisions - so reproduce a figure against the commit it
+names, and do not re-point the script at the current index without re-measuring.
 
 Every resolution below is **built**, not modelled or sampled. Sizes are the shipped layout
 (``timezonefinder/shortcut_index.py``), computed by ``format_bytes`` and checked against
