@@ -20,6 +20,7 @@ from benchmarks.candidate_comparison import (
 from scripts.measure_batch_break_even import (
     CONTROL_MIN_BATCH_SIZE,
     DEFAULT_LADDER,
+    DEFAULT_POINTS_PER_ROUND,
     MIN_CALLS_PER_ROUND,
     MIN_POOL_BATCHES,
     PreparedBatch,
@@ -35,7 +36,9 @@ from scripts.measure_batch_break_even import (
     prepare_pool,
     saturation,
     speedup,
+    top_up_pool,
 )
+from timezonefinder.shortcut_index import ABSENT
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 pytestmark = pytest.mark.unit
@@ -368,6 +371,39 @@ def test_default_ladder_straddles_the_names_gather_threshold():
     assert NAMES_GATHER_MIN_BATCH - 1 in DEFAULT_LADDER
 
 
+def test_default_ladder_top_rung_fits_the_points_per_round():
+    """The top rung must be measurable at the default settings, not refused by them.
+
+    The points per round are held constant across rungs, so raising the ladder without
+    raising them would make ``measure_rung`` refuse the very rungs saturation is read
+    from - after every cheaper rung had already been measured.
+    """
+    assert max(DEFAULT_LADDER) * MIN_CALLS_PER_ROUND <= DEFAULT_POINTS_PER_ROUND
+
+
+def test_top_up_keeps_the_fixture_as_the_prefix_and_reaches_the_size():
+    fixture = [(1.0, 2.0), (3.0, 4.0)]
+    pool = top_up_pool(None, "random", fixture, 50, seed=3)  # type: ignore[arg-type]
+    assert pool[:2] == fixture
+    assert len(pool) == 50
+    assert pool == top_up_pool(None, "random", fixture, 50, seed=3)  # type: ignore[arg-type]
+
+
+def test_top_up_leaves_a_pool_that_is_already_large_enough_alone():
+    fixture = [(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)]
+    assert top_up_pool(None, "random", fixture, 2, seed=0) == fixture  # type: ignore[arg-type]
+
+
+def test_top_up_draws_the_class_it_extends(tf):
+    """A topped-up unique-shortcut pool must still be unique-shortcut points, or the top
+    rungs would measure a different stratum from the bottom ones under the same label."""
+    pool = top_up_pool(tf, "unique_shortcut", [], 200, seed=0)
+    assert len(pool) == 200
+    for lng, lat in pool:
+        entry = tf.shortcuts.entry_at(lng, lat)
+        assert entry != ABSENT and entry >= 0
+
+
 def test_ladder_is_capped_at_half_the_pool():
     """At N == pool size only one batch exists without replacement, which is no sample."""
     assert ladder_for((1, 10, 100, 1000), pool_size=200) == [1, 10, 100]
@@ -567,6 +603,9 @@ def test_chart_is_well_formed_xml_and_carries_its_annotations(tmp_path: Path):
     assert "break-even" in markup
     assert f"names gather ({NAMES_GATHER_MIN_BATCH})" in markup
     assert "the two estimators do not resolve this rung" in markup
+    rungs = _fake_run()["sweeps"][0]["rungs"]
+    assert f"~{saturation(rungs).batch_size:,}" in markup
+    assert "stops improving" in markup
 
 
 def test_chart_frame_carries_both_estimators(tmp_path: Path):
@@ -676,11 +715,13 @@ def test_saturation_is_withheld_from_the_headline_when_the_control_fails(
     ):
         rung["comparison"]["best_baseline"] *= factor
 
-    page = tmp_path / "page.rst"
-    render_batch_break_even(run, page, tmp_path / "sweep.svg")
+    page, chart = tmp_path / "page.rst", tmp_path / "sweep.svg"
+    render_batch_break_even(run, page, chart)
     text = page.read_text(encoding="utf-8")
 
     assert "not established on this run" in text
     assert "stops improving beyond" not in text
+    # the chart follows the same rule: no marker the headline would refuse to state
+    assert "stops improving" not in chart.read_text(encoding="utf-8")
     # the crossing survives a noisy baseline and must still be stated
     assert "points per call" in text

@@ -26,7 +26,7 @@ measurement genuinely has lives on the *x* axis, where the shaded break-even ban
 it: it is the resolution limit of a discrete ladder, not a spread in any measured
 quantity.
 
-seaborn rather than direct matplotlib: fourteen rungs, two panels, two estimators and
+seaborn rather than direct matplotlib: a dozen rungs, two panels, two estimators and
 four annotated rules benefit from its long-form data and semantic grouping APIs. The
 smaller ``tzfpy`` agreement chart uses matplotlib directly, under the same deterministic
 SVG constraints.
@@ -51,10 +51,13 @@ from scripts.benchmark_utils import machine_label  # noqa: E402
 from scripts.measure_batch_break_even import (  # noqa: E402
     break_even,
     comparison_of,
+    control_spread,
     per_point_seconds,
     point_class_label,
+    saturation,
     speedup,
 )
+from scripts.render_benchmark_reports import batch_break_even_settings  # noqa: E402
 
 #: Salt for the element ids matplotlib derives by hashing. Its default is ``None``, which
 #: means a fresh ``uuid4`` per process - so without this line the committed SVG differs
@@ -138,7 +141,7 @@ def _subtitle(run: dict[str, Any]) -> str:
 
 #: Where the speed-up axis gets a labelled tick. A 1-2-5 ladder per decade, which is what
 #: a log axis is readable at, filtered to the range the data actually occupies.
-SPEEDUP_TICKS = (0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0)
+SPEEDUP_TICKS = (0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0)
 
 
 def _label_speedup_axis(ax, values: Sequence[float]) -> None:
@@ -193,6 +196,44 @@ def _draw_unresolved(
             markeredgecolor=palette[point_class],
             markeredgewidth=1.6,
             zorder=5,
+        )
+
+
+def _annotate_saturation(ax, run: dict[str, Any], classes: Sequence[str]) -> None:
+    """Point at the rung where each curve stops improving, where the run can say so.
+
+    The page states that answer in words, and a chart that left it out made the reader
+    find the knee of a log-log curve by eye. Drawn under exactly the page's rule: only
+    when the control certifies the ladder, because saturation is read across rungs and
+    a wandering baseline moves it - a marker the headline withholds would publish the
+    noise the headline refused to.
+    """
+    settings = batch_break_even_settings(run["machine_info"]["timezonefinder"])
+    palette = dict(zip(classes, sns.color_palette(PALETTE, len(classes)), strict=True))
+    for sweep in run["sweeps"]:
+        rungs = sweep["rungs"]
+        control = control_spread(
+            rungs,
+            threshold=settings.control_spread_threshold,
+            min_batch_size=settings.control_spread_min_batch_size,
+        )
+        settles = saturation(rungs, tolerance=settings.saturation_tolerance)
+        if not control.within_threshold or settles.batch_size is None:
+            continue
+        rung = next(r for r in rungs if r["batch_size"] == settles.batch_size)
+        color = palette[point_class_label(sweep["point_class"])]
+        # below the curve: the curves rise left to right, so the space under the right
+        # half of the panel is the one place neither curve nor legend occupies
+        ax.annotate(
+            f"stops improving\n~{settles.batch_size:,}",
+            xy=(settles.batch_size, speedup(rung)),
+            xytext=(0, -34),
+            textcoords="offset points",
+            fontsize=8,
+            color=color,
+            ha="center",
+            va="top",
+            arrowprops={"arrowstyle": "->", "color": color, "linewidth": 1.0},
         )
 
 
@@ -260,6 +301,8 @@ def render_sweep(run: dict[str, Any], output_path: Path) -> str:
                 va="top",
             )
 
+    _annotate_saturation(top, run, classes)
+
     names_gather = run["machine_info"]["timezonefinder"].get("names_gather_min_batch")
     if names_gather and rungs[0] <= names_gather <= rungs[-1]:
         top.annotate(
@@ -316,7 +359,7 @@ def render_sweep(run: dict[str, Any], output_path: Path) -> str:
     # --- shared x ------------------------------------------------------------------
     bottom.set_xscale("log")
     bottom.xaxis.set_major_locator(FixedLocator(rungs))
-    # a tick at every rung, but a label only where one fits: fourteen labels on a log
+    # a tick at every rung, but a label only where one fits: a dozen labels on a log
     # axis overlap (127 and 128 land on top of each other), and the decades plus the
     # ladder's ends are what a reader navigates by
     labelled = {rungs[0], rungs[-1]} | {r for r in rungs if _is_decade(r)}

@@ -1029,6 +1029,20 @@ def render_batch_break_even(
         "replacement inside a batch: a repeated coordinate would be answered from the "
         "batch's own cell lookup and would flatter exactly the effect being measured."
     )
+    ladder_text = (
+        "The ladder runs well past where either curve levels off, because where "
+        "batching stops improving can only be read from rungs *beyond* it: a ladder "
+        "that ends on the knee cannot tell a plateau from a curve still falling."
+    )
+    if "fixture_version" in info:
+        # only a run over the committed fixtures was topped up; a caller's CSV never is
+        ladder_text += (
+            " Its top rungs need more points than the committed benchmark fixtures "
+            "hold, so each fixture is extended with points drawn by the fixture "
+            "generator's own sampler and classified by its own rule - the same "
+            "population, not merely the same label."
+        )
+    reporter.add_text(ladder_text)
     reporter.add_text(
         "The coordinate arrays are prepared before the clock starts, in the contiguous "
         "``float64`` form the batch API takes without copying. A caller holding Python "
@@ -1051,7 +1065,9 @@ def render_batch_break_even(
         "rounds the batched call won, which assumes nothing about how the noise is "
         "distributed. A difference is believed only where both agree, so the shaded band "
         "- where the crossing lies - is exactly where the upper panel passes 1.0 and the "
-        "lower one passes one half. Hollow markers are rungs neither estimator resolves."
+        "lower one passes one half. Hollow markers are rungs neither estimator resolves. "
+        "An arrow marks where a curve stops improving, and is drawn only when the "
+        "control certifies the run, the same rule the headline follows."
     )
     names_gather = info.get("names_gather_min_batch")
     if names_gather:

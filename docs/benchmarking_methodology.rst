@@ -388,6 +388,18 @@ repeated coordinate would be answered from the batch's own cell lookup and would
 the amortisation being measured; and the ladder is capped at half the point pool, because at a batch
 size equal to the pool there is only one possible batch and drawing it every round is not sampling.
 
+The ladder has to run *past* the point where the batched call stops improving, not end on it: that
+answer is read off the top rungs, and while the top two still disagree the curve is indistinguishable
+from one still falling. A ladder that ended the unique-shortcut stratum at 2,000 points, under half
+its 5,000-point fixture, read "still improving" there on every run - the end of the ladder, not an
+answer. Its top rungs therefore
+need a larger pool than the committed fixtures hold, and the sweep extends each fixture with points
+from the fixture generator's own sampler and classification rule rather than enlarging the fixtures,
+which would change every tracked benchmark's input for a question none of them asks. Rungs are spaced
+densely only where the two answers fall: below the crossing a curve that is one fixed cost spread over
+N needs two rungs, and those rungs are the expensive ones, because each round answers the same number
+of points and at N=1 every one of them is a whole batched call.
+
 The measurement runs in one environment and stamps the acceleration path it bound, because the
 question is about batch size rather than about backends; ``make batch-break-even`` asserts the
 tracked path on top of that, so the committed page cannot end up beside its siblings describing a

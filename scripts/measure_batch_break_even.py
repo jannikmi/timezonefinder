@@ -8,7 +8,7 @@ Why this is not a ``benchmarks/`` suite
 ``benchmarks/test_timezone_finding.py`` measures the batch API at one fixed size
 (``BATCH_SIZE``, 2,500) so that two commits can be compared, and its node ids are the
 trend chart's join key. The question here is the *shape* of the curve that measurement
-takes a single point on, and a sweep would add a node id per rung - fourteen metrics
+takes a single point on, and a sweep would add a node id per rung - a dozen metrics
 that are not comparable to each other and that no chart should carry.
 
 It is also the other kind of measurement: two candidates in one working tree rather than
@@ -55,6 +55,7 @@ Usage::
 """
 
 import argparse
+import contextlib
 import csv
 import json
 import random
@@ -75,6 +76,11 @@ from benchmarks.candidate_comparison import (
 from scripts.assert_acceleration_path import active_acceleration_path
 from scripts.benchmark_utils import cpu_info, get_system_status
 from scripts.configs import DEBUG
+from scripts.generate_benchmark_fixtures import (
+    generate_on_land_points,
+    generate_random_points,
+    generate_shortcut_points,
+)
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -118,36 +124,56 @@ def point_class_label(point_class: str) -> str:
 DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 
 #: The rungs. Log-spaced, because the interesting region spans four decades and an
-#: integer step would spend the whole run where nothing changes.
+#: integer step would spend the whole run where nothing changes - and spaced unevenly on
+#: purpose, dense only where the page's two answers fall.
+#:
+#: * **Below the crossing** the batched call is its own fixed cost spread over N, a
+#:   curve two rungs describe, so 1 and 10 stand alone. Those rungs are also the
+#:   expensive ones: every round answers ~:data:`DEFAULT_POINTS_PER_ROUND` points, and
+#:   at N=1 each costs a whole batched call, so a rung spent there is worth more than
+#:   one at the top.
+#: * **The crossing** has fallen between 20 and 100 on every recorded run, so 20 and 50
+#:   keep the bracket that narrow.
+#: * **Saturation** needs the ladder to run *past* the plateau, not to end on it:
+#:   :func:`saturation` takes its reference from the top three rungs and calls the
+#:   curve unsaturated while the top two still disagree. The ladder as of ``647a0c4``
+#:   ended the unique-shortcut stratum at 2,000, under half its 5,000-point fixture, and
+#:   read "still improving" there on every run - the end of the ladder, not an answer. Probed between 1,000 and
+#:   150,000, both default strata level off between 2,000 and 5,000 and stay level to
+#:   ~100,000 before the batch outgrows the cache, so 5,000-20,000 is three rungs of
+#:   plateau with the top well short of that cliff.
 #:
 #: The two rungs around ``NAMES_GATHER_MIN_BATCH`` are the exception, and they are
 #: imported rather than written as 127/128: ``ZoneNames.names_of`` switches from a
-#: Python loop to a numpy gather exactly there, so a plain 1-2-5 ladder steps over a
-#: real discontinuity inside the measured path and renders it as noise between 100 and
-#: 200. It is also the most actionable thing this page can show a caller sizing batches.
+#: Python loop to a numpy gather exactly there, so a log ladder steps over a real
+#: discontinuity inside the measured path and renders it as noise between 100 and the
+#: next rung. It is also the most actionable thing this page can show a caller sizing
+#: batches.
 DEFAULT_LADDER: Final[tuple[int, ...]] = (
     1,
-    2,
-    5,
     10,
     20,
     50,
     100,
     NAMES_GATHER_MIN_BATCH - 1,
     NAMES_GATHER_MIN_BATCH,
-    200,
     500,
     1000,
     2000,
     5000,
+    10_000,
+    20_000,
 )
 
 #: Points each round asks both candidates to answer, held constant across rungs so the
-#: curve compares like with like. A round is then tens of milliseconds at every rung -
-#: far above timer resolution at ``N = 1``, and short enough that the machine's state is
-#: unlikely to change inside one, which is the reasoning behind the harness's own
-#: ``DEFAULT_BATCH_SIZE``.
-DEFAULT_POINTS_PER_ROUND: Final[int] = 25_000
+#: curve compares like with like. Sized by the top rung rather than by the bottom one:
+#: the top rung still needs :data:`MIN_CALLS_PER_ROUND` calls in a round, and raising
+#: only its rounds would put the rung saturation is read from in a different
+#: measurement regime from the rest of the ladder. A candidate's round is then
+#: upwards of ~80 ms at every rung - far above timer resolution at ``N = 1`` - and the
+#: price is paid at the bottom of the ladder, where at N=1 every point is a whole
+#: batched call: that is why the rungs below the crossing are few.
+DEFAULT_POINTS_PER_ROUND: Final[int] = 80_000
 
 #: Batched calls a round must contain. Below this the ``min`` over rounds stops being
 #: "the least perturbed round" and becomes "the luckiest single call".
@@ -385,6 +411,45 @@ def ladder_for(sizes: Sequence[int], pool_size: int) -> list[int]:
             "supply more points."
         )
     return rungs
+
+
+def top_up_pool(
+    finder: TimezoneFinder,
+    point_class: str,
+    points: Sequence[tuple[float, float]],
+    pool_size: int,
+    seed: int,
+) -> list[tuple[float, float]]:
+    """The committed fixture, extended to ``pool_size`` points of the same class.
+
+    The fixtures are sized for the suites' fixed ``BATCH_SIZE``, not for this ladder:
+    half of 5,000 unique-shortcut points ends the ladder at 2,500, below where that
+    stratum stops improving. Enlarging them would rewrite every tracked benchmark's
+    input and reset the trend chart for a question none of those rows asks, so the
+    sweep draws the rest itself - with the fixture generator's own sampler and its own
+    classification rule, so the extra points are the same population and not merely the
+    same label. The fixture stays the prefix, so every rung a fixture-sized pool could
+    already measure draws from the points it always did, and a fixed ``seed`` keeps the
+    whole pool reproducible.
+    """
+    missing = pool_size - len(points)
+    if missing <= 0:
+        return list(points)
+
+    rng = random.Random(seed)
+    # the generators narrate on stdout, which is this script's report channel
+    with contextlib.redirect_stdout(sys.stderr):
+        if point_class == "random":
+            extra = generate_random_points(rng, missing)
+        elif point_class == "on_land":
+            extra = generate_on_land_points(finder, rng, missing)
+        elif point_class == "unique_shortcut":
+            extra, _ = generate_shortcut_points(finder, rng, missing, 0)
+        elif point_class == "ambiguous_shortcut":
+            _, extra = generate_shortcut_points(finder, rng, 0, missing)
+        else:
+            raise ValueError(f"no sampler for point class {point_class!r}")
+    return [*points, *extra]
 
 
 def prepare_pool(
@@ -843,6 +908,19 @@ def main() -> None:
 
     finder = TimezoneFinder(in_memory=args.in_memory)
     try:
+        if not args.points:
+            # Room for the top requested rung, under ladder_for's half-the-pool cap. A
+            # caller's own CSV is never topped up: it is their workload, and points this
+            # script invented would make the answer stop being theirs.
+            sources = [
+                (
+                    name,
+                    source,
+                    top_up_pool(finder, name, points, 2 * max(sizes), args.seed),
+                )
+                for name, source, points in sources
+            ]
+
         # One finder for the whole run. The names form is warmed at or above
         # NAMES_GATHER_MIN_BATCH: ZoneNames builds its gather lookup array lazily on the
         # first such call, so whichever rung triggered it would otherwise pay a one-off
