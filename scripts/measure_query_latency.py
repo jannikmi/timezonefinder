@@ -223,13 +223,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if DEBUG:
-        # the same guard benchmarks/conftest.py applies: DEBUG lowers SHORTCUT_H3_RES,
+        # the same guard benchmarks/conftest.py applies: DEBUG truncates the parse,
         # which changes how many queries reach the geometry at all - i.e. exactly the
         # distribution this measures
         raise RuntimeError(
-            "scripts.configs.DEBUG is True, which overrides SHORTCUT_H3_RES to a much "
-            "coarser resolution. Latency measured under DEBUG describes a different "
-            "index and must never be published."
+            "scripts.configs.DEBUG is True, which stops the parse after a handful of "
+            "zones. Latency measured under DEBUG describes a different dataset and "
+            "must never be published."
         )
 
     measured = measure(args.points, args.repetitions)

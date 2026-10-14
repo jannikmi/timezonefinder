@@ -38,7 +38,8 @@ the report leads with the one that measures the *real* function untouched.
   probe that could be subtracted off: enabling it deoptimises the whole interpreter, so
   code that never calls the profiled function slows down too. Measured here, with only
   ``timezone_at`` registered, ``validate_coordinates`` goes 284 -> 2,251 ns and
-  ``h3.latlng_to_cell`` 390 -> 1,090 ns in loops that call neither, and both revert when
+  the H3 cell computation then in that stage 390 -> 1,090 ns in loops that call neither,
+  and both revert when
   it is switched off. The inflation is therefore non-uniform by stage type - ~8x for a
   pure-Python stage, ~2.8x for a C-extension one, ~1x for time spent inside numba or the
   C extension, which the interpreter never sees - so it shifts attribution away from
@@ -69,8 +70,50 @@ Inputs are the committed fixtures in ``tests/fixtures/benchmarks/``, so two runs
 same commit execute the same workload.
 
 
-FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2 free-threading build, data 2026c,
-fixture set v3)
+FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2, data 2026c, fixture set v3; the
+2026-10-13 re-take is the first block below)
+
+**This script cannot measure a free-threaded interpreter**, whichever one it is run
+on: ``line_profiler`` is imported at module scope and has not declared ``Py_mod_gil``,
+so loading it re-enables the GIL for the whole process. Run on a free-threading build
+of 3.14.2 it reads within a few percent of the standard build for that reason, not
+because free threading is free. A figure here is a GIL-enabled figure.
+
+**2026-10-13: the shortcut index was replaced, and this instrument changed shape with
+it.** The H3 hexagons became an aligned grid tree, so the ladder's ``h3.latlng_to_cell``
+and ``shortcut table read`` rungs are one rung, ``shortcut entry_at`` - the cell is now
+integer arithmetic inside the same call as the table read, and splitting them again
+would price a call the lookup does not make. Every table and share *below this block*
+was measured on the H3 index and is kept as the superseded measurement it is; where a
+number below names ``h3``, read it as history.
+
+Re-taken on the same machine, clang, mapped, data 2026d, fixture set v4, 2,000 points
+per stratum, min of 15 rounds - with the H3 tree measured in the same session for
+comparison (``ns/query``, ladder total and real ``timezone_at``):
+
+    stratum      stage                  H3     grid tree
+    random       validate_coordinates   192          191
+    random       cell + table read      500          344
+    random       everything below       248          112
+    random       ladder total           940          647
+    random       real timezone_at()     967          708
+    on_land      ladder total         1,135          843
+    on_land      real timezone_at()   1,187          888
+
+The random query loses ~27 % end to end, and the two stages finding 3 named as the
+addressable prologue became one that costs a third less. The geometry rungs fall for a
+second reason: the exact cells hand far fewer queries to the candidate loop at all, so
+`everything below` is a smaller share as well as a smaller number. The ambiguous
+stratum is *not* comparable across the two - it is a classification by the index, so the
+grid tree's ambiguous fixture is the residual-hard subset of H3's and reads slower per
+point for that reason alone; the shared-point comparison is in the pull request that
+replaced the index.
+
+A ``memoryview`` read of the root table rather than ``int(array[i])`` is worth 6 % of a
+whole random ``timezone_at`` and 8 % of a unique-cell one (52 and 55 of 61 paired rounds),
+and it is in the figures above. That is this ladder's own finding acted on: the root read
+is now the largest single stage of a query that needs no geometry, so it is the one stage
+where a redesign pays.
 
 The interpreter is named more precisely than it was before 2026-09-06 - finding 9 is why
 - and the evidence that it did not *change* is that the previous revision of this script,
@@ -280,18 +323,35 @@ CONCLUSIONS
 
 3. **A batch API would amortise real overhead, not noise.** A unique-zone query is
    ~0.80-0.87 us of which *no stage is geometry*: ~740-805 ns of four fixed-cost calls
-   plus ~51-68 ns for the bound-method call. The two largest, h3 cell computation
+   plus ~51-68 ns for the bound-method call. The two largest, the H3 cell computation
    (~366-372 ns) and coordinate validation (~212-270 ns), are exactly the two that
    vectorise over an array of points - over two thirds of the query, addressable before
    any lookup logic is touched. At resolution 4 ~89 % of uniformly random points are
    answered from that path, so the prologue is ~54-64 % of a random-workload query, and
    it has grown as a share every time the geometry got cheaper.
 
-4. **The shortcut lookup is a slot-addressed table read, and it is not where a query's
-   time goes.** Reading it costs ~110-112 ns: ~14 % of a unique-zone query, ~2.5 % of
-   an ambiguous one, and well under a tenth of the workload-representative random
-   stratum.
-   That is the *ceiling* on what any further work on this structure could return.
+   **Acted on 2026-10-13, and this is what it bought.** The grid tree's cell *is*
+   integer arithmetic, so the cell computation stopped being a call at all and the batch
+   path vectorises the whole prologue rather than looping a C call per point: a
+   256-point batch of random points resolves ~5x faster and one whose cells a single
+   zone covers ~25x. The scalar prologue did not vanish - it is still the majority of a
+   query with no geometry in it - but it is a third cheaper and coordinate validation is
+   now the part of it nothing has removed.
+
+4. **The shortcut lookup was a slot-addressed table read, and it was not where a
+   query's time went.** Reading it cost ~110-112 ns: ~14 % of a unique-zone query,
+   ~2.5 % of an ambiguous one, and well under a tenth of the workload-representative
+   random stratum. That was the *ceiling* on what further work on that structure could
+   return, and it is why the shortcut *table* was never the thing to redesign.
+
+   **What the grid tree changed is the premise, not the ceiling.** It did not make the
+   table read faster; it folded the cell computation - a separate, larger stage - into
+   the same call, and it made the cells selective enough that far fewer queries reach
+   geometry. The re-take at the top of this block reads the combined stage at 344 ns on
+   a random query, over half the ladder, so the ceiling is now worth stating of *that*
+   stage rather than of the read inside it: a ``memoryview`` root read took 6-8 % of a
+   whole call out of it, and anything further has to come out of the four integer
+   divisions or the interpreter.
 
 5. **Per-polygon FFI marshalling is gone, and with it the largest single cost a
    candidate used to carry on the clang path.** ``ffi.from_buffer`` over the two axes and
@@ -410,7 +470,6 @@ import time
 from collections.abc import Callable, Sequence
 
 import numpy as np
-from h3.api import numpy_int as h3
 from line_profiler import LineProfiler
 
 from scripts.assert_acceleration_path import active_acceleration_path
@@ -425,8 +484,7 @@ from tests.auxiliaries import (
     load_pip_strata,
 )
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.shortcut_index import ABSENT, slot_of
+from timezonefinder.shortcut_index import ABSENT
 
 # one pass over this many points is a round; the reported value is the min over
 # ``REPEATS`` rounds, the estimator the benchmark suite tracks (see
@@ -522,9 +580,13 @@ def make_ladder(
     tf: TimezoneFinder,
 ) -> list[tuple[str, Callable[[Points, Sequence[int]], int]]]:
     validate = utils.validate_coordinates
-    latlng_to_cell = h3.latlng_to_cell
-    res = SHORTCUT_H3_RES
     shortcuts = tf.shortcuts
+    # One rung where there were two. ``entry_at`` is what ``timezone_at`` calls, and it
+    # computes the cell itself - the grid tree's integer arithmetic followed by one or
+    # two table reads - where the H3 index needed a separate ``h3.latlng_to_cell`` rung
+    # in front of a cell-taking ``entry_of``. Splitting it again would price a call the
+    # lookup does not make.
+    entry_at = shortcuts.entry_at
     # A rung must bind the symbol the lookup binds. ``timezone_at`` calls
     # ``self.zone_names.name_of``; the public ``tf.zone_name_from_id`` in front of it
     # adds a sign check, and the public/private accessor split on this class exists
@@ -551,20 +613,11 @@ def make_ladder(
             n += 1
         return n
 
-    def s2_h3(points: Points, stops: Sequence[int]) -> int:
-        n = 0
-        for (lng, lat), stop in zip(points, stops, strict=True):
-            lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            n += 1
-        return n
-
     def s3_shortcut(points: Points, stops: Sequence[int]) -> int:
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             n += 1
         return n
 
@@ -572,8 +625,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
             n += 1
@@ -583,8 +635,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -596,8 +647,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -610,8 +660,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -625,8 +674,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -647,8 +695,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -674,8 +721,7 @@ def make_ladder(
         n = 0
         for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
-            hex_id = latlng_to_cell(lat, lng, res)
-            entry = shortcuts.entry_of(hex_id)
+            entry = entry_at(lng, lat)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
@@ -703,8 +749,7 @@ def make_ladder(
     return [
         ("loop overhead", s0_loop),
         ("validate_coordinates", s1_validate),
-        ("h3.latlng_to_cell", s2_h3),
-        ("shortcut table read", s3_shortcut),
+        ("shortcut entry_at", s3_shortcut),
         ("zone_name_from_id", s4_zone_name),
         ("candidate list slice", s4b_candidates),
         ("last_change read", s6_last_change),
@@ -864,11 +909,8 @@ OVERHEAD_REFERENCE_SECONDS = 2.0
 # signal that this table needs a new marker.
 BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("validate_coordinates", "prologue"),
-    ("latlng_to_cell", "prologue"),
     ("entry = int(", "prologue"),
     ("shortcuts.entry_at", "prologue"),
-    ("SLOT_BASE_CELL_SHIFT", "prologue"),
-    ("SLOT_DIGITS_SHIFT", "prologue"),
     ("if entry >= 0", "prologue"),
     ("if entry == ABSENT", "prologue"),
     ("zone_name_from_id", "zone name"),

@@ -1,0 +1,25 @@
+# Writing and keeping contributor memory
+
+How a rule gets recorded, where it goes, and what never belongs in one. The [core contract](core-contributor-contract.md) says what a change owes; this says what a change owes the *next* change. It governs every file under `contributing/`, so it applies to whichever route brought you here.
+
+## Recording a rule
+
+When an implementation request establishes or exposes a reusable, non-obvious invariant with a concrete failure mode, default to delivering the implementation and its contributor-memory rule. Amend the narrowest module so the next coding agent inherits the decision. Mechanical edits, already-recorded rules, and lessons without a durable failure mode create no new memory.
+
+Record a repository fact only when it is durable beyond the current change, non-obvious enough to have caused a failed check or wrong assumption, and has a concrete failure mode. Put it in the narrowest existing module, or at the code/configuration decision site when that is sufficient. Never copy a rule merely to make it more visible: route to its canonical owner instead.
+
+Amend existing memory instead of appending corrective history. An amendment that leaves the original claim standing above it is an append: rewrite the claim, because a reader who skims one line gets the retired answer. Delete or correct stale rules as part of the change that invalidates them. A confidently wrong instruction costs more than a missing one. A rule that *removes* a check is code that removes a check: state at the rule what now passes unexamined, because the cost falls on a later change that no one will connect back to it. Do not restate what the code, git history, Makefile, or public documentation already makes clear.
+
+## Keeping it small
+
+State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. **The test is whether the sentence states a mechanism or an episode.** What an incident teaches is almost always a mechanism, and a mechanism states in the present tense — not "this bit four pages after one loader change" but "a figure quoted in prose is typically quoted in three more places before anyone re-measures". Write the mechanism and delete the episode; a rule that needs the episode in order to be believed is a rule that has not been stated yet. Link the authoritative code, test, schema, or public documentation instead of copying it.
+
+**A change that deletes code records the invariant the deletion establishes, never the deletion.** "The converter stopped keeping a second copy of every source ring when the vertex cache went" is an anecdote that ages the moment it is written and that nothing re-reads; "the converter must not keep a second copy of the source rings" is a rule the next contributor can follow and a reviewer can apply. So: ask what a removal makes true from now on, write it in the present tense in the matching `development/` module, and delete the rest.
+
+**Delete a reference to a file or symbol that no longer exists; never reword it to the past tense.** A rule naming `Hex.lies_in_cell` sends a reader looking for it, and "both are deleted" is a sentence whose only content is that it has no content. This holds for every module, including `decisions/`, and it holds for the next removal as much as this one.
+
+**A *checked-and-found-sound* entry about deleted code is deleted outright.** It records that something was examined and is fine; there is nothing left to examine.
+
+**`decisions/` keeps only what stops a re-proposal** — the options that were refused and the measurement that refused them — **and states the decision in force in the present tense.** It is not a log. Who decided, on what date, in what order, what a hold was once waiting for, and that the work has since shipped are all Git's; a reader of a decision file needs the rule and the dead ends. When a premise moves, rewrite the claim; keep a superseded measurement only where the [register rules](improvements/improvement-register-rules.md) require it to stop the same proposal returning, and say what it refuses rather than what happened.
+
+Update the narrowest existing module before creating one. A new module needs a descriptive subject filename, a direct route from `CONTRIBUTING.md`, and a bounded subject. **Splitting is the contributor's call and is never a maintainer question:** when a module is at or near its word budget, split it in the change that would have pushed it over, rather than shaving load-bearing text to fit or asking whether to. Pay for the split by condensing first — replace a rule copied from another module with a route to it, delete superseded wording, consolidate duplicates — then move one bounded section out whole. Move it verbatim and diff the result against the original, because a split that quietly drops a rule is unreviewable. A split sized to the words the current change happens to need is the wrong size. Historical sequence belongs in Git, not contributor memory.

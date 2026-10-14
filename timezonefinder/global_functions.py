@@ -263,7 +263,7 @@ def unique_timezone_at(*, lng: float, lat: float) -> str | None:
     """
     Get the timezone for a coordinate if the shortcut zone is unambiguous.
 
-    Returns None if the H3 shortcut cell contains multiple timezones or no zones.
+    Returns None if the shortcut cell contains multiple timezones or no zones.
 
     :param lng: Longitude of the point in degrees (-180.0 to 180.0)
     :param lat: Latitude of the point in degrees (-90.0 to 90.0)
@@ -277,7 +277,7 @@ def unique_timezone_at(*, lng: float, lat: float) -> str | None:
 
     Note:
         This is faster than timezone_at() but may return None even for valid coordinates
-        if the H3 cell spans multiple timezones.
+        if the cell spans multiple timezones.
     """
     return _get_tf_instance().unique_timezone_at(lng=lng, lat=lat)
 

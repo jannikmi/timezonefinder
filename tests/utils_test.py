@@ -4,7 +4,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Callable
 
-import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
@@ -30,6 +29,13 @@ from tests.auxiliaries import (
 )
 from tests.locations import OUT_OF_RANGE_COORDINATES
 from timezonefinder import utils_clang, utils_numba, utils
+from timezonefinder.shortcut_index import (
+    BLOCK_CELLS,
+    BLOCK_SIDE,
+    ROOT_CELLS,
+    ROOT_COLUMNS,
+    child_cells_of,
+)
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
@@ -249,11 +255,11 @@ def test_convert2ints():
 def test_convert2ints_from_source_rounds_onto_the_source_grid():
     """The default conversion is for transient geometry; stored rings ask for the grid.
 
-    Both exist because both are needed: an H3 cell's boundary is computed here and has
-    as many decimals as a float carries, while a *stored* boundary coordinate has to sit
-    on the grid the packed payload counts residuals in. Converting the first the second
-    way raises - which is how this got the wrong way round once, and what
-    `scripts/hex_utils.py` would hit again.
+    Both exist because both are needed: a coordinate computed at conversion time has as
+    many decimals as a float carries, while a *stored* boundary coordinate has to sit on
+    the grid the packed payload counts residuals in. Converting the first the second way
+    raises, so a converter-side caller that picks the wrong one fails loudly rather than
+    quantizing geometry that was never on the grid.
     """
     coords = ([13.358, -0.5], [52.5186, 0.25])
     assert convert2ints(coords, from_source=True) == [
@@ -551,26 +557,30 @@ def test_render_frequencies_keeps_the_bare_zero_without_a_label():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("resolution", [0, 3, 5])
-def test_shortcut_index_stats_takes_the_cell_count_from_h3(monkeypatch, resolution):
-    """``possible_cells`` is the denominator of every coverage figure.
+@pytest.mark.parametrize("refined", [0, 1, 3])
+def test_shortcut_index_stats_read_the_tree_shape_off_the_mapping(refined):
+    """``leaf_cells`` is the denominator of every coverage figure, and it is not a
+    constant: a root cell only one zone can own *is* a cell, and the block it would have
+    refined into does not exist. So how many cells the tree has depends on the data, and
+    the only place that is recorded is which finest-level cells the mapping carries.
 
-    It used to come from a ladder of literals covering resolutions 0-4 only,
-    with everything else falling through to the number of cells actually
-    stored - which makes ``coverage_ratio`` exactly 1.0 and reports complete H3
-    coverage for a resolution nobody tabulated. Resolution 5 is in this
-    parametrization because it is the first one past the end of that ladder:
-    the two tabulated resolutions agree with h3 and so cannot show the
-    difference.
+    Parametrized on how many root cells refine because the arithmetic is exactly where a
+    mistake hides: every refined root cell trades itself for ``BLOCK_CELLS`` children,
+    so counting it as well as its children over-reports the total and under-reports
+    coverage.
     """
-    monkeypatch.setattr(reporting, "SHORTCUT_H3_RES", resolution)
-    mapping = {0: 1, 1: np.array([0, 1]), 2: np.array([], dtype=int)}
+    mapping: dict[int, object] = {0: 1, 1: np.array([0, 1]), 2: np.array([], dtype=int)}
+    for root in range(ROOT_CELLS - refined, ROOT_CELLS):
+        for child in child_cells_of(root):
+            mapping[int(child)] = 1
 
     stats = reporting.calculate_shortcut_index_stats(mapping, [7, 7])
 
-    assert stats["h3_resolution"] == resolution
-    assert stats["possible_cells"] == h3.get_num_cells(resolution)
-    # the fallback this replaces reported stored == possible, hence full coverage
+    assert stats["root_columns"] == ROOT_COLUMNS
+    assert stats["block_side"] == BLOCK_SIDE
+    assert stats["root_cells"] == ROOT_CELLS
+    assert stats["refined_root_cells"] == refined
+    assert stats["leaf_cells"] == ROOT_CELLS + refined * (BLOCK_CELLS - 1)
     assert stats["stored_cells"] == len(mapping)
     assert stats["coverage_ratio"] < 1.0
 
@@ -610,7 +620,7 @@ def test_shortcut_efficiency_metrics_read_the_counts_they_are_given():
         zones_per_shortcut=[1, 2, 3, 0],
     )
 
-    metrics = reporting.shortcut_efficiency_metrics(counts, possible_cells=8)
+    metrics = reporting.shortcut_efficiency_metrics(counts, leaf_cells=8)
 
     # one of four cells answers outright, of eight cells the grid could hold
     assert metrics["unique_entry_fraction"] == 0.25
@@ -626,7 +636,7 @@ def test_shortcut_efficiency_metrics_read_the_counts_they_are_given():
 def test_shortcut_efficiency_metrics_answer_zero_on_an_empty_index():
     counts = reporting.ShortcutEntryCounts(0, 0, 0, 0, 0, [], [])
 
-    metrics = reporting.shortcut_efficiency_metrics(counts, possible_cells=0)
+    metrics = reporting.shortcut_efficiency_metrics(counts, leaf_cells=0)
 
     # the keys as well as the values: every value on this path is 0.0, so a
     # dropped or misnamed key is invisible to a comparison of values alone

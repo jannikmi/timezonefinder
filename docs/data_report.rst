@@ -225,59 +225,63 @@ Shortcut Index Overview
 
 .. list-table::
    :header-rows: 1
-   :widths: 82 18
+   :widths: 54 46
 
    * - Shortcut Index Metric
      - Value
-   * - H3 Resolution
-     - 4
+   * - Grid
+     - 384 root columns, 4x4 blocks
    * - Total shortcut entries
-     - 288,122
+     - 231,798
    * - Zone entries (direct lookup)
-     - 256,732
+     - 180,328
    * - Polygon entries (require testing)
-     - 31,390
+     - 51,470
    * - Empty entries
      - 0
    * - Total polygon references
-     - 65,241
+     - 105,118
    * -
      -
-   * - H3 cells stored
-     - 288,122
-   * - H3 cells possible at resolution
-     - 288,122
-   * - H3 cells missing
+   * - Root cells
+     - 73,728
+   * - Root cells refined into blocks
+     - 10,538
+   * - Cells in the tree
+     - 231,798
+   * - Cells stored
+     - 231,798
+   * - Cells missing
      - 0
-   * - H3 coverage ratio
+   * - Coverage ratio
      - 1.000
    * -
      -
    * - Unique entry fraction
-     - 0.891
+     - 0.778
    * - Unique surface fraction
-     - 0.891
+     - 0.778
    * - Zone distribution efficiency
-     - 0.891
+     - 0.778
    * - Avg polygons per polygon entry
-     - 2.08
+     - 2.04
    * -
      -
    * - Zone storage (KB)
-     - 2256.4
+     - 1584.9
    * - Polygon storage (KB)
-     - 372.7
+     - 607.4
    * - Total estimated storage (KB)
-     - 2629.1
+     - 2192.3
    * - Storage compression ratio
-     - 0.90x
+     - 0.92x
 
 
 
 Shortcut Entry Distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-How much work a lookup in one H3 cell costs. A cell covered by a single timezone stores that zone id directly and needs no point-in-polygon test at all; the rest store the candidate polygons a lookup has to test.
+How much work a lookup in one cell costs. A cell covered by a single timezone stores that zone id directly and needs no point-in-polygon test at all; the rest store the candidate polygons a lookup has to test.
 
 No cell needs exactly one test: a single candidate is unambiguous, so it is stored as a direct zone id instead.
 
@@ -292,37 +296,42 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 256732
-     - 89.11%
-     - 89.11%
-     - 10.89%
+     - 180328
+     - 77.8%
+     - 77.8%
+     - 22.2%
    * - 2
-     - 29368
-     - 10.19%
-     - 99.3%
-     - 0.7%
+     - 49597
+     - 21.4%
+     - 99.19%
+     - 0.81%
    * - 3
-     - 1836
-     - 0.64%
-     - 99.94%
-     - 0.06%
-   * - 4
-     - 135
+     - 1768
+     - 0.76%
+     - 99.95%
      - 0.05%
-     - 99.98%
-     - 0.02%
+   * - 4
+     - 71
+     - 0.03%
+     - 99.99%
+     - 0.01%
    * - 5
-     - 25
+     - 13
      - 0.01%
      - 99.99%
      - 0.01%
    * - 6
-     - 9
+     - 6
      - 0.0%
      - 99.99%
      - 0.01%
    * - 7
-     - 5
+     - 3
+     - 0.0%
+     - 99.99%
+     - 0.01%
+   * - 8
+     - 1
      - 0.0%
      - 100.0%
      - 0.0%
@@ -336,8 +345,13 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 13
-     - 3
+   * - 11
+     - 2
+     - 0.0%
+     - 100.0%
+     - 0.0%
+   * - 14
+     - 1
      - 0.0%
      - 100.0%
      - 0.0%
@@ -346,17 +360,12 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 17
+   * - 18
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 25
-     - 1
-     - 0.0%
-     - 100.0%
-     - 0.0%
-   * - 31
+   * - 24
      - 1
      - 0.0%
      - 100.0%
@@ -366,7 +375,7 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 50
+   * - 47
      - 1
      - 0.0%
      - 100.0%
@@ -383,37 +392,27 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 256732
-     - 89.11%
-     - 89.11%
-     - 10.89%
+     - 180328
+     - 77.8%
+     - 77.8%
+     - 22.2%
    * - 2
-     - 29641
-     - 10.29%
-     - 99.39%
-     - 0.61%
+     - 49920
+     - 21.54%
+     - 99.33%
+     - 0.67%
    * - 3
-     - 1657
-     - 0.58%
-     - 99.97%
-     - 0.03%
+     - 1506
+     - 0.65%
+     - 99.98%
+     - 0.02%
    * - 4
-     - 75
-     - 0.03%
-     - 99.99%
-     - 0.01%
+     - 40
+     - 0.02%
+     - 100.0%
+     - 0.0%
    * - 5
-     - 13
-     - 0.0%
-     - 100.0%
-     - 0.0%
-   * - 6
-     - 3
-     - 0.0%
-     - 100.0%
-     - 0.0%
-   * - 25
-     - 1
+     - 4
      - 0.0%
      - 100.0%
      - 0.0%
@@ -433,13 +432,13 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 30.50
-     - 97.82%
+     - 98.13%
    * - hole polygon data
      - 0.09
      - 0.29%
    * - shortcut index
-     - 0.59
-     - 1.89%
+     - 0.49
+     - 1.57%
    * - Total
-     - 31.18
+     - 31.08
      - 100.00%

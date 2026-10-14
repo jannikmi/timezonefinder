@@ -183,10 +183,16 @@ def test_a_change_at_the_gate_still_passes(monkeypatch, tmp_path) -> None:
 # a hand-edit on every data update, discovered after a full converter run: 2026d failed
 # its own release CI on exactly that.
 #
-# What a stale table cannot survive is a *format* change, which moves every byte count
-# at once and leaves the band test comparing numbers from two different layouts. That
-# is what CALIBRATION_FORMAT_VERSION below guards, and it is the only event that
-# obliges anyone to touch this table again.
+# What a stale table cannot survive is a *format* change that moves the polygon payload,
+# because it moves every byte count at once and leaves the band test comparing numbers
+# from two different layouts. That is what CALIBRATION_FORMAT_VERSION below guards, and
+# it is the only event that obliges anyone to touch this table again.
+#
+# A format bump does not always move them. Format 4 replaced the shortcut index and left
+# POLYGON_LAYOUT_VERSION at 3: re-compiling 2026d under it reproduced both counts below
+# to the byte, so the table carried over unchanged and only the constant moved. The
+# guard still had to fire, which is the point - the author is the one who can tell the
+# two cases apart, and nothing else would have asked them to.
 CALIBRATION_PAYLOADS = {
     "2025c": {"boundary_payload_bytes": 31_034_584, "hole_payload_bytes": 97_452},
     "2026a": {"boundary_payload_bytes": 31_116_264, "hole_payload_bytes": 94_936},
@@ -198,19 +204,21 @@ CALIBRATION_PAYLOADS = {
 
 # The format generation every byte count above was measured in. Restated rather than
 # derived, because the point is to notice when the two stop agreeing.
-CALIBRATION_FORMAT_VERSION = 3
+CALIBRATION_FORMAT_VERSION = 4
 
 
 @pytest.mark.unit
 def test_the_calibration_describes_the_format_this_code_reads() -> None:
     """A format change invalidates the whole table at once, and silently.
 
-    The numbers are compiled payload sizes, so a new layout moves all of them
+    The numbers are compiled payload sizes, so a layout change moves all of them
     together. The band test below would keep passing on them - comparing releases
     measured in a format nothing in the tree produces any more - and the bands would
     then be calibrated against nothing. A format change is already an ordered
     two-distribution release, so re-deriving the table is work its author is in a
-    position to do; what they cannot do is notice the obligation unaided.
+    position to do; what they cannot do is notice the obligation unaided. Nor can a
+    check tell a bump that moved the polygon payload from one that did not, which is
+    exactly why this asks a person rather than deriving an answer.
     """
     assert DATA_FORMAT_VERSION == CALIBRATION_FORMAT_VERSION, (
         f"the payload sizes in CALIBRATION_PAYLOADS were measured in data format "

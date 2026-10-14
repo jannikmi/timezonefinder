@@ -9,7 +9,7 @@ The position in one paragraph
 polygons exactly as the source dataset provides them - every vertex of every polygon and every
 hole, at the ~11 cm resolution its source publishes - and never simplifies them. :doc:`data_report` is generated
 from the packaged data and carries the current counts. Speed is the constraint that work is done
-under, not the goal: the H3 spatial
+under, not the goal: the grid-tree spatial
 index, the integer coordinate representation and the optional acceleration backends exist to make
 full-resolution geometry affordable, not to shave the last microsecond off a lookup.
 
@@ -98,10 +98,10 @@ difference is in what they do with that dataset's geometry.
      - Limited only by the source dataset
      - Reduced near borders, in proportion to the simplification (PyPI build; the ``+full`` build does not simplify)
    * - Spatial Index
-     - H3 hexagons at resolution 4 (~288k cells); :doc:`data_report` lists the index size
+     - an aligned grid tree, 0.9375-degree cells refining to 0.234375; :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
    * - Time to First Answer
-     - Imports NumPy and H3, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)
+     - Imports NumPy, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
      - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
@@ -135,7 +135,7 @@ difference is in what they do with that dataset's geometry.
    about two libraries.
 
    What it shows: ``tzfpy`` is the faster one per lookup, on every point class and by a single-digit
-   factor throughout. The gap is smallest where a coordinate's H3 cell already determines the answer
+   factor throughout. The gap is smallest where a coordinate's shortcut cell already determines the answer
    and widest where this package has to fall through to a full point-in-polygon test - the shape you
    would predict from the design difference, and the price of the accuracy this package is for.
 
@@ -147,7 +147,7 @@ difference is in what they do with that dataset's geometry.
 
    What it also shows, and what this page previously got wrong: **neither package starts instantly.**
    ``tzfpy`` imports in about a millisecond, but it deserialises its index lazily inside the first
-   query, and that costs about as much as this package spends importing NumPy and H3 and reading its
+   query, and that costs about as much as this package spends importing NumPy and reading its
    own index. Measured all the way to a first answer, the two land close enough together that
    startup is not a reason to choose either - which is why the decision table below no longer
    lists it.

@@ -41,7 +41,7 @@ These methods are reusable audits, not a schedule. Repeat one when its trigger i
 
 ## Shortcut coverage sweep
 
-- Replay `scripts/hex_utils.py::lies_in_cell` and the three overlap helpers in `scripts/utils_numba.py` against packaged binaries.
+- Replay the converter's candidate rule - `scripts/grid_cells.py::owned_pairs` - against the packaged binaries rather than against the converter's own in-memory geometry. Replay the *rule*, not a site: the sites move when the index does, and a method pinned to one stops running.
 - Seven resolution-5 child centers across all 288,122 shortcut cells exercise 2,016,842 coordinates.
 - The original sweep found eight bad answers and corrected the diagnosis from pole-enclosing cells to antimeridian-straddling cells.
 - After checking every packaged polygon's longitude span and frame, the clean rerun found no answer from a cell lacking a containing polygon.

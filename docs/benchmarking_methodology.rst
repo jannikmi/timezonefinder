@@ -158,7 +158,7 @@ value is the fastest such pass. That design buys comparability on a noisy runner
 by discarding the shape of the distribution *before* any estimator sees it. A batch mean cannot
 distinguish 2,500 queries that each cost 2 µs from 2,475 that cost 1 µs and 25 that cost 100 µs.
 
-For this package that distinction is the interesting one. A query whose H3 cell holds a single zone
+For this package that distinction is the interesting one. A query whose shortcut cell holds a single zone
 reads no geometry at all and costs ~1 µs; a query that falls in a very large boundary polygon is
 answered by one ray cast across that whole ring and costs tens of microseconds. Query time
 correlates 0.92 with *vertices tested* and only 0.76 with the number of candidate polygons: the tail
@@ -318,7 +318,7 @@ equivalent of, and which costs 84 -> 188 ns. Measure the whole public call and l
 fall where it falls.
 
 **Alternate the order of a paired comparison.** Running A then B inside each round lets A warm
-everything the two share - coordinate validation, the H3 call, the zone-name lookup, the branch
+everything the two share - coordinate validation, the cell lookup, the zone-name lookup, the branch
 predictors - and hands B the benefit for free. The same shortcut comparison read as **13.3 %
 faster** in a fixed order and **0.3 %** once the order alternated round by round.
 
@@ -400,20 +400,23 @@ What a stage's share does and does not bound
 ``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
 asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
 
-The shortcut lookup is 117-145 ns: **13-15 % of a unique-zone query, ~1 % of an ambiguous one, and
-~7 % of the uniformly random stratum** - the last measured directly rather than derived, which is
-what makes it the one to rank on. So making that lookup infinitely fast wins at most ~7 % of a
-realistic workload, and the part of that inside the 3-9 % jitter of a single machine is not
-reliably measurable at all. Making it *slower* is not bounded that way: one plausible redesign of
-the same stage (``np.searchsorted`` over sorted keys) measured **+93 % of a unique query**, and
-since ~89 % of a random workload is answered on the unique path, a regression there is amplified
-into the mixed figure rather than diluted out of it.
+Where the ladder points is the **prologue** - coordinate validation and the cell computation,
+before any lookup logic runs - because on a workload most of whose queries need no geometry, that
+is nearly all of the query. The committed ``FINDINGS`` block in
+``prototypes/query_stage_profile.py`` carries the current per-stage figures; this page describes
+how to read them rather than restating them.
+
+Read a small share asymmetrically. A stage the ladder puts in single digits of a random workload
+bounds what removing it could win, and the part of that inside a single machine's 3-9 % jitter is
+not reliably measurable at all. Making such a stage *slower* is not bounded the same way: one
+plausible redesign of the shortcut table read (``np.searchsorted`` over sorted keys) measured
+**+93 % of a unique query**, and since the large majority of a random workload is answered on that
+path, a regression there is amplified into the mixed figure rather than diluted out of it.
 
 The rule that follows, for any stage the ladder puts in single digits: ask whether a change keeps
 it roughly free, never whether it makes it faster, and decide on a whole-query A/B rather than on
-the stage. Where a real win would have to come from is visible in the same ladder -
-``validate_coordinates`` at ~30 % and ``h3.latlng_to_cell`` at ~40 %, **70 % of a unique-zone query
-in two calls before any lookup logic runs.**
+the stage - ``benchmarks/candidate_comparison.py`` is that harness. Conversely, a stage the ladder
+puts at a third or more of a workload is worth a redesign, and the one it named got one.
 
 
 Calibrating the shortcut-ordering model
@@ -436,7 +439,7 @@ pytest-benchmark measures wall clock, and running ``tracemalloc`` across its cal
 would distort the very timings those suites exist to produce.
 
 Each configuration is measured in a **fresh subprocess**. ``import timezonefinder`` costs ~95 MiB of
-NumPy and H3 before any timezone data is touched, so only a delta against a post-import baseline is
+NumPy before any timezone data is touched, so only a delta against a post-import baseline is
 meaningful - and a second finder built in the same process would inherit the first one's warmed
 page cache and freed-but-unreturned arenas.
 
@@ -506,7 +509,7 @@ Three things this deliberately does not do:
 
 The startup half of that suite is worth its own note, because the obvious measurement is the wrong
 one. Timing *construction* would score ``tzfpy`` as free: it imports in about a millisecond and then
-deserialises its index inside the **first query**, where this package imports NumPy and H3 and reads
+deserialises its index inside the **first query**, where this package imports NumPy and reads
 its index when a finder is built. What a caller actually waits for is the first answer, so that is
 what is measured - a fresh ``python -c`` per round, with a bare-interpreter row alongside it so the
 interpreter's own cost can be subtracted.

@@ -9,7 +9,7 @@ The proposal was to store/query only the relevant polygon sections for ambiguous
 Preserve these distinctions when revisiting the idea:
 
 - **Naive planar clipping and rounded cut vertices are unsuitable:** both change containment on the recorded dataset. Padding the cell alone does not repair moved source edges.
-- **Exact rectangular clipping is a viable geometric construction, not a production correctness certificate.** Its Python implementation passed the recorded checks; its floating-point cell envelopes remain uncertified.
+- **Exact rectangular clipping is a viable geometric construction, not a production correctness certificate.** Its Python implementation passed the recorded checks. The cell's own bounds are exact integers, so the clipping window needs no numerical certification; what remains uncertified is the exact arithmetic in a native reader.
 - **Sharing original coordinate runs is lossless relative to those exact fragments.** It avoids paying twice for geometry exposed by `get_geometry` and preserves the existing source precision and holes.
 - **The Python reference reader is not a viable query engine.** Its latency does not measure the potential of a future native reader. Do not use its approximately 200x slowdown to rule out every cell-local design, or describe a speedup as established because fewer edges seem necessary.
 
@@ -43,7 +43,7 @@ The exact representation passed all 69,483 ring round trips, 1,161,572 window-co
 
 Five focused tests covered integer-grid queries, binary round trips, disconnected intersections, holes, fractional cuts and recorded failures. Independent review additionally checked 72,200 integer queries on 200 randomized polygon walks, all 756 source-hole resolutions and a fractional-floor/source-vertex collision. These are evidence, not exhaustive proofs of the implementation. Sharing's full coordinate comparison establishes equivalence to the tested exact predecessor, not that the predecessor has no remaining defects.
 
-Production prerequisites remain a certified numerical envelope or explicit floating-point error bound, an overflow audit of native rational products, source-release pairing enforcement, and a reader that does not materialize whole source rings. Stored int64 numerators do not imply int64 intermediate products are safe. The shared prototype records source hashes but does not enforce them in its reader; the measured run checked against the same source dataset.
+Production prerequisites remain an overflow audit of native rational products, source-release pairing enforcement, and a reader that does not materialize whole source rings. Stored int64 numerators do not imply int64 intermediate products are safe. The shared prototype records source hashes but does not enforce them in its reader; the measured run checked against the same source dataset.
 
 ## The only latency experiment
 

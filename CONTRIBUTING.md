@@ -4,6 +4,7 @@ This is the entrypoint for human and automated contributors. Read the [core cont
 
 | Task trigger | Required files | Conditional files |
 |---|---|---|
+| Recording a rule, or any edit under `contributing/` | [Writing and keeping contributor memory](contributing/contributor-memory-rules.md) | |
 | First orientation or architectural work | [Project purpose and constraints](contributing/project/project-purpose-runtime-constraints-and-non-goals.md), [repository layout and lookup flow](contributing/project/repository-layout-and-runtime-lookup-flow.md) | [Public API contract](contributing/project/public-api-and-compatibility-contract.md) when changing exported behavior |
 | Planning, scoping, or design exploration before implementing | [Trade-off surfacing and validation](contributing/development/trade-off-surfacing-and-validation.md), [project purpose and constraints](contributing/project/project-purpose-runtime-constraints-and-non-goals.md) | [Measurement baseline](contributing/improvements/query-performance-measurement-baseline.md) when the trade-off is latency or memory |
 | Ordinary code or test change | [Coding rules](contributing/development/coding-design-and-state-management-rules.md), [testing strategy](contributing/development/testing-strategy-and-change-scope.md) | [Generated-file rules](contributing/development/generated-file-regeneration-rules.md) when an artifact is generated |

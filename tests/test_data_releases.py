@@ -200,7 +200,7 @@ def test_the_cli_records_a_release(tmp_path) -> None:
 @pytest.mark.unit
 def test_the_cli_derives_a_post_release(capsys) -> None:
     assert main(["derive-version", "--data-tag", "2026c", "--post", "2"]) == 0
-    assert capsys.readouterr().out == "3.2026.3.post2\n"
+    assert capsys.readouterr().out == "4.2026.3.post2\n"
 
 
 @pytest.mark.unit

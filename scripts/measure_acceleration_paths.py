@@ -275,7 +275,7 @@ def _startup_probe_point() -> tuple[float, float]:
     """A point the shortcut index cannot answer on its own.
 
     The probe times the *first* query, and ``numba.njit`` compiles when the kernel is
-    first called rather than when it is imported. A point whose H3 cell holds one
+    first called rather than when it is imported. A point whose shortcut cell holds one
     zone is answered without any point-in-polygon test, so it would leave the
     compilation out of the number the reader is deciding against.
     """
@@ -390,9 +390,9 @@ def main() -> None:
     if DEBUG:
         # the same guard benchmarks/conftest.py and measure_query_latency.py apply
         raise RuntimeError(
-            "scripts.configs.DEBUG is True, which overrides SHORTCUT_H3_RES to a much "
-            "coarser resolution. It changes how many queries reach the geometry at "
-            "all, which is most of what this comparison measures."
+            "scripts.configs.DEBUG is True, which stops the parse after a handful of "
+            "zones. It changes how many queries reach the geometry at all, which is "
+            "most of what this comparison measures."
         )
     if not utils.clang_extension_loaded:
         raise RuntimeError(
@@ -403,7 +403,7 @@ def main() -> None:
 
     path = interpreted_path_name()
     # First, and in its own processes: every later line of this run has imported
-    # numpy, h3, the boundary data and - where the environment has it - numba, and
+    # numpy, the boundary data and - where the environment has it - numba, and
     # the startup cost is exactly what a process pays before any of that.
     startup = measure_startup(path)
     kernels = compare_kernels(path)

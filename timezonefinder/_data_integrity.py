@@ -17,7 +17,6 @@ import mmap
 from pathlib import Path
 
 import numpy as np
-from h3.api import numpy_int as h3
 
 from timezonefinder._block_index import block_latitude_ranges, nr_blocks_for
 from timezonefinder.block_payload import (
@@ -47,7 +46,6 @@ from timezonefinder.configs import (
     BLOCK_WIDTH_DTYPE,
     POLYGON_BLOCK_SIZE,
     SOURCE_COORD_STEP,
-    SHORTCUT_H3_RES,
     VERTEX_COUNT_DTYPE,
     ZONE_ID_RESULT_DTYPE,
 )
@@ -69,14 +67,12 @@ from timezonefinder.np_binary_helpers import (
 from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder.shortcut_index import (
     ABSENT,
-    SLOT_BASE_CELL_MASK,
-    SLOT_BASE_CELL_SHIFT,
-    SLOT_TABLE_SIZE,
+    BLOCK_CELLS,
+    ROOT_CELLS,
     get_last_change_idx,
     get_shortcut_file_path,
     narrowest_dtype_for,
     read_shortcuts_binary,
-    slots_of,
 )
 from timezonefinder.utils import (
     get_boundaries_dir,
@@ -753,72 +749,56 @@ def validate_zone_data(data_dir: Path) -> None:
         )
 
 
-def all_cells_at_shortcut_res() -> np.ndarray:
-    """Every H3 cell id at ``SHORTCUT_H3_RES``, ascending, as ``int64``."""
-    cells: list[int] = []
-    for res0 in h3.get_res0_cells():
-        cells.extend(int(c) for c in h3.cell_to_children(res0, SHORTCUT_H3_RES))
-    return np.array(sorted(cells), dtype=np.int64)
+def validate_tree_structure(index, path: Path) -> None:
+    """Check that every stored value addresses something, on both levels.
 
+    The lookup does no bounds checking: it divides a coordinate into the root table,
+    reads one ``int16``, and - if that is below ``ABSENT`` - reads the block it names
+    without asking whether the block exists. Two levels of the same tri-state have to
+    hold for that to be safe, and neither is self-announcing at lookup time.
 
-def validate_slot_layout_against_h3() -> None:
-    """Check the shortcut index's bit arithmetic against h3's *public* API, cell by cell.
+    What makes the *root* level different from the block level is that a negative root
+    value means a child block and a negative block value means a candidate list. The
+    two are indistinguishable as numbers, so which it is comes from the level alone -
+    and that is exactly why a root value pointing past the last block, or a block value
+    pointing past the last candidate list, is a silently wrong answer rather than an
+    error.
 
-    This is what makes addressing entries by H3 bit position a checked invariant rather
-    than a trusted one, and it is the whole answer to "h3-py does not promise the index
-    encoding as API". It does not have to: ``get_base_cell_number`` and
-    ``cell_to_child_pos`` are public, and between them they determine a cell's position
-    exactly as the bits do. So the lookup can slice bits while this proves that slicing
-    agrees with the supported accessors over every cell that exists. If h3 ever changes
-    the layout, this fails where the data is produced instead of silently returning a
-    neighbour's timezone.
-
-    Cost is why it lives here: the public route is ~2.5x the whole shortcut lookup per
-    query, and nothing at all once per build.
-
-    :raises DataIntegrityError: if the bits and the public accessors disagree
+    :raises DataIntegrityError: if a stored value addresses nothing
     """
-    cells = all_cells_at_shortcut_res()
-
-    # a dense reference index derived only from public API
-    base_offset: dict[int, int] = {}
-    run = 0
-    for cell in sorted(int(c) for c in h3.get_res0_cells()):
-        base_offset[int(h3.get_base_cell_number(cell))] = run
-        run += int(h3.cell_to_children_size(cell, SHORTCUT_H3_RES))
-
-    base_from_bits = (cells >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
-    public_index = np.empty(len(cells), dtype=np.int64)
-    for i, cell_id in enumerate(cells):
-        cell = int(cell_id)
-        base = int(h3.get_base_cell_number(cell))
-        if base != int(base_from_bits[i]):
-            raise DataIntegrityError(
-                f"h3's index encoding has moved: cell {cell:#x} reports base cell {base} "
-                f"through get_base_cell_number and {int(base_from_bits[i])} at bits "
-                f"{SLOT_BASE_CELL_SHIFT}-{SLOT_BASE_CELL_SHIFT + 6}. The shortcut index "
-                f"addresses entries by those bits, so every lookup in it is now wrong. "
-                f"Regenerate the data and bump SHORTCUT_LAYOUT_VERSION with "
-                f"DATA_FORMAT_VERSION."
-            )
-        public_index[i] = base_offset[base] + int(h3.cell_to_child_pos(cell, 0))
-
-    slots = slots_of(cells)
-    # The two must order the cells identically: same base cell first, then the same digit
-    # sequence. Equality of the indices themselves is not expected - the bit form is
-    # base-8 per digit and therefore sparser than the public form.
-    if not np.array_equal(np.argsort(slots), np.argsort(public_index)):
+    if len(index.table) != ROOT_CELLS:
         raise DataIntegrityError(
-            "the bit-derived shortcut slot orders cells differently from h3's public "
-            "get_base_cell_number / cell_to_child_pos. The index's entry order no longer "
-            "means what it did; regenerate the data and bump SHORTCUT_LAYOUT_VERSION "
-            "with DATA_FORMAT_VERSION."
+            f"{path}: the root table holds {len(index.table)} cells, but the grid this "
+            f"timezonefinder divides coordinates into has {ROOT_CELLS}. Every lookup "
+            f"past the first row would read another cell's answer."
         )
-
-    if len(np.unique(slots)) != len(cells) or int(slots.max()) >= SLOT_TABLE_SIZE:
+    if len(index.blocks) != index.nr_of_blocks * BLOCK_CELLS:
         raise DataIntegrityError(
-            "the shortcut slot map is no longer a bijection over the cells at "
-            f"resolution {SHORTCUT_H3_RES}."
+            f"{path}: the block array holds {len(index.blocks)} cells, which is not a "
+            f"whole number of {BLOCK_CELLS}-cell blocks. The descent addresses a child "
+            f"by block index times {BLOCK_CELLS}, so a partial block at the end means "
+            f"the last refined root cell reads past the array."
+        )
+    refined = index.table < ABSENT
+    block_indices = -(index.table[refined].astype(np.int64) + 2)
+    if len(block_indices) and int(block_indices.max()) >= index.nr_of_blocks:
+        raise DataIntegrityError(
+            f"{path}: a root cell names child block {int(block_indices.max())}, but only "
+            f"{index.nr_of_blocks} are stored. A lookup in that cell reads past the "
+            f"block array."
+        )
+    if index.nr_of_blocks != int(np.count_nonzero(refined)):
+        raise DataIntegrityError(
+            f"{path}: {index.nr_of_blocks} child blocks are stored but "
+            f"{int(np.count_nonzero(refined))} root cells name one. A block nothing "
+            f"points at is dead weight in a file whose whole purpose is to be small, "
+            f"and two root cells sharing a block would make one of them answer the "
+            f"other's region."
+        )
+    if len(block_indices) != len(np.unique(block_indices)):
+        raise DataIntegrityError(
+            f"{path}: two root cells name the same child block, so one of them answers "
+            f"the other's region."
         )
 
 
@@ -826,10 +806,11 @@ def validate_shortcut_index(data_dir: Path) -> None:
     """Check that the shortcut index in ``data_dir`` says what a lookup will read from it.
 
     The lookup does no bounds checking and no dispatch beyond the sign of one ``int16``:
-    it slices bits into the table, and follows what it finds there straight into the
-    payload. Everything that makes that safe is established here - the widths chosen by
-    fit rather than by headroom, the reserved table values, the precomputed stop index,
-    and the padding that must read as "nothing here" - because none of it is
+    it divides a coordinate into the root table, follows a negative value into the block
+    array, and follows what it finds there straight into the payload. Everything that
+    makes that safe is established here - the widths chosen by fit rather than by
+    headroom, the reserved values on each of the two levels, the payload being reachable
+    in its entirety, and the precomputed stop index - because none of it is
     self-announcing at lookup time. A stop index one too small returns a plausible wrong
     timezone; a zone id truncated into ``int16`` returns a different zone's name.
 
@@ -839,10 +820,9 @@ def validate_shortcut_index(data_dir: Path) -> None:
     :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
     :raises DataIntegrityError: if the index does not hold together
     """
-    validate_slot_layout_against_h3()
-
     path = get_shortcut_file_path(data_dir)
     index = read_shortcuts_binary(path)
+    validate_tree_structure(index, path)
     zone_ids = read_per_polygon_vector(get_zone_ids_path(data_dir))
     nr_of_zones = len(read_zone_names(data_dir))
     nr_of_boundaries = len(zone_ids)
@@ -903,8 +883,8 @@ def validate_shortcut_index(data_dir: Path) -> None:
                 f"longer agree on how the width is chosen."
             )
 
-    # Both widths that carry a zone id are int16 and both are chosen by fit: the table
-    # stores one per unique cell, and a batch lookup answers with an array of them. A
+    # Both widths that carry a zone id are int16 and both are chosen by fit: the tree
+    # stores one per answered cell, and a batch lookup answers with an array of them. A
     # zone count past that ceiling would wrap in either, so it is refused here rather
     # than truncated there - and here rather than at lookup time, because a finder must
     # not re-derive what the build already settled.
@@ -915,38 +895,28 @@ def validate_shortcut_index(data_dir: Path) -> None:
             f"{nr_of_zones - 1:,}, but the widest a zone id may be is "
             f"{ZONE_ID_RESULT_DTYPE.name} and it holds at most {zone_id_ceiling:,}. "
             "Widen ZONE_ID_RESULT_DTYPE (timezonefinder/configs.py) and TABLE_DTYPE "
-            "(timezonefinder/shortcut_index.py) to int32 together. TABLE_DTYPE changes "
+            "(timezonefinder/shortcut_index.py) to int32 together. TABLE_DTYPE covers "
+            "both levels of the tree and changes "
             "the binary layout, so bump SHORTCUT_LAYOUT_VERSION and DATA_FORMAT_VERSION "
             "with it and publish the data distribution before the code that reads it."
         )
 
-    table = index.table
-    zone_id_slots = table >= 0
-    if np.any(table[zone_id_slots] >= nr_of_zones):
-        raise DataIntegrityError(
-            f"{path}: the table answers with zone id "
-            f"{int(table[zone_id_slots].max())}, but {data_dir} names {nr_of_zones} "
-            "zones. Zone ids share the table with the candidate list indices, so a "
-            "value out of range here is a silently wrong answer rather than an error."
-        )
-    entry_slots = table < ABSENT
-    entry_indices = -(table[entry_slots].astype(np.int64) + 2)
+    for level, values in (("root table", index.table), ("block array", index.blocks)):
+        answered = values >= 0
+        if np.any(values[answered] >= nr_of_zones):
+            raise DataIntegrityError(
+                f"{path}: the {level} answers with zone id "
+                f"{int(values[answered].max())}, but {data_dir} names {nr_of_zones} "
+                "zones. Zone ids share the level with its negative markers, so a value "
+                "out of range here is a silently wrong answer rather than an error."
+            )
+    # a negative value means a candidate list on the block level, where the root level
+    # means a child block; `validate_tree_structure` is what checks the other one
+    entry_indices = -(index.blocks[index.blocks < ABSENT].astype(np.int64) + 2)
     if len(entry_indices) and int(entry_indices.max()) >= index.nr_of_entries:
         raise DataIntegrityError(
-            f"{path}: the table points at candidate list {int(entry_indices.max())}, but "
-            f"only {index.nr_of_entries} are stored."
-        )
-
-    # the padding: base-8 slots no cell at this resolution can address must read as
-    # absent, or the invariant "a slot without an entry answers nothing" is unassertable
-    reachable = np.zeros(SLOT_TABLE_SIZE, dtype=bool)
-    reachable[slots_of(all_cells_at_shortcut_res())] = True
-    if np.any(table[~reachable] != ABSENT):
-        raise DataIntegrityError(
-            f"{path}: {int(np.count_nonzero(table[~reachable] != ABSENT))} table slots no "
-            "H3 cell can address hold something other than the absent marker. They are "
-            "unreachable, so this changes no answer - but it is what the reader fills "
-            "them with, so it disagreeing means the expansion is not doing what it says."
+            f"{path}: the block array points at candidate list "
+            f"{int(entry_indices.max())}, but only {index.nr_of_entries} are stored."
         )
 
     # the precomputed stop index, against the function the query used to call

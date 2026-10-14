@@ -2,22 +2,16 @@
 
 This is the technical companion to [the findings and reopening conditions](cell-local-geometry-findings.md). The [dated evidence record](../measurements/cell-local-geometry-2026-09-09.json) preserves the measured bytes and inputs. The experiments did not modify the production package or dataset; temporary programs and binary outputs were not promoted into a maintained toolchain. The algorithms, record layouts, witnesses and sampling protocol below preserve the reproduction contract without depending on temporary file paths.
 
-## Two independent failures of naive clipping
+## The failure of naive clipping
 
-The first implementation intersected each candidate polygon, including holes, with a planar polygon joining `h3.cell_to_boundary` coordinates, using Shapely 2.1.2 on coordinates scaled by 10^7. A seeded 512-cell pilot preceded enumeration of all ambiguous shortcuts. Antimeridian cells were excluded rather than silently unwrapped or repaired. No invalid source candidate pairs were encountered in the included census.
+**Rounding a cut vertex changes containment**, and that is the failure any cell-local design has to answer. Clipping a ring at a cell boundary produces endpoints off the coordinate grid; rounding them onto it moves a *source* edge, and a query within a fraction of a unit of the cut then falls on the other side of it. Padding the cell does not repair a moved source edge, and keeping the intersections in float64 is not a proof of exact border behaviour either. Two witnesses on data 2026c, both about 0.001326 degrees from the clip boundary, with the integer pair authoritative — converting a displayed decimal through floating-point truncation can produce a different integer:
 
-To probe curved edges, convert neighboring boundary vertices to unit vectors, normalize their sum and nudge the midpoint toward the cell center by 10^-7. Convert back to longitude/latitude, ask actual `latlng_to_cell` membership, and check the planar clip. Of 185,237 deliberately adversarial probes, 92,266 belonged to the cell but lay outside its planar clip. There were 94,801 candidate-membership disagreements; these are **not a production query error rate or counts of wrong timezone names**.
-
-A witness is cell `0x8400001ffffffff`, original polygon 1234, longitude `38.760102079734025`, latitude `79.3817262348777`: the original runtime contains the point but the floating planar clip does not. H3 constructs cell boundaries through spherical transformations, including vertices at face crossings; see [boundary construction](https://h3geo.org/docs/core-library/cellToBoundaryDesc/) and [gnomonic indexing](https://h3geo.org/docs/core-library/latLngToCellDesc/).
-
-Rounding cut vertices is a separate failure. Probe integer neighbors of interpolated points on clipped edges with fractional endpoints, retain queries assigned to the actual cell, and exclude points within 100 scaled units of the artificial mask boundary. Compare original and rounded-clipped containment with the repository integer kernel and its pure-Python form. Both witnesses below lie about 0.001326 degrees from the artificial seam; the unrounded floating clip agrees with the original.
-
-| Cut-vertex grid | Cell / original polygon | Integer query (longitude, latitude) | Original | Rounded clip |
+| Cut-vertex grid | Original polygon | Integer query (longitude, latitude) | Original | Rounded clip |
 | --- | --- | --- | --- | --- |
-| 10^-7 degrees | 0x8403569ffffffff / 1290 | (-817275056, 830386731) | inside | outside |
-| 10^-6 degrees | 0x8403569ffffffff / 1290 | (-817275055, 830386731) | outside | inside |
+| 10^-7 degrees | 1290 | (-817275056, 830386731) | inside | outside |
+| 10^-6 degrees | 1290 | (-817275055, 830386731) | outside | inside |
 
-The integer pairs are authoritative; converting a displayed decimal through floating-point truncation can produce another integer. A cell safety margin cannot fix a moved source edge. Retaining float64 intersections alone is not a proof of exact border behavior either.
+A second failure, recorded against cells whose boundaries were spherical, does not arise for cells that are axis-aligned rectangles of the coordinate plane: a planar clip of such a cell disagreed with the runtime's cell membership along curved edges, because the cell's own boundary was not a planar polygon. **A cell shape that stopped being a planar rectangle would bring it back**, together with the window construction below.
 
 ## Exact clipping construction
 
@@ -27,13 +21,11 @@ For a query strictly inside the window, clipping preserves the ring's odd/even i
 
 Keep the exterior first and subtract each surviving hole. An empty exterior is a zero-ring candidate; empty clipped holes contribute nothing and need no records. Keep candidate order and the original shortcut stop index: correctness is not derived from a new cell-dependent precedence rule. Python integers/Fractions make this reference predicate overflow-safe; a native implementation needs its own arithmetic audit.
 
-## Conservative windows and the outstanding proof obligation
+## The clipping window
 
-Take the largest angular distance between the H3 center and its boundary vertices and add 10^-6 radians. A spherical cap below pi/2 is geodesically convex: enclosing the boundary vertices encloses the minor great-circle arcs and the small cell interior. Latitude limits are center latitude plus/minus radius. If the cap excludes the poles, its longitude half-width is `asin(sin(radius)/cos(center_latitude))`; otherwise retain all longitudes. Round outward to the six-decimal source grid and pad by another source step, including world limits, so valid integer queries remain strictly inside.
+**The window is the cell, exactly**, because a cell is an axis-aligned rectangle of integer coordinates in the same plane the kernel reads: `timezonefinder.shortcut_index.cell_bounds` gives the four bounds and nothing has to be enclosed, padded or proved to enclose. No cell wraps the coordinate plane's cut or encloses a pole, so there is no split window, no polar case and no trigonometry.
 
-Split a cap crossing the antimeridian into two rectangles in the original longitude frame. Do not reinterpret the source polygon's longitude edges. This includes the cells excluded by the naive census and handles pole queries with a full-longitude window.
-
-The argument is analytic, but the implementation used ordinary floating-point trigonometry with an approximately six-meter angular guard. **It was not certified interval arithmetic or a proof of every H3 rounding branch.** Coverage probes sampled minor arcs at fractions 0, 0.25, 0.5 and 0.75, their midpoint perturbations toward/away from the center, and the center itself. Checking those samples does not discharge the numerical proof obligation.
+**That is the whole of the proof obligation this construction used to carry**, and it is worth knowing what it was, because a cell shape that is not a planar rectangle reinstates it: the window then has to be *derived* — enclose the cell's boundary vertices in a geodesically convex cap, bound the latitudes by the cap radius and the longitudes by `asin(sin(radius)/cos(center_latitude))`, round outward to the source grid and pad — and that derivation was floating-point trigonometry with an approximately six-metre guard, never certified interval arithmetic. Sampling minor arcs does not discharge it. Reinstating such a shape means discharging it.
 
 ## Serialized exact format
 
@@ -41,7 +33,7 @@ All columns are little-endian, checked for overflow before writing. The base coo
 
 | Record/file | Layout |
 | --- | --- |
-| Window table | uint32 first-window index per compact H3 slot; max uint32 means absent |
+| Window table | uint32 first-window index per cell; max uint32 means absent |
 | Window | 24 bytes: four int32 bounds, uint32 candidate start, uint16 candidate count/window count |
 | Candidate | 12 bytes: uint16 original polygon/zone IDs, uint32 ring start/count |
 | Ring | 28 bytes: uint32 vertex count, block start/count, payload word start/count, exception start/count |

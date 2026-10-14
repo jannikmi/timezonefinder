@@ -12,7 +12,7 @@ measurement.
 Why a separate process
 ----------------------
 
-``import timezonefinder`` pulls in numpy and h3 for ~100 MB of resident memory
+``import timezonefinder`` pulls in numpy for ~100 MB of resident memory
 before any timezone data is touched at all, which dwarfs everything this is
 trying to measure. Only a *delta* against a post-import baseline says anything
 about the library's own data, and taking that delta requires a process whose

@@ -49,7 +49,7 @@ stays correct at timezone borders.**
 
 
 In comparison to other alternatives this package aims at maximum accuracy around timezone borders while offering fast lookup performance and compatibility with many (Python) runtime environments.
-It combines preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
+It combines preprocessed polygon data, grid-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
 
 
 Quick Guide
@@ -94,15 +94,16 @@ The timezone boundary data is installed automatically as the separate ``timezone
 How it works
 ------------
 
-A lookup scales the coordinates to 32-bit integers (x 10^7, ~1.1 cm steps), finds the point's
-H3 hexagon at resolution 4, and reads a precomputed shortcut for that cell. Most cells are covered
-by a single timezone, so the answer is returned immediately with no geometry touched at all. Only
-an ambiguous cell falls through to the polygons it lists: bounding-box rejection first, then a
+A lookup scales the coordinates to 32-bit integers (x 10^7, ~1.1 cm steps), finds the point's cell
+in an aligned grid tree - 0.9375-degree cells, refining to 0.234375 degrees where several zones meet
+- by one integer division per axis, and reads a precomputed shortcut for that cell. Most cells are
+covered by a single timezone, so the answer is returned immediately with no geometry touched at all.
+Only an ambiguous cell falls through to the polygons it lists: bounding-box rejection first, then a
 ray-casting point-in-polygon test - holes before the outer ring, since holes are smaller and can
 reject the polygon outright.
 
 The central trade-off: **the boundary polygons are never simplified**, so border accuracy is limited
-only by the source dataset. The H3 index is what makes carrying full-resolution geometry affordable.
+only by the source dataset. The shortcut index is what makes carrying full-resolution geometry affordable.
 
 Since the dataset includes ocean zones, every coordinate on earth matches some timezone - use
 ``timezone_at_land()`` when you need to tell land from sea.
@@ -135,7 +136,7 @@ Engineering notes
 -----------------
 
 * `Architecture <https://timezonefinder.readthedocs.io/en/latest/architecture.html>`__ - the lookup pipeline, the acceleration backends, and the ceilings this package deliberately does not exceed
-* `Data Format <https://timezonefinder.readthedocs.io/en/latest/data_format.html>`__ - binary layouts, coordinate scaling and the H3 index
+* `Data Format <https://timezonefinder.readthedocs.io/en/latest/data_format.html>`__ - binary layouts, coordinate scaling and the shortcut index
 * `Benchmarking Methodology <https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html>`__ - the measurement design and where every threshold comes from
 * `Testing philosophy <https://timezonefinder.readthedocs.io/en/latest/architecture.html#tests-that-protect-guarantees-not-behaviour>`__ - the tests that exist because a rule needed a failure mode, plus the property-based suite and the version/backend matrix
 * `How it ships <https://timezonefinder.readthedocs.io/en/latest/architecture.html#how-it-ships>`__ - abi3 wheels, three libc targets, and the checks that stop a broken wheel reaching PyPI

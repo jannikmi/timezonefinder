@@ -1,9 +1,13 @@
 """Find sampled shortcut omissions without using shortcut geometry as the oracle.
 
 Run with ``uv run python -m scripts.audit_shortcut_candidates --output tmp/audit.json``.
-The default probes every resolution-4 cell's vertices and both sides of spherical
-edge midpoints. ``--mode source-edges`` probes stored ring vertices and planar edge
-midpoints; ``--mode seams`` probes poles and both antimeridian representations.
+The default probes every stored cell's four corners and the midpoint of each of its
+four edges. The corners are where the candidate rule is tightest: a cell owns its north
+and east edges and not its south or west, so each grid line is probed from both sides -
+once as one cell's ``x1`` and once as its neighbour's ``x0`` - without any point being
+invented. The midpoints cover a polygon boundary crossing a cell edge between corners.
+``--mode source-edges`` probes stored ring vertices and planar edge midpoints;
+``--mode seams`` probes poles and both antimeridian representations.
 ``--points`` replays a JSON array of [longitude, latitude] pairs instead.
 
 Only full polygon containment (including holes), independently of the shortcut,
@@ -15,7 +19,6 @@ Exit 1 means omissions were found, even when another candidate gives the same zo
 
 import argparse
 import hashlib
-import itertools
 import json
 import math
 import platform
@@ -23,41 +26,58 @@ import time
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
-import h3.api.basic_int as h3
 import numpy as np
 
 from scripts.assert_acceleration_path import active_acceleration_path
 from scripts.configs import SOURCE_DATA_DIR
 from scripts.utils import write_json
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import COORD2INT_FACTOR, SHORTCUT_H3_RES
+from timezonefinder.configs import (
+    COORD2INT_FACTOR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
+    SHORTCUT_BLOCK_SIDE,
+    SHORTCUT_ROOT_COLUMNS,
+)
+from timezonefinder.shortcut_index import ShortcutIndex, cell_bounds
 from timezonefinder.utils import coord2int
 
 
-def cell_edge_points(cells: Iterable[int]) -> Iterator[tuple[float, float]]:
-    """Probe reported vertices and spherical midpoints nudged toward/away from center."""
-    for cell in cells:
-        boundary = np.radians(h3.cell_to_boundary(cell))
-        lat, lng = boundary.T
-        vertices = np.array(
-            [np.cos(lat) * np.cos(lng), np.cos(lat) * np.sin(lng), np.sin(lat)]
-        ).T
-        clat, clng = np.radians(h3.cell_to_latlng(cell))
-        center = np.array(
-            [np.cos(clat) * np.cos(clng), np.cos(clat) * np.sin(clng), np.sin(clat)]
-        )
-        mids = vertices + np.roll(vertices, -1, axis=0)
-        mids /= np.linalg.norm(mids, axis=1)[:, None]
-        for lat_deg, lng_deg in h3.cell_to_boundary(cell):
-            yield lng_deg, lat_deg
-        for direction in (-1, 1):
-            probes = mids + direction * 1e-7 * center
-            probes /= np.linalg.norm(probes, axis=1)[:, None]
-            for vec in probes:
-                yield (
-                    float(np.degrees(np.arctan2(vec[1], vec[0]))),
-                    float(np.degrees(np.arctan2(vec[2], np.hypot(vec[0], vec[1])))),
-                )
+def cell_edge_points(index: ShortcutIndex) -> Iterator[tuple[float, float]]:
+    """Every stored cell's four corners and the midpoint of each of its four edges.
+
+    The corners alone probe each grid *line* from both sides - a cell owns its north and
+    east edges and its neighbour owns the other side of the same line - which is the
+    property the candidate rule turns on. The midpoints are there because a *polygon*
+    boundary can cross a cell edge between its corners, and nothing about a corner says
+    what happens there. **Probe the edges as well as the corners**: a stream that covers
+    only corners narrows this audit without saying so, and this is the only check that
+    runs over a whole compiled dataset.
+
+    ``query_coordinate`` is what makes a probe land on the intended integer: a float that
+    truncates to it, not the nearest float to the division. Coordinates outside the valid
+    range are skipped rather than clamped - a lookup rejects them, and the two lines that
+    *are* in range but owned by no polygon as spelled (-180 and -90) are read as +180 and
+    one unit north, which the ``seams`` mode probes.
+    """
+    for cell_id, _ in index.items():
+        x0, y0, x1, y1 = cell_bounds(cell_id)
+        xm, ym = (x0 + x1) // 2, (y0 + y1) // 2
+        for x, y in (
+            (x0, y0),
+            (x0, y1),
+            (x1, y0),
+            (x1, y1),
+            (xm, y0),
+            (xm, y1),
+            (x0, ym),
+            (x1, ym),
+        ):
+            if not -MAX_LNG_VAL_INT <= x <= MAX_LNG_VAL_INT:
+                continue
+            if not -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT:
+                continue
+            yield query_coordinate(x), query_coordinate(y)
 
 
 def source_edge_points(finder: TimezoneFinder) -> Iterator[tuple[float, float]]:
@@ -128,7 +148,7 @@ def omission_at(
         "longitude": lng,
         "latitude": lat,
         "integer_coordinates": [x, y],
-        "cell": hex(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)),
+        "cell": finder.shortcuts.cell_at(lng, lat),
         "missing_polygon_ids": missing,
         "candidate_polygon_ids": sorted(int(poly) for poly in candidates),
         "containing_polygon_ids": containing,
@@ -197,7 +217,9 @@ def main(argv: list[str] | None = None) -> int:
         "--points", type=Path, help="JSON array of [longitude, latitude]"
     )
     parser.add_argument(
-        "--mode", choices=("cell-edges", "source-edges", "seams"), default="cell-edges"
+        "--mode",
+        choices=("cell-edges", "source-edges", "seams"),
+        default="cell-edges",
     )
     parser.add_argument("--max-points", type=int)
     parser.add_argument("--witness-limit", type=int, default=100)
@@ -209,11 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.points:
             points = json.loads(args.points.read_text(encoding="utf-8"))
         elif args.mode == "cell-edges":
-            cells = itertools.chain.from_iterable(
-                h3.cell_to_children(root, SHORTCUT_H3_RES)
-                for root in h3.get_res0_cells()
-            )
-            points = cell_edge_points(cells)
+            points = cell_edge_points(finder.shortcuts)
         elif args.mode == "source-edges":
             points = source_edge_points(finder)
         else:
@@ -232,7 +250,10 @@ def main(argv: list[str] | None = None) -> int:
                 if args.points
                 else None
             ),
-            h3_versions=h3.versions(),
+            grid={
+                "root_columns": SHORTCUT_ROOT_COLUMNS,
+                "block_side": SHORTCUT_BLOCK_SIDE,
+            },
             python=platform.python_version(),
             platform=platform.platform(),
             acceleration_path=active_acceleration_path(),

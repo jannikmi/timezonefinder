@@ -2,7 +2,6 @@ from importlib.util import find_spec
 from pathlib import Path
 import warnings
 
-import h3.api.numpy_int as h3
 import pytest
 
 from scripts.configs import THRES_DTYPE_H
@@ -19,11 +18,8 @@ from tests.locations import (
     OUT_OF_RANGE_COORDINATES,
     TEST_LOCATIONS,
 )
-from timezonefinder.configs import (
-    DEFAULT_DATA_DIR,
-    SHORTCUT_H3_RES,
-)
-from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
+from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.shortcut_index import ABSENT
 from timezonefinder.zone_names import read_zone_names
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
@@ -497,18 +493,12 @@ def test_certain_timezone_at_tests_exactly_the_shortcut_candidates():
         }
         assert tf.certain_timezone_at(lng=lng, lat=lat) in candidate_zones
 
-        slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        assert tf.shortcuts.table[slot] != ABSENT, "the cell is covered to begin with"
-        # loaded index state is immutable: replace it rather than mutate the dataset
-        table = tf.shortcuts.table.copy()
-        table[slot] = ABSENT
-        tf.shortcuts = ShortcutIndex(
-            table,
-            tf.shortcuts.starts,
-            tf.shortcuts.ends,
-            tf.shortcuts.last_change,
-            tf.shortcuts.payload,
+        cell = tf.shortcuts.cell_at(lng, lat)
+        assert tf.shortcuts.entry_of(cell) != ABSENT, (
+            "the cell is covered to begin with"
         )
+        # loaded index state is immutable: replace it rather than mutate the dataset
+        tf.shortcuts = tf.shortcuts.replacing(cell, ABSENT)
 
         assert list(tf._iter_boundaries_in_shortcut(lng=lng, lat=lat)) == []
         assert tf.certain_timezone_at(lng=lng, lat=lat) is None

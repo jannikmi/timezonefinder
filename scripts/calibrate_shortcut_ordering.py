@@ -29,7 +29,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Final, Iterable, Iterator, Sequence, cast
 
-import h3.api.numpy_int as h3
 import numpy as np
 from shapely import Polygon
 
@@ -44,6 +43,8 @@ from scripts.shortcut_ordering import (
     DEFAULT_COST_COEFFICIENTS,
     CostCoefficients,
     ShortcutOrderer,
+    cell_region,
+    spherical_area,
 )
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -57,10 +58,9 @@ from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
     POLYGON_BLOCK_SIZE,
-    SHORTCUT_H3_RES,
 )
 from timezonefinder.polygon_array import HoleArray, PolygonArray
-from timezonefinder.shortcut_index import ABSENT, get_last_change_idx
+from timezonefinder.shortcut_index import ABSENT, cell_bounds, get_last_change_idx
 
 SCHEMA_VERSION: Final[int] = 2
 MODEL_PATH = Path("benchmarks/shortcut_ordering_model.json")
@@ -309,7 +309,7 @@ def collect_observations(
     observations: list[Observation] = []
     total = StageCounts()
     for lng, lat in points:
-        cell = int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        cell = finder.shortcuts.cell_at(lng, lat)
         entry = finder.shortcuts.entry_of(cell)
         if entry >= ABSENT:
             continue
@@ -360,7 +360,7 @@ def collect_hole_hit_observations(
         lng, lat = x * INT2COORD_FACTOR, y * INT2COORD_FACTOR
         observations.append(
             Observation(
-                cell=int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)),
+                cell=finder.shortcuts.cell_at(lng, lat),
                 polygon_id=int(polygon_id),
                 elapsed_ns=_minimum_predicate_ns(
                     finder, int(polygon_id), x, y, repetitions
@@ -489,10 +489,13 @@ class _ReorderedIndex:
     def entry_of(self, cell: int) -> int:
         return self.cell_entries.get(cell, self.base.entry_of(cell))
 
+    def cell_at(self, lng: float, lat: float) -> int:
+        return self.base.cell_at(lng, lat)
+
     def entry_at(self, lng: float, lat: float) -> int:
         # what the lookups ask: installed as ``finder.shortcuts``, this overlay has to
         # answer the coordinate form, or ``timezone_at`` fails before the first count
-        return self.entry_of(int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)))
+        return self.entry_of(self.base.cell_at(lng, lat))
 
     def candidates_of(self, entry: int) -> np.ndarray:
         if entry in self.orders:
@@ -506,43 +509,40 @@ class _ReorderedIndex:
 
 
 def ambiguous_cells(finder: TimezoneFinder) -> dict[int, list[int]]:
-    """Every shortcut cell whose stored order the optimizer could change."""
+    """Every shortcut cell whose stored order the optimizer could change.
+
+    Walks the index's own leaves rather than enumerating the grid: a cell carrying a
+    candidate list is one of the few the tree refined to, and asking the index is both
+    cheaper and the only way to be sure the set matches what a lookup can read.
+    """
     cells = {}
-    for root in h3.get_res0_cells():
-        for child in h3.cell_to_children(root, SHORTCUT_H3_RES):
-            cell = int(child)
-            entry = finder.shortcuts.entry_of(cell)
-            if entry < ABSENT:
-                candidates = finder.shortcuts.candidates_of(entry).astype(int).tolist()
-                if len(candidates) > 1:
-                    cells[cell] = candidates
+    for cell, value in finder.shortcuts.items():
+        if not isinstance(value, int) and len(value) > 1:
+            cells[cell] = value.astype(int).tolist()
     return cells
 
 
 def sample_cell_points(
     cell: int, amount: int, rng: random.Random
 ) -> list[tuple[float, float]]:
-    """Points uniform on the sphere inside one H3 cell, by rejection from its box."""
-    boundary = np.asarray(h3.cell_to_boundary(cell))
-    lats, lngs = boundary[:, 0], boundary[:, 1]
-    lat_low, lat_high = lats.min(), lats.max()
-    if int(h3.latlng_to_cell(90.0, 0.0, SHORTCUT_H3_RES)) == cell:
-        lat_high, lngs = 90.0, np.asarray([-180.0, 180.0])
-    elif int(h3.latlng_to_cell(-90.0, 0.0, SHORTCUT_H3_RES)) == cell:
-        lat_low, lngs = -90.0, np.asarray([-180.0, 180.0])
-    elif lngs.max() - lngs.min() > 180:
-        # the cell straddles the antimeridian: sample the box east of it, unwrapped
-        lngs = np.where(lngs < 0, lngs + 360, lngs)
-    low = math.sin(math.radians(lat_low))
-    high = math.sin(math.radians(lat_high))
-    points: list[tuple[float, float]] = []
-    while len(points) < amount:
-        lat = math.degrees(math.asin(rng.uniform(low, high)))
-        lng = rng.uniform(lngs.min(), lngs.max())
-        lng = lng - 360 if lng > 180 else lng
-        if int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)) == cell:
-            points.append((lng, lat))
-    return points
+    """Points uniform on the sphere inside one grid cell.
+
+    No rejection loop and no polar or antimeridian case: the cell is an axis-aligned
+    rectangle, so sampling the sine of the latitude uniformly and the longitude uniformly
+    *is* the uniform spherical distribution over it. A cell shape whose bounding box is
+    not the cell would need the rejection back.
+    """
+    x0, y0, x1, y1 = cell_bounds(cell)
+    lng_low, lng_high = x0 * INT2COORD_FACTOR, x1 * INT2COORD_FACTOR
+    low = math.sin(math.radians(y0 * INT2COORD_FACTOR))
+    high = math.sin(math.radians(y1 * INT2COORD_FACTOR))
+    return [
+        (
+            rng.uniform(lng_low, lng_high),
+            math.degrees(math.asin(rng.uniform(low, high))),
+        )
+        for _ in range(amount)
+    ]
 
 
 def _query_counts(
@@ -592,24 +592,19 @@ def _ordering_report(
         order = orderer.order(cell, candidates)
         if order != candidates:
             changed[cell] = order
-    earth = sum(
-        h3.cell_area(int(child), "rads^2")
-        for root in h3.get_res0_cells()
-        for child in h3.cell_to_children(root, SHORTCUT_H3_RES)
-    )
+    # the whole sphere in the same units the cell areas are integrated in, so the
+    # share below is a share and not a ratio of two conventions
+    earth = 4 * math.pi
     workload_share = {}
     for stratum, fixture in STRATA.items():
         points = load_benchmark_points(fixture)
-        hits = sum(
-            int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)) in changed
-            for lng, lat in points
-        )
+        hits = sum(base_index.cell_at(lng, lat) in changed for lng, lat in points)
         workload_share[stratum] = hits / len(points)
     report: dict[str, Any] = {
         "eligible_cells": len(cells),
         "changed_cells": len(changed),
         "changed_area_share_of_sphere": sum(
-            h3.cell_area(cell, "rads^2") for cell in changed
+            spherical_area(cell_region(cell)) for cell in changed
         )
         / earth,
         "fixture_query_share_in_changed_cells": workload_share,

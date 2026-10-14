@@ -120,7 +120,7 @@ def convert2ints(
     :param from_source: whether these coordinates come from the upstream dataset and
         will therefore be *stored*. Those must land on the source's own grid
         (:func:`source_coord2int`), because the packed payload holds residuals in units
-        of it. Everything else is transient geometry computed here - an H3 cell's
+        of it. Everything else is transient geometry computed here - a cell's
         boundary, tested for overlap and then discarded - which has no such grid and
         would be refused by that conversion for having more decimals than a published
         coordinate ever does.
@@ -193,7 +193,7 @@ def to_numpy_polygon_repr(
     # of arms: GeoJSON allows a third element per position, and dropping it is what this
     # function is for, so a ring that carries elevation must truncate rather than raise.
     if flipped:
-        # support the (lat, lng) format used by h3
+        # support the (lat, lng) format some sources use
         y_coords, x_coords = zip(*coord_pairs, strict=False)
     else:
         x_coords, y_coords = zip(*coord_pairs, strict=False)

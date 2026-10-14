@@ -11,17 +11,15 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import cast
 
-import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.configs import (
     DATA_REPORT_FILE,
-    SHORTCUT_H3_RES,
     SOURCE_DATA_DIR,
     BinaryData,
     ShortcutEfficiencyMetrics,
     ShortcutEntryCountStats,
-    ShortcutH3Coverage,
+    ShortcutGridCoverage,
     ShortcutIndexStats,
     ShortcutStorageMetrics,
     TableRow,
@@ -32,7 +30,13 @@ from scripts.utils import percent
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
 from timezonefinder.shortcut_index import (
+    BLOCK_CELLS,
+    BLOCK_SIDE,
+    ROOT_CELLS,
+    ROOT_COLUMNS,
     get_shortcut_file_path,
+    is_root_cell,
+    parent_cell_of,
     read_shortcuts_binary,
 )
 from timezonefinder.np_binary_helpers import (
@@ -59,7 +63,7 @@ DATA_VERSION_LABEL = "**Timezone Data Version**"
 
 # Widths of the hybrid shortcut index's stored fields, used to estimate its
 # on-disk size in the data report.
-SHORTCUT_KEY_SIZE_BYTES = 8  # int64 hex ID
+SHORTCUT_KEY_SIZE_BYTES = 8  # int64 cell id, as a naive keyed index would store it
 SHORTCUT_ZONE_ID_SIZE_BYTES = 1  # uint8 zone ID
 SHORTCUT_POLYGON_ID_SIZE_BYTES = 2  # uint16 polygon ID
 
@@ -284,9 +288,9 @@ class ShortcutEntryCounts:
     """One pass over the shortcut mapping, and nothing derived from it.
 
     `shortcut_efficiency_metrics` and `shortcut_storage_metrics` read these
-    counts and `shortcut_h3_coverage` takes only the stored-cell total from
-    them; separating the four is what lets one be read, changed or checked
-    without the others.
+    counts, and `shortcut_grid_coverage` reads the mapping's keys instead;
+    separating the four is what lets one be read, changed or checked without
+    the others.
     """
 
     total_entries: int
@@ -311,7 +315,7 @@ def count_shortcut_entries(
     amount_of_different_zones: list[int] = []
 
     for v in mapping.values():
-        if isinstance(v, int):
+        if isinstance(v, (int, np.integer)):
             # Direct zone ID - single zone, no polygons to enumerate
             zone_entries += 1
             nr_of_entries_in_shortcut.append(0)  # No polygons, direct zone
@@ -345,26 +349,34 @@ def count_shortcut_entries(
     )
 
 
-def shortcut_h3_coverage(stored_cells: int) -> ShortcutH3Coverage:
-    """How much of the H3 grid at this resolution the index stores a cell for."""
-    # The theoretical cell count at this resolution is h3's to state, and it
-    # states it exactly. The ladder of per-resolution literals this replaces
-    # only covered resolutions 0-4; every other resolution - and a missing h3,
-    # which cannot happen since h3 is a runtime dependency - fell through to
-    # ``possible_cells = total_entries``, i.e. a silent ``coverage_ratio`` of
-    # 1.0 reporting complete H3 coverage instead of failing.
-    possible_cells = h3.get_num_cells(SHORTCUT_H3_RES)
+def shortcut_grid_coverage(
+    mapping: dict[int, int | np.ndarray],
+) -> ShortcutGridCoverage:
+    """The tree's shape, and how much of it the index stores a cell for.
+
+    Read off the mapping's keys rather than taken as a count, because the tree's
+    own cell count is not a property of the grid: a root cell only one zone can
+    own is a leaf, and the block it would have refined into does not exist. So
+    which root cells refine has to be recovered from the finest-level keys
+    present, and the leaf total follows.
+    """
+    refined = {parent_cell_of(cell) for cell in mapping if not is_root_cell(cell)}
+    leaf_cells = ROOT_CELLS - len(refined) + len(refined) * BLOCK_CELLS
+    stored_cells = len(mapping)
     return {
-        "h3_resolution": SHORTCUT_H3_RES,
+        "root_columns": ROOT_COLUMNS,
+        "block_side": BLOCK_SIDE,
+        "root_cells": ROOT_CELLS,
+        "refined_root_cells": len(refined),
+        "leaf_cells": leaf_cells,
         "stored_cells": stored_cells,
-        "possible_cells": possible_cells,
-        "missing_cells": max(possible_cells - stored_cells, 0),
-        "coverage_ratio": stored_cells / possible_cells if possible_cells else 0.0,
+        "missing_cells": max(leaf_cells - stored_cells, 0),
+        "coverage_ratio": stored_cells / leaf_cells if leaf_cells else 0.0,
     }
 
 
 def shortcut_efficiency_metrics(
-    counts: ShortcutEntryCounts, possible_cells: int
+    counts: ShortcutEntryCounts, leaf_cells: int
 ) -> ShortcutEfficiencyMetrics:
     """What fraction of cells the index answers outright, and how wide the rest are."""
     total_entries = counts.total_entries
@@ -372,8 +384,8 @@ def shortcut_efficiency_metrics(
         "unique_entry_fraction": counts.zone_entries / total_entries
         if total_entries
         else 0.0,
-        "unique_surface_fraction": counts.zone_entries / possible_cells
-        if possible_cells
+        "unique_surface_fraction": counts.zone_entries / leaf_cells
+        if leaf_cells
         else 0.0,
         "zone_distribution_efficiency": sum(
             1 for zones in counts.zones_per_shortcut if zones <= 1
@@ -422,14 +434,14 @@ def calculate_shortcut_index_stats(
     """Assemble the four unrelated metric families the data report states.
 
     Args:
-        mapping: Hybrid shortcut mapping (hex_id -> zone_id | polygon_ids)
+        mapping: the index's leaves (cell id -> zone_id | polygon_ids)
         poly_zone_ids: Zone IDs for each polygon
 
     Returns:
         Dictionary of statistical metrics
     """
     counts = count_shortcut_entries(mapping, poly_zone_ids)
-    coverage = shortcut_h3_coverage(counts.total_entries)
+    coverage = shortcut_grid_coverage(mapping)
     entries: ShortcutEntryCountStats = {
         "total_entries": counts.total_entries,
         "zone_entries": counts.zone_entries,
@@ -441,7 +453,7 @@ def calculate_shortcut_index_stats(
     }
     stats: dict = {**entries}
     stats.update(coverage)
-    stats.update(shortcut_efficiency_metrics(counts, coverage["possible_cells"]))
+    stats.update(shortcut_efficiency_metrics(counts, coverage["leaf_cells"]))
     stats.update(shortcut_storage_metrics(counts))
     # Every key above is checked against one of the four TypedDicts where it is
     # written, which is what the annotations on ``entries`` and on the three
@@ -458,17 +470,23 @@ def render_shortcut_statistics(
 
     shortcut_headers = ["Shortcut Index Metric", "Value"]
     shortcut_rows = [
-        ["H3 Resolution", f"{stats['h3_resolution']}"],
+        [
+            "Grid",
+            f"{stats['root_columns']} root columns, "
+            f"{stats['block_side']}x{stats['block_side']} blocks",
+        ],
         ["Total shortcut entries", f"{stats['total_entries']:,}"],
         ["Zone entries (direct lookup)", f"{stats['zone_entries']:,}"],
         ["Polygon entries (require testing)", f"{stats['polygon_entries']:,}"],
         ["Empty entries", f"{stats['empty_entries']:,}"],
         ["Total polygon references", f"{stats['polygon_id_count']:,}"],
         ["", ""],  # Separator
-        ["H3 cells stored", f"{stats['stored_cells']:,}"],
-        ["H3 cells possible at resolution", f"{stats['possible_cells']:,}"],
-        ["H3 cells missing", f"{stats['missing_cells']:,}"],
-        ["H3 coverage ratio", f"{stats['coverage_ratio']:.3f}"],
+        ["Root cells", f"{stats['root_cells']:,}"],
+        ["Root cells refined into blocks", f"{stats['refined_root_cells']:,}"],
+        ["Cells in the tree", f"{stats['leaf_cells']:,}"],
+        ["Cells stored", f"{stats['stored_cells']:,}"],
+        ["Cells missing", f"{stats['missing_cells']:,}"],
+        ["Coverage ratio", f"{stats['coverage_ratio']:.3f}"],
         ["", ""],  # Separator
         ["Unique entry fraction", f"{stats['unique_entry_fraction']:.3f}"],
         ["Unique surface fraction", f"{stats['unique_surface_fraction']:.3f}"],
@@ -497,7 +515,7 @@ def render_shortcut_statistics(
         + render_rst_table(shortcut_headers, shortcut_rows)
         + join_lines(
             rst_title("Shortcut Entry Distributions", level=2),
-            "How much work a lookup in one H3 cell costs. A cell covered by a single "
+            "How much work a lookup in one cell costs. A cell covered by a single "
             "timezone stores that zone id directly and needs no point-in-polygon test "
             "at all; the rest store the candidate polygons a lookup has to test.",
             "\nNo cell needs exactly one test: a single candidate is unambiguous, so "
