@@ -1,84 +1,82 @@
 #!/usr/bin/env python3
 
-"""Price longitude/latitude-aligned shortcut indexes against the shipped H3 index.
+"""Price longitude/latitude-aligned shortcut indexes against the shipped grid tree.
 
-FINDINGS (2026-10-11, Apple M1 Pro, Python 3.14.2, data 2026d, fixture set v3)
+FINDINGS (Intel Xeon, Emerald Rapids @ 2.1 GHz, 4 vCPUs of a KVM cloud VM, Linux,
+Python 3.13.16, data 2026d, fixture set v4, master at 6b99331)
 ==============================================================================
 
-**This script does not import against the current tree**, and is kept for its findings
-rather than for its code: it builds both the H3 index it compared against and a
-five-array ``ShortcutIndex``, neither of which still exists. It is the sweep the shipped
-index was chosen from, so reproduce a figure against the commit it names.
+**The shipped shape - 0.9375-degree root cells, one level of 4x4 blocks - is level with
+its own control and ahead of every candidate of its size; only one larger tree beats
+it.** Rebuilt here as ``grid_tree_0_9375deg_4x4_1levels`` it reproduces the control's
+counts exactly (0.048 / 0.115 polygons tested per random / on-land query, 507 KB) and
+times level with it: 2-6 % faster per scalar call, -3 to +6 % per batch, mostly
+unresolved. The shipped index's work optimizer is worth 0-5 % over the converter's plain
+order, also mostly unresolved. Every flat grid of up to 1 MB is slower, scalar and
+batch, those of 1.3-1.5 MB draw about level, and the touch-inclusive controls are 11-30
+% slower per scalar call than the control. Head to head the shipped shape beats the flat
+equal-area grid of H3's size by 10-16 % per scalar call and 10-25 % per batch, and two
+levels of 2x2 with the same cells by 3-4 % per scalar call (mostly unresolved) and 5-16
+% per batch.
 
-**An aligned grid tree beats the resolution-4 H3 index on every axis measured, at less
-than H3's footprint; and it is the package's index.** The chosen shape - a
-dense grid of 0.9375-degree root cells whose cells several zones can own refine into one
-level of 4x4 blocks - takes 507 KB on disk and in memory against H3's 617 KB and
-1,031 KB, tests 57 % and 42 % fewer polygons per random and on-land query than an H3
-control ordered by the same converter rule, and agrees with the full lookup as
-``TimezoneFinderL`` on 97.6 / 93.7 % of points (shipped H3 95.8 / 90.0 %). Whole
-``timezone_at`` calls are 29-30 % faster on random points and 26-28 % on land, 256-point
-batches 71-72 % and 59-61 %, every round won on clang and numba alike; head to head it
-is 6.5-12 % faster per call than the flat equal-area grid of H3's size. The scalar win is
-the removed ``h3.latlng_to_cell`` call, the batch win that a grid cell vectorises.
+**The one tree that beats it costs nearly twice the index.** The 1.875-degree root with
+two levels of 4x4 tests 0.026 / 0.068 polygons per query and is 6.5-12 % faster per
+scalar call and 11-26 % per batch, at 957 KB against 507 KB. Choosing it trades resident
+memory in constrained containers for that speed, which is a maintainer decision rather
+than this sweep's. The flat 0.25-degree equal-angle grid is 1-11 % faster at 2.1 MB.
 
-**What makes it work: exact cells, alignment, bytes only at borders, an unrolled
-lookup.** Cells follow the kernel's own edge rule (a polygon owns its east and north
-boundary, never its west or south), so a zone across a cell edge is not a candidate; a
-touch-inclusive control gives up about 8 points of random scalar speed. Unaligned grids
-of the same size test 14-24 % more polygons per random query. A flat grid pays 2 bytes
-for every cell, ocean included; the tree reaches 0.234-degree cells only where borders
-are. A generic loop over the tree's levels cost ~280 ns more per lookup than the
-unrolled one and lost to a flat grid.
+**Correctness.** All 24 candidates gave the control's answer for 30,000 fixture points,
+for points on and one unit either side of their own cell edges, and on the 7.5-degree
+and whole-degree lines borders follow - the -180 meridian included, which every
+candidate reads as +180 the way the shipped lookup does - on both kernels and both the
+scalar and the batch path.
 
-**Correctness.** All 34 candidates gated in the 2026-10-11 run gave the control's answer
-for 30,000 fixture points (289 of them in two overlapping zones), for points on and one
-unit either side of their own cell edges, and on the 7.5-degree and whole-degree lines
-borders follow, on both kernels and both the scalar and the batch path, except points on
-the -180 meridian and the -90 parallel, which no polygon owns as spelled. Lookups have
-since read them as +180 and as one unit north, which this tree's clamp reproduces on the
-parallel and not on the meridian.
-
-That run also priced linear quadtrees, ``tzf-rs``'s tile pyramid, a two-tier split and
-three-level trees; their code has since been dropped from this script, and their
-numbers and refusals are in
+**The H3 comparison the shipped shape was chosen by** was taken on a second server class
+(Cascade Lake), with this script at 47b50d4; its table, and the refused families whose
+code has since been dropped, are in
 ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``.
-``--output`` writes every remaining candidate's numbers in about a minute: the counts
-exactly, the times for the machine it runs on.
+The ranking above held across both CPU generations. ``--output`` writes every
+candidate's numbers in under two minutes: the counts exactly, the times for the machine
+it runs on.
 
 METHOD
 ======
 
 Every candidate is compiled from the packaged boundaries and answers through the real
-``TimezoneFinder`` query path: :class:`IndexFinder` replaces only the index lookup of
-``timezone_at`` and of the batch prologue - ``ShortcutIndex.entry_at`` / ``entries_at``
-in the shipped code - with the candidate's cell lookup. Only those two methods are
-replaced, so a candidate index answers nothing else a finder can be asked.
+``TimezoneFinder`` query path: a candidate is a ``ShortcutIndex`` whose ``entry_at`` and
+``entries_at`` - the two methods the scalar lookup and the batch prologue call - are its
+own cell lookup, put in the shipped index's place. Only those two methods are replaced,
+so a candidate index answers nothing else a finder can be asked.
 
 * **One ordering policy, the converter's own.** Candidate lists are ordered by
   ``scripts.shortcuts.optimise_shortcut_ordering`` itself, called on a sorted input. The
-  baseline is an **H3 control**: the shipped candidate sets re-ordered by that policy and
-  written and read back through the real shortcut file functions, because the shipped
-  index also carries the converter's H3-specific work optimizer.
+  baseline is a **control**: the shipped grid tree's candidate sets re-ordered by that
+  policy and written and read back through the real shortcut file functions, because the
+  shipped index also carries the converter's work optimizer, which the candidates do
+  not. The control and ``grid_tree_0_9375deg_4x4_1levels`` are the same cells, so their
+  counts must agree exactly; that is the sweep's own consistency check.
 * **Exact cells.** A cell is computed from the truncated integer coordinates the kernel
-  reads and owns its east and north edges, the kernel's own convention. A polygon is a
+  reads and owns its east and north edges, the kernel's own convention; -180 reads as
+  +180 and -90 as the point one unit north, as the shipped lookup reads them. A polygon is a
   candidate only if it can own one of the cell's integer points: an interior
   intersection with the cell's box shifted half a unit south-west. The gate's boundary
   probes test exactly this, on both kernels.
 * **The shipped layout's sizes.** One ``int16`` per cell, distinct candidate lists once
-  each in the narrowest widths, and the 40-byte header; the same arithmetic reproduces
+  each in the narrowest widths, and the shipped header; the same arithmetic reproduces
   the shipped ``shortcuts.bin`` to the byte.
 * **The family is swept**, equal-angle and equal-area grids, aligned and not, and grid
   trees of several shapes, with the recommendation also timed head to head against its
   rivals.
 
 It does not certify coverage beyond the sampled gate, time ``TimezoneFinderL``, or
-measure loading, construction or ``make memory``.
+measure loading, construction or ``make memory``. Times decide only when taken on
+server hardware (x86-64 Linux), which the report's ``environment`` block records.
 """
 
 import argparse
 import json
 import math
+import os
 import platform
 import subprocess
 import sys
@@ -92,7 +90,6 @@ from pathlib import Path
 
 import numpy as np
 import shapely
-from h3.api import numpy_int as h3
 from shapely import STRtree
 
 from benchmarks.candidate_comparison import CandidateComparison, compare_candidates
@@ -101,6 +98,7 @@ from scripts.assert_acceleration_path import (
     PACKED_BUFFER_FACTORIES,
     interpreted_path_name,
 )
+from scripts.benchmark_utils import cpu_info
 from scripts.shortcuts import optimise_shortcut_ordering
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -111,18 +109,13 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import (
-    COORD2INT_FACTOR,
-    DEFAULT_DATA_DIR,
-    NO_ZONE_ID,
-    SHORTCUT_H3_RES,
-    ZONE_ID_RESULT_DTYPE,
-)
+from timezonefinder.configs import COORD2INT_FACTOR, DEFAULT_DATA_DIR
 from timezonefinder.shortcut_index import (
     _HEADER_SIZE,
     ABSENT,
-    COMPACT_TABLE_SIZE,
+    BLOCK_CELLS,
     PAYLOAD_DTYPE,
+    ROOT_CELLS,
     TABLE_DTYPE,
     ShortcutIndex,
     build_shortcut_index,
@@ -136,13 +129,13 @@ from timezonefinder.shortcut_index import (
 STRATA = {
     "random": RANDOM_POINTS_FIXTURE,
     "on_land": ON_LAND_POINTS_FIXTURE,
-    # H3 classifications: correctness probes only, since a different index re-labels
-    # their points (the resolution decision's caveat). Only random and on_land rank.
-    "h3_unique": UNIQUE_SHORTCUT_POINTS_FIXTURE,
-    "h3_ambiguous": AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    # the shipped index's classifications: correctness probes only, since a different
+    # index re-labels their points. Only random and on_land rank.
+    "shipped_unique": UNIQUE_SHORTCUT_POINTS_FIXTURE,
+    "shipped_ambiguous": AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
 }
 RANKING_STRATA = ("random", "on_land")
-# Pairs timed against each other rather than each against the H3 control, for the
+# Pairs timed against each other rather than each against the control, for the
 # claims a recommendation makes between two candidates: (challenger, baseline).
 HEAD_TO_HEAD = (
     ("grid_tree_0_9375deg_4x4_1levels", "equal_area_0_375deg_aligned"),
@@ -241,6 +234,13 @@ def entries_resident_bytes(index: ShortcutIndex) -> int:
         + index.payload.nbytes
         + index.last_change.nbytes
     )
+
+
+def no_blocks() -> np.ndarray:
+    """The shipped ``blocks`` array for a candidate that keeps its own levels."""
+    blocks = np.empty(0, dtype=TABLE_DTYPE)
+    blocks.flags.writeable = False
+    return blocks
 
 
 def table_value(values: np.ndarray) -> np.ndarray:
@@ -342,6 +342,11 @@ def ranges(count: int, span: int, offset: int) -> tuple[np.ndarray, np.ndarray]:
 
 
 # --- candidate indexes ----------------------------------------------------------------
+#
+# Every scalar lookup reads its root level through ``_root``, the memoryview the shipped
+# ``ShortcutIndex`` builds over ``table``, as the shipped lookup does. ``int(table[i])``
+# instead put the shipped shape 4-5 % behind the control per scalar call with identical
+# cells and counts: the comparison would have priced the read, not the cells.
 
 
 class BandedGrid(ShortcutIndex):
@@ -365,21 +370,21 @@ class BandedGrid(ShortcutIndex):
         "_offsets_array",
     )
 
-    def cell_entry(self, lng: float, lat: float) -> int:
+    def entry_at(self, lng: float, lat: float) -> int:
         row = (int(lat * F) + KY) // self.row_height
         if row < 0:
             row = 0
-        col = (int(lng * F) + KX) // self.widths[row]
-        if col < 0:
-            col = 0
-        return int(self.table[self.offsets[row] + col])
+        x = int(lng * F) + KX
+        if x < 0:
+            x += X_SPAN
+        return self._root[self.offsets[row] + x // self.widths[row]]
 
-    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+    def entries_at(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
         rows = ((lats * F).astype(np.int64) + KY) // self.row_height
         np.maximum(rows, 0, out=rows)
-        cols = ((lngs * F).astype(np.int64) + KX) // self._widths_array[rows]
-        np.maximum(cols, 0, out=cols)
-        return self.table[self._offsets_array[rows] + cols]
+        x = (lngs * F).astype(np.int64) + KX
+        np.add(x, X_SPAN, out=x, where=x < 0)
+        return self.table[self._offsets_array[rows] + x // self._widths_array[rows]]
 
     @property
     def cells(self) -> int:
@@ -423,21 +428,21 @@ class UniformGrid(BandedGrid):
 
     __slots__ = ("width", "columns")
 
-    def cell_entry(self, lng: float, lat: float) -> int:
+    def entry_at(self, lng: float, lat: float) -> int:
         row = (int(lat * F) + KY) // self.row_height
-        col = (int(lng * F) + KX) // self.width
         if row < 0:
             row = 0
-        if col < 0:
-            col = 0
-        return int(self.table[row * self.columns + col])
+        x = int(lng * F) + KX
+        if x < 0:
+            x += X_SPAN
+        return self._root[row * self.columns + x // self.width]
 
-    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+    def entries_at(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
         rows = ((lats * F).astype(np.int64) + KY) // self.row_height
         np.maximum(rows, 0, out=rows)
-        cols = ((lngs * F).astype(np.int64) + KX) // self.width
-        np.maximum(cols, 0, out=cols)
-        return self.table[rows * self.columns + cols]
+        x = (lngs * F).astype(np.int64) + KX
+        np.add(x, X_SPAN, out=x, where=x < 0)
+        return self.table[rows * self.columns + x // self.width]
 
 
 def build_grid(
@@ -473,7 +478,9 @@ def build_grid(
     widths = np.asarray([X_SPAN // c for c in column_counts], dtype=np.int32)
     uniform = len(set(column_counts)) == 1
     cls = UniformGrid if uniform else BandedGrid
-    index = cls(table_value(values), bounds[:-1], bounds[1:], last, payload)
+    index = cls(
+        table_value(values), no_blocks(), bounds[:-1], bounds[1:], last, payload
+    )
     index.name = name
     index.family = family
     index.params = params
@@ -501,10 +508,9 @@ class GridTree(ShortcutIndex):
     below ``ABSENT`` above the last level is the index of a block of k x k children on the
     next level, one per cell any two zones can own; on the last level it is a candidate
     list entry, the shipped tri-state. Every level is a whole number of coordinate units
-    wide, so a level's cell is one floor division per axis, and clamping the shifted
-    coordinate at 0 once covers -90 on every level. It covers -180 too, but in the first
-    column, where the lookup now reads -180 as +180: a shipped tree wraps a negative
-    column to the last one instead, and this one's -180 points gate as defects.
+    wide, so a level's cell is one floor division per axis. Clamping the shifted latitude
+    at 0 once covers -90 on every level, and wrapping a negative shifted longitude by the
+    full span reads -180 as +180 on every level, as the shipped lookup does.
     """
 
     __slots__ = (
@@ -525,8 +531,9 @@ class GridTree(ShortcutIndex):
         "_block_arrays",
     )
 
-    def cell_entries(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
-        x = np.maximum((lngs * F).astype(np.int64) + KX, 0)
+    def entries_at(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+        x = (lngs * F).astype(np.int64) + KX
+        np.add(x, X_SPAN, out=x, where=x < 0)
         y = np.maximum((lats * F).astype(np.int64) + KY, 0)
         w = self.widths[0]
         v = self.table[(y // w) * self.columns + x // w].astype(np.int64)
@@ -544,7 +551,7 @@ class GridTree(ShortcutIndex):
         return len(self.table)
 
     @property
-    def blocks(self) -> list[int]:
+    def block_counts(self) -> list[int]:
         return [len(a) // self.kk for a in self._block_arrays]
 
     @property
@@ -582,15 +589,15 @@ class GridTree(ShortcutIndex):
 class GridTree1(GridTree):
     __slots__ = ()
 
-    def cell_entry(self, lng: float, lat: float) -> int:
+    def entry_at(self, lng: float, lat: float) -> int:
         x = int(lng * F) + KX
         y = int(lat * F) + KY
         if x < 0:
-            x = 0
+            x += X_SPAN
         if y < 0:
             y = 0
         w = self.w0
-        v = int(self.table[(y // w) * self.columns + x // w])
+        v = self._root[(y // w) * self.columns + x // w]
         if v >= -1:
             return v
         w = self.w1
@@ -601,15 +608,15 @@ class GridTree1(GridTree):
 class GridTree2(GridTree):
     __slots__ = ()
 
-    def cell_entry(self, lng: float, lat: float) -> int:
+    def entry_at(self, lng: float, lat: float) -> int:
         x = int(lng * F) + KX
         y = int(lat * F) + KY
         if x < 0:
-            x = 0
+            x += X_SPAN
         if y < 0:
             y = 0
         w = self.w0
-        v = int(self.table[(y // w) * self.columns + x // w])
+        v = self._root[(y // w) * self.columns + x // w]
         if v >= -1:
             return v
         w = self.w1
@@ -677,7 +684,7 @@ def build_grid_tree(
 
     bounds, payload, last = packer.arrays()
     cls = {1: GridTree1, 2: GridTree2}[levels]
-    tree = cls(narrow(arrays[0]), bounds[:-1], bounds[1:], last, payload)
+    tree = cls(narrow(arrays[0]), no_blocks(), bounds[:-1], bounds[1:], last, payload)
     tree.name = name
     tree.family = "grid tree"
     tree.params = {
@@ -697,34 +704,13 @@ def build_grid_tree(
     return tree
 
 
-# --- the query path with the H3 prologue swapped out ------------------------------------
-
-
-class IndexFinder(TimezoneFinder):
-    """The shipped finder, its two H3 lines replaced by ``shortcuts.cell_entry``."""
-
-    __slots__ = ()
-
-    def timezone_at(self, *, lng: float, lat: float) -> str | None:
-        lng, lat = utils.validate_coordinates(lng, lat)
-        entry = self.shortcuts.cell_entry(lng, lat)
-        if entry >= 0:
-            return self.zone_names.name_of(entry)
-        if entry == ABSENT:
-            return None
-        return self.zone_names.name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
-
-    def _zone_ids_of_valid(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
-        if lngs.shape[0] == 0:
-            return np.empty(0, dtype=ZONE_ID_RESULT_DTYPE)
-        entries = self.shortcuts.cell_entries(lngs, lats)
-        zone_ids = np.where(entries >= 0, entries, NO_ZONE_ID).astype(
-            ZONE_ID_RESULT_DTYPE
-        )
-        ambiguous = np.flatnonzero(entries < ABSENT)
-        if ambiguous.size:
-            self._resolve_ambiguous_cells(entries, ambiguous, lngs, lats, zone_ids)
-        return zone_ids
+# --- the query path, with a candidate index in the shipped one's place ----------------
+#
+# A candidate subclasses ``ShortcutIndex`` and overrides ``entry_at`` and ``entries_at``,
+# the two methods the lookups call to turn a coordinate into a stored value, so it
+# answers through the unmodified ``TimezoneFinder``. Only those two are replaced: a
+# candidate answers nothing else a finder can be asked, which is why the finder is
+# never asked for anything else here.
 
 
 @contextmanager
@@ -738,9 +724,9 @@ def bound(path: str) -> Iterator[None]:
         utils.inside_polygon_packed, utils.packed_buffers = previous
 
 
-def finder_on(path: str, index=None, cls=TimezoneFinder) -> TimezoneFinder:
+def finder_on(path: str, index=None) -> TimezoneFinder:
     with bound(path):
-        finder = cls(in_memory=False)
+        finder = TimezoneFinder(in_memory=False)
     if index is not None:
         finder.shortcuts = index
     return finder
@@ -749,15 +735,8 @@ def finder_on(path: str, index=None, cls=TimezoneFinder) -> TimezoneFinder:
 # --- instruments ----------------------------------------------------------------------
 
 
-def h3_entry(index: ShortcutIndex) -> Callable[[float, float], int]:
-    return lambda lng, lat: index.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-
-
 def work_counts(
-    finder: TimezoneFinder,
-    entry_of: Callable[[float, float], int],
-    index,
-    points: Sequence[tuple[float, float]],
+    finder: TimezoneFinder, index, points: Sequence[tuple[float, float]]
 ) -> dict[str, float]:
     """The exact counts, and how often ``TimezoneFinderL`` on this index is right.
 
@@ -768,7 +747,7 @@ def work_counts(
     unique = offered = tested = lite_right = 0
     zone_ids = finder.zone_ids
     for lng, lat in points:
-        entry = entry_of(lng, lat)
+        entry = index.entry_at(lng, lat)
         if entry >= 0:
             unique += 1
             lite_right += 1
@@ -810,7 +789,7 @@ def gate(
     candidate: TimezoneFinder,
     points: Sequence[tuple[float, float]],
 ) -> dict[str, int]:
-    """Compare every answer with the H3 control and classify each disagreement.
+    """Compare every answer with the control's and classify each disagreement.
 
     ``overlap``: both answers' zones contain the point - precedence among overlapping
     zones, which any index may order differently. ``uncovered``: no zone contains the
@@ -935,36 +914,8 @@ def comparison(result: CandidateComparison) -> dict[str, object]:
 
 
 def cpu_name() -> str:
-    try:
-        return subprocess.run(
-            ["sysctl", "-n", "machdep.cpu.brand_string"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return platform.processor()
-
-
-def h3_cost() -> dict[str, float]:
-    """``import h3``'s cumulative import time (best of five cold processes) and install size."""
-    times = []
-    for _ in range(5):
-        stderr = subprocess.run(
-            [sys.executable, "-X", "importtime", "-c", "import h3"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stderr
-        for line in stderr.splitlines():
-            parts = [p.strip() for p in line.split("|")]
-            if len(parts) == 3 and parts[2] == "h3":
-                times.append(int(parts[1]) / 1000)
-    import h3 as h3_package
-
-    package = Path(h3_package.__file__).resolve().parent
-    size = sum(p.stat().st_size for p in package.rglob("*") if p.is_file())
-    return {"import_ms_best_of_5": min(times), "installed_bytes": size}
+    """The CPU model, which ``platform.processor()`` reduces to ``x86_64`` on Linux."""
+    return str(cpu_info().get("brand_raw") or platform.processor() or "unknown")
 
 
 # --- the sweep ------------------------------------------------------------------------
@@ -1103,7 +1054,8 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         tree = build_grid_tree(name, root_columns, k, levels, polygons, data)
         tree.params["build_seconds"] = round(time.perf_counter() - started, 1)
         print(
-            f"built {name}: {tree.cells:,} root cells, blocks {tree.blocks}", flush=True
+            f"built {name}: {tree.cells:,} root cells, blocks {tree.block_counts}",
+            flush=True,
         )
         indexes.append(tree)
     return indexes
@@ -1131,7 +1083,12 @@ def main() -> None:
 
     shipped = reference.shortcuts
     shipped_file = get_shortcut_file_path(DEFAULT_DATA_DIR)
-    model = _HEADER_SIZE + COMPACT_TABLE_SIZE * 2 + entries_file_bytes(shipped)
+    model = (
+        _HEADER_SIZE
+        + shipped.table.nbytes
+        + shipped.blocks.nbytes
+        + entries_file_bytes(shipped)
+    )
     if model != shipped_file.stat().st_size:
         raise AssertionError(
             f"file-size model {model} != shipped {shipped_file.stat().st_size}"
@@ -1147,31 +1104,32 @@ def main() -> None:
     )
     control_index = read_shortcuts_binary(control_path)
 
-    def h3_row(index: ShortcutIndex, payload: int) -> dict:
+    def shipped_row(index: ShortcutIndex, payload: int) -> dict:
         return {
-            "cells": int(h3.get_num_cells(SHORTCUT_H3_RES)),
-            "file_slots": int(COMPACT_TABLE_SIZE),
-            "resident_slots": len(index.table),
+            "cells": ROOT_CELLS + index.nr_of_blocks * BLOCK_CELLS,
+            "blocks": index.nr_of_blocks,
             "payload_bytes": payload,
-            "resident_bytes": index.table.nbytes + entries_resident_bytes(index),
+            "resident_bytes": index.table.nbytes
+            + index.blocks.nbytes
+            + entries_resident_bytes(index),
             "strata": {
-                label: work_counts(reference, h3_entry(index), index, points)
+                label: work_counts(reference, index, points)
                 for label, points in fixtures.items()
             },
         }
 
     report: dict[str, object] = {
-        "schema": 2,
+        "schema": 3,
         "created": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "command": "uv run python -m prototypes.latlng_index_bench "
         + " ".join(sys.argv[1:]),
         "environment": {
             "python": platform.python_version(),
             "machine": platform.machine(),
+            "system": platform.system(),
             "cpu": cpu_name(),
-            "versions": {
-                name: version(name) for name in ("h3", "numpy", "shapely", "numba")
-            },
+            "logical_cpus": os.cpu_count(),
+            "versions": {name: version(name) for name in ("numpy", "shapely", "numba")},
             "paths": list(paths),
             "commit": subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
@@ -1186,20 +1144,19 @@ def main() -> None:
             ).stdout.strip()[:8],
             "fixture": benchmark_fixture_provenance(),
         },
-        "h3": h3_cost(),
         "file_size_model": {"shipped_bytes": model, "reproduces_shipped_file": True},
-        "shipped_h3": h3_row(shipped, model),
-        "h3_control": h3_row(control_index, control_path.stat().st_size),
+        "shipped": shipped_row(shipped, model),
+        "control": shipped_row(control_index, control_path.stat().st_size),
         "candidates": {},
     }
     control_finder = finder_on("clang", control_index)
-    report["h3_control"]["gate_against_shipped"] = gate(
+    report["control"]["gate_against_shipped"] = gate(
         reference,
         control_finder,
         [p for points in fixtures.values() for p in points],
     )
     control_finder.cleanup()
-    print("H3 rows done", flush=True)
+    print("shipped and control rows done", flush=True)
 
     indexes = build_sweep(polygons, data, args.only)
     shared_probes = border_probes(args.probes, rng)
@@ -1218,11 +1175,11 @@ def main() -> None:
             "payload_bytes": index.payload_bytes,
             "resident_bytes": index.resident_bytes,
             "strata": {
-                label: work_counts(reference, index.cell_entry, index, points)
+                label: work_counts(reference, index, points)
                 for label, points in fixtures.items()
             },
         }
-        entry = index.cell_entry(*MALACCA_WITNESS)
+        entry = index.entry_at(*MALACCA_WITNESS)
         offered = set(index.candidates_of(entry).tolist()) if entry < ABSENT else set()
         row["malacca_witness_offered"] = bool(
             (
@@ -1235,7 +1192,7 @@ def main() -> None:
         row["gate"] = {}
         for path in paths:
             control = finder_on(path, control_index)
-            candidate = finder_on(path, index, IndexFinder)
+            candidate = finder_on(path, index)
             try:
                 row["gate"][path] = {
                     "fixtures": gate(
@@ -1270,19 +1227,13 @@ def main() -> None:
             shipped_finder = finder_on(path)
             try:
                 rows = {}
-                for name, index in [("shipped_h3", None)] + [
-                    (i.name, i) for i in timed
-                ]:
-                    finder = (
-                        shipped_finder
-                        if index is None
-                        else finder_on(path, index, IndexFinder)
-                    )
+                for name, index in [("shipped", None)] + [(i.name, i) for i in timed]:
+                    finder = shipped_finder if index is None else finder_on(path, index)
                     rows[name] = {}
                     for label in RANKING_STRATA:
                         points = fixtures[label][: args.points]
                         scalar = compare_candidates(
-                            ("h3_control", scalar_call(control)),
+                            ("control", scalar_call(control)),
                             (name, scalar_call(finder)),
                             points,
                             rounds=args.rounds,
@@ -1290,7 +1241,7 @@ def main() -> None:
                         )
                         batch_inputs = batches(points)
                         batch = compare_candidates(
-                            ("h3_control", batch_call(control)),
+                            ("control", batch_call(control)),
                             (name, batch_call(finder)),
                             batch_inputs,
                             rounds=args.rounds,
@@ -1300,7 +1251,7 @@ def main() -> None:
                             "scalar": comparison(scalar),
                             "batch_256": comparison(batch),
                         }
-                    if name != "shipped_h3":
+                    if name != "shipped":
                         finder.cleanup()
                     print(f"  timed {name}", flush=True)
                 report["timing"][path] = rows
@@ -1314,8 +1265,8 @@ def main() -> None:
             for challenger, baseline in HEAD_TO_HEAD:
                 if challenger not in by_name or baseline not in by_name:
                     continue
-                a = finder_on(path, by_name[challenger], IndexFinder)
-                base = finder_on(path, by_name[baseline], IndexFinder)
+                a = finder_on(path, by_name[challenger])
+                base = finder_on(path, by_name[baseline])
                 result = {}
                 for label in RANKING_STRATA:
                     points = fixtures[label][: args.points]
