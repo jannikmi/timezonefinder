@@ -32,11 +32,10 @@ STRATA = [
 ]
 
 
-#: Rounds for the one row that dominates the published suite's runtime. The interpreted
-#: bare kernel over the `large` stratum takes ~20 s a round on a CI runner, so the
-#: Makefile's 15 report rounds spent ~5 of the suite's ~7 minutes on it - while its
-#: rounds spread 0.6 %, against a gap of two orders of magnitude to the compiled
-#: kernel it is published beside. Five rounds describe that row as well as fifteen.
+#: Rounds for the one row that dominates the published suite's runtime: the
+#: interpreted bare kernel over the `large` stratum takes tens of seconds a round, and
+#: its rounds agree to within a percent against a gap of two orders of magnitude to the
+#: compiled kernel beside it, so five describe it as well as the report's fifteen.
 #: The marker sits on each parameter rather than on the function: pytest-benchmark
 #: reads the *closest* `benchmark` marker, and a bare one on the function wins over a
 #: parameter's, which silently left this row at 15 rounds. Every other row keeps the
