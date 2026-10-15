@@ -138,10 +138,12 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #:   :func:`saturation` takes its reference from the top three rungs and calls the
 #:   curve unsaturated while the top two still disagree. The ladder as of ``647a0c4``
 #:   ended the unique-shortcut stratum at 2,000, under half its 5,000-point fixture, and
-#:   read "still improving" there on every run - the end of the ladder, not an answer. Probed between 1,000 and
-#:   150,000, both default strata level off between 2,000 and 5,000 and stay level to
-#:   ~100,000 before the batch outgrows the cache, so 5,000-20,000 is three rungs of
-#:   plateau with the top well short of that cliff.
+#:   read "still improving" there on every run - the end of the ladder, not an answer.
+#:   Ending at 20,000 was still not enough on the CI runner (EPYC 7763): that stratum's
+#:   batched time fell 12 % from 10,000 to 20,000, because the per-call fixed cost is
+#:   tens of microseconds against ~20 ns per point and only drops under the 5 %
+#:   tolerance past ~50,000. Probed up to 150,000, both default strata stay level from
+#:   there to ~100,000 before the batch outgrows the cache, so 100,000 is the top.
 #:
 #: The two rungs around ``NAMES_GATHER_MIN_BATCH`` are the exception, and they are
 #: imported rather than written as 127/128: ``ZoneNames.names_of`` switches from a
@@ -163,16 +165,20 @@ DEFAULT_LADDER: Final[tuple[int, ...]] = (
     5000,
     10_000,
     20_000,
+    50_000,
+    100_000,
 )
 
 #: Points each round asks both candidates to answer, held constant across rungs so the
-#: curve compares like with like. Sized by the top rung rather than by the bottom one:
-#: the top rung still needs :data:`MIN_CALLS_PER_ROUND` calls in a round, and raising
-#: only its rounds would put the rung saturation is read from in a different
-#: measurement regime from the rest of the ladder. A candidate's round is then
-#: upwards of ~80 ms at every rung - far above timer resolution at ``N = 1`` - and the
-#: price is paid at the bottom of the ladder, where at N=1 every point is a whole
-#: batched call: that is why the rungs below the crossing are few.
+#: curve compares like with like - except at the top of the ladder, where
+#: :func:`points_per_round_for` raises it to :data:`MIN_CALLS_PER_ROUND` calls. Holding
+#: 100,000-point rungs to the same work everywhere would mean 400,000 points per round,
+#: and at N=1 every one of those is a whole batched call: ~15 minutes for that rung
+#: alone. So the top rungs run longer rounds than the rest, and that is the trade - a
+#: longer round is more likely to catch an interruption, which ``min`` over rounds
+#: absorbs and which can only bias those rungs *slower*, i.e. toward reporting
+#: saturation no later than it happens. A candidate's round is otherwise upwards of
+#: ~80 ms at every rung, far above timer resolution at ``N = 1``.
 DEFAULT_POINTS_PER_ROUND: Final[int] = 80_000
 
 #: Batched calls a round must contain. Below this the ``min`` over rounds stops being
@@ -493,6 +499,35 @@ def _scalar_caller(
     return lambda batch: [lookup(lng=lng, lat=lat) for lng, lat in batch.points]
 
 
+def scaled_rungs(run: dict[str, Any]) -> list[int]:
+    """Batch sizes whose rounds answered more than the target, across every sweep.
+
+    Read off what each rung stored rather than recomputed, so a run taken under other
+    settings reports the rungs it actually scaled.
+    """
+    target = run["machine_info"]["timezonefinder"]["points_per_round_target"]
+    return sorted(
+        {
+            rung["batch_size"]
+            for sweep in run["sweeps"]
+            for rung in sweep["rungs"]
+            if rung["points_per_round"] > target
+        }
+    )
+
+
+def points_per_round_for(batch_size: int, target: int) -> int:
+    """The points one round of this rung answers: the target, or more at the top.
+
+    Never fewer than :data:`MIN_CALLS_PER_ROUND` batched calls, because below that the
+    minimum over rounds stops being the least perturbed round and becomes the luckiest
+    single call. Rungs the target already covers are left at it, so everything below
+    the top of the ladder still times the same work; see
+    :data:`DEFAULT_POINTS_PER_ROUND` for what the exception costs.
+    """
+    return max(target, MIN_CALLS_PER_ROUND * batch_size)
+
+
 def measure_rung(
     finder: TimezoneFinder,
     points: Sequence[tuple[float, float]],
@@ -503,16 +538,9 @@ def measure_rung(
     seed: int,
 ) -> dict[str, Any]:
     """One paired comparison at one batch size."""
-    calls_per_round = points_per_round_target // batch_size
-    if calls_per_round < MIN_CALLS_PER_ROUND:
-        raise ValueError(
-            f"batch size {batch_size:,} leaves only {calls_per_round} batched call(s) "
-            f"per round at --points-per-round {points_per_round_target:,}, below the "
-            f"{MIN_CALLS_PER_ROUND} this harness requires: with fewer, the minimum over "
-            "rounds stops being the least perturbed round and becomes the luckiest "
-            f"single call. Raise --points-per-round to at least "
-            f"{batch_size * MIN_CALLS_PER_ROUND:,}, or drop this rung from --sizes."
-        )
+    calls_per_round = (
+        points_per_round_for(batch_size, points_per_round_target) // batch_size
+    )
 
     pool = prepare_pool(points, batch_size, random.Random(seed + batch_size))
     comparison = compare_candidates(
@@ -867,7 +895,9 @@ def main() -> None:
         default=DEFAULT_POINTS_PER_ROUND,
         help=(
             "points each round answers, held constant across rungs so the curve "
-            f"compares like with like (default: {DEFAULT_POINTS_PER_ROUND:,})"
+            "compares like with like, and raised only where a rung would otherwise "
+            f"get fewer than {MIN_CALLS_PER_ROUND} batched calls "
+            f"(default: {DEFAULT_POINTS_PER_ROUND:,})"
         ),
     )
     parser.add_argument(

@@ -368,7 +368,11 @@ three things follow from that.
 one-point round microscopic and a five-thousand-point round substantial - different measurement
 regimes plotted as one curve. Instead the number of calls is chosen per rung so that each round
 answers about the same number of *points*, and the per-point figures divide by what the round
-actually answered rather than by the nominal target.
+actually answered rather than by the nominal target. The one exception is the top of the ladder,
+where a round still needs four batched calls: those rungs answer more points per round rather than
+fewer calls, because holding every rung to that much work would multiply the cost of the smallest
+rungs, where each point is a whole batched call. A longer round can only catch more interruptions,
+which biases those rungs slower and so toward reporting saturation no later than it happens.
 
 **No ratio crosses a rung.** Each rung is its own experiment, so dividing one rung's batched time by
 another's scalar time would be the cross-experiment ratio the section above refuses, one step
@@ -392,7 +396,8 @@ The ladder has to run *past* the point where the batched call stops improving, n
 answer is read off the top rungs, and while the top two still disagree the curve is indistinguishable
 from one still falling. A ladder that ended the unique-shortcut stratum at 2,000 points, under half
 its 5,000-point fixture, read "still improving" there on every run - the end of the ladder, not an
-answer. Its top rungs therefore
+answer - and one ending at 20,000 still did on an EPYC 7763, where that stratum's per-call fixed cost
+of tens of microseconds only falls under the 5 % tolerance past ~50,000 points. Its top rungs therefore
 need a larger pool than the committed fixtures hold, and the sweep extends each fixture with points
 from the fixture generator's own sampler and classification rule rather than enlarging the fixtures,
 which would change every tracked benchmark's input for a question none of them asks. Rungs are spaced

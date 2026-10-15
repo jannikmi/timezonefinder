@@ -49,12 +49,14 @@ from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter  # noqa
 from benchmarks.candidate_comparison import DEFAULT_WIN_MARGIN  # noqa: E402
 from scripts.benchmark_utils import machine_label  # noqa: E402
 from scripts.measure_batch_break_even import (  # noqa: E402
+    MIN_CALLS_PER_ROUND,
     break_even,
     comparison_of,
     control_spread,
     per_point_seconds,
     point_class_label,
     saturation,
+    scaled_rungs,
     speedup,
 )
 from scripts.render_benchmark_reports import batch_break_even_settings  # noqa: E402
@@ -128,9 +130,10 @@ def _subtitle(run: dict[str, Any]) -> str:
             "in memory" if info.get("in_memory") else "memory mapped",
         ]
     )
-    where = [
-        f"{info['rounds']} rounds x ~{info['points_per_round_target']:,} points per rung"
-    ]
+    per_round = f"~{info['points_per_round_target']:,} points per round"
+    if scaled_rungs(run):
+        per_round += f" ({MIN_CALLS_PER_ROUND} calls at the top rungs)"
+    where = [f"{info['rounds']} rounds x {per_round}"]
     machine = machine_label(run)
     if machine:
         where.append(machine)

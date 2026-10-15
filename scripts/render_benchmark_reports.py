@@ -64,7 +64,9 @@ from scripts.measure_batch_break_even import (
     control_spread,
     per_point_seconds,
     point_class_label,
+    MIN_CALLS_PER_ROUND,
     saturation,
+    scaled_rungs,
     speedup,
 )
 
@@ -1020,10 +1022,24 @@ def render_batch_break_even(
         "``unresolved`` rather than as a number "
         "(``benchmarks/candidate_comparison.py``)."
     )
-    reporter.add_text(
+    scaled = scaled_rungs(run)
+    work_text = (
         f"Every rung times the same amount of work - about "
         f"{info['points_per_round_target']:,} points per round, whatever the batch size "
-        f"- so the rungs are comparable to each other, and both answers are read off the "
+        "- "
+        if not scaled
+        else f"Every rung times about {info['points_per_round_target']:,} points per "
+        "round, whatever the batch size, except the "
+        + ", ".join(f"{size:,}" for size in scaled)
+        + f"-point rungs, whose rounds hold {MIN_CALLS_PER_ROUND} batched calls and so "
+        "answer more: fewer calls would make the best round the luckiest single call, "
+        "and holding every rung to that much work would multiply the cost of the "
+        "smallest rungs, where every point is a whole batched call. Otherwise the work "
+        "is the same "
+    )
+    reporter.add_text(
+        work_text
+        + "so the rungs are comparable to each other, and both answers are read off the "
         "ratio *within* a rung rather than off absolute times across rungs, which is "
         "what keeps drift over the run out of the curve. Points are drawn without "
         "replacement inside a batch: a repeated coordinate would be answered from the "

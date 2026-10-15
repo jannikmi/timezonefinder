@@ -31,10 +31,11 @@ from scripts.measure_batch_break_even import (
     control_spread,
     ladder_for,
     load_points_csv,
-    measure_rung,
     per_point_seconds,
+    points_per_round_for,
     prepare_pool,
     saturation,
+    scaled_rungs,
     speedup,
     top_up_pool,
 )
@@ -93,7 +94,9 @@ def _rung(
     test that does not care about the second estimator gets a resolved verdict; pass it
     explicitly to build the disagreement that reads as ``unresolved``.
     """
-    calls_per_round = max(1, points_per_round_target // batch_size)
+    calls_per_round = (
+        points_per_round_for(batch_size, points_per_round_target) // batch_size
+    )
     points_per_round = calls_per_round * batch_size
     if challenger_wins is None:
         ratio = challenger_per_point / baseline_per_point
@@ -371,14 +374,29 @@ def test_default_ladder_straddles_the_names_gather_threshold():
     assert NAMES_GATHER_MIN_BATCH - 1 in DEFAULT_LADDER
 
 
-def test_default_ladder_top_rung_fits_the_points_per_round():
-    """The top rung must be measurable at the default settings, not refused by them.
+def test_points_per_round_hold_the_target_below_the_top_of_the_ladder():
+    """Every rung the target already covers times the same work."""
+    for size in DEFAULT_LADDER:
+        if size * MIN_CALLS_PER_ROUND <= DEFAULT_POINTS_PER_ROUND:
+            assert points_per_round_for(size, DEFAULT_POINTS_PER_ROUND) == (
+                DEFAULT_POINTS_PER_ROUND
+            )
 
-    The points per round are held constant across rungs, so raising the ladder without
-    raising them would make ``measure_rung`` refuse the very rungs saturation is read
-    from - after every cheaper rung had already been measured.
-    """
-    assert max(DEFAULT_LADDER) * MIN_CALLS_PER_ROUND <= DEFAULT_POINTS_PER_ROUND
+
+def test_points_per_round_never_leave_a_rung_short_of_its_calls():
+    """Raised rather than refused at the top: the default ladder must be measurable."""
+    for size in DEFAULT_LADDER:
+        points = points_per_round_for(size, DEFAULT_POINTS_PER_ROUND)
+        assert points // size >= MIN_CALLS_PER_ROUND
+    # and the default ladder does reach past the target, or nothing here is exercised
+    assert max(DEFAULT_LADDER) * MIN_CALLS_PER_ROUND > DEFAULT_POINTS_PER_ROUND
+
+
+def test_scaled_rungs_are_read_off_what_each_rung_stored():
+    run = _fake_run()
+    assert scaled_rungs(run) == []
+    run["sweeps"][0]["rungs"].append(_rung(10_000, 1.3e-6, 8.0e-7))  # 4 x 10,000
+    assert scaled_rungs(run) == [10_000]
 
 
 def test_top_up_keeps_the_fixture_as_the_prefix_and_reaches_the_size():
@@ -441,22 +459,6 @@ def test_pool_is_reproducible_under_a_seed():
     first = prepare_pool(points, 10, random.Random(7))
     second = prepare_pool(points, 10, random.Random(7))
     assert [batch.points for batch in first] == [batch.points for batch in second]
-
-
-def test_a_rung_with_too_few_calls_per_round_is_refused():
-    """Below a handful of calls, ``min`` over rounds is the luckiest call, not the
-    least perturbed round."""
-    points = [(float(i), float(-i)) for i in range(50)]
-    with pytest.raises(ValueError, match="--points-per-round"):
-        measure_rung(
-            finder=None,
-            points=points,
-            batch_size=10,
-            api="names",
-            rounds=3,
-            points_per_round_target=10 * (MIN_CALLS_PER_ROUND - 1),
-            seed=0,
-        )
 
 
 # --- the CSV a downstream user brings ------------------------------------------------
