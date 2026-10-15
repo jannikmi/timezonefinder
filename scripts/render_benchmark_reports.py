@@ -945,7 +945,12 @@ def _batch_break_even_headline(
     elif settles.batch_size is not None and settles.speedup is not None:
         closing = (
             f", and stops improving beyond ~{settles.batch_size:,} "
-            f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})."
+            f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})"
+            + (
+                f"; from {settles.slower_from:,} points it is slower per point again."
+                if settles.slower_from is not None
+                else "."
+            )
         )
     else:
         closing = ", and had not stopped improving at the top of the ladder."

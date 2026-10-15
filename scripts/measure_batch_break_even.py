@@ -127,23 +127,20 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #: integer step would spend the whole run where nothing changes - and spaced unevenly on
 #: purpose, dense only where the page's two answers fall.
 #:
-#: * **Below the crossing** the batched call is its own fixed cost spread over N, a
-#:   curve two rungs describe, so 1 and 10 stand alone. Those rungs are also the
-#:   expensive ones: every round answers ~:data:`DEFAULT_POINTS_PER_ROUND` points, and
-#:   at N=1 each costs a whole batched call, so a rung spent there is worth more than
-#:   one at the top.
-#: * **The crossing** has fallen between 20 and 100 on every recorded run, so 20 and 50
-#:   keep the bracket that narrow.
+#: * **Below the crossing** the batched call is its own fixed cost spread over N, which
+#:   10 and 20 already show, so the ladder starts at 10. Rungs under it are the
+#:   expensive ones: every round answers ~:data:`DEFAULT_POINTS_PER_ROUND` points, and at
+#:   N=1 each costs a whole batched call. ``--sizes 1,...`` still measures them.
+#: * **The crossing** has fallen between 20 and 100, so 20 and 50 keep the bracket
+#:   narrow.
 #: * **Saturation** needs the ladder to run *past* the plateau, not to end on it:
-#:   :func:`saturation` takes its reference from the top three rungs and calls the
-#:   curve unsaturated while the top two still disagree. The ladder as of ``647a0c4``
-#:   ended the unique-shortcut stratum at 2,000, under half its 5,000-point fixture, and
-#:   read "still improving" there on every run - the end of the ladder, not an answer.
-#:   Ending at 20,000 was still not enough on the CI runner (EPYC 7763): that stratum's
-#:   batched time fell 12 % from 10,000 to 20,000, because the per-call fixed cost is
-#:   tens of microseconds against ~20 ns per point and only drops under the 5 %
-#:   tolerance past ~50,000. Probed up to 150,000, both default strata stay level from
-#:   there to ~100,000 before the batch outgrows the cache, so 100,000 is the top.
+#:   :func:`saturation` reads it off the top rungs. The per-call fixed cost is tens of
+#:   microseconds against tens of nanoseconds per point on the unique-shortcut stratum,
+#:   so that curve can still be falling at 20,000; past ~50,000 the batch outgrows the
+#:   cache and gets slower again, which :func:`saturation` reads as a turn. The top
+#:   rung is kept to show that turn, and nothing above it is worth measuring. Above the
+#:   gather rungs the ladder steps 1-5-10 per decade: an answer is named to the nearest
+#:   rung either way.
 #:
 #: The two rungs around ``NAMES_GATHER_MIN_BATCH`` are the exception, and they are
 #: imported rather than written as 127/128: ``ZoneNames.names_of`` switches from a
@@ -152,7 +149,6 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #: next rung. It is also the most actionable thing this page can show a caller sizing
 #: batches.
 DEFAULT_LADDER: Final[tuple[int, ...]] = (
-    1,
     10,
     20,
     50,
@@ -161,24 +157,19 @@ DEFAULT_LADDER: Final[tuple[int, ...]] = (
     NAMES_GATHER_MIN_BATCH,
     500,
     1000,
-    2000,
     5000,
     10_000,
-    20_000,
     50_000,
     100_000,
 )
 
 #: Points each round asks both candidates to answer, held constant across rungs so the
 #: curve compares like with like - except at the top of the ladder, where
-#: :func:`points_per_round_for` raises it to :data:`MIN_CALLS_PER_ROUND` calls. Holding
-#: 100,000-point rungs to the same work everywhere would mean 400,000 points per round,
-#: and at N=1 every one of those is a whole batched call: ~15 minutes for that rung
-#: alone. So the top rungs run longer rounds than the rest, and that is the trade - a
-#: longer round is more likely to catch an interruption, which ``min`` over rounds
-#: absorbs and which can only bias those rungs *slower*, i.e. toward reporting
-#: saturation no later than it happens. A candidate's round is otherwise upwards of
-#: ~80 ms at every rung, far above timer resolution at ``N = 1``.
+#: :func:`points_per_round_for` raises it to :data:`MIN_CALLS_PER_ROUND` calls. Raising
+#: it for every rung instead would multiply the cost of the bottom rungs, where every
+#: few points are a whole batched call. A longer round is more likely to catch an
+#: interruption, which ``min`` over rounds absorbs and which can only bias those rungs
+#: *slower*, i.e. toward reporting saturation no later than it happens.
 DEFAULT_POINTS_PER_ROUND: Final[int] = 80_000
 
 #: Batched calls a round must contain. Below this the ``min`` over rounds stops being
@@ -296,11 +287,17 @@ class Saturation:
     batch_size: int | None = None
     speedup: float | None = None
     verdict: str | None = None
+    #: the rung from which every larger one is slower per point than the fastest by more
+    #: than the tolerance - where the batch has outgrown something, typically the cache
+    slower_from: int | None = None
 
     def describe(self) -> str:
         if self.status == "not_reached":
             return "not reached within the ladder"
-        return f"N={self.batch_size} ({self.speedup:.2f}x, {self.verdict})"
+        described = f"N={self.batch_size} ({self.speedup:.2f}x, {self.verdict})"
+        if self.slower_from is not None:
+            described += f", slower again from N={self.slower_from}"
+        return described
 
 
 @dataclass(frozen=True)
@@ -625,6 +622,16 @@ def saturation(
     Every larger rung must also be inside the tolerance, so one lucky dip at a small
     rung cannot qualify it.
 
+    **A curve that turns back up has stopped improving too**, and is read differently.
+    Once the rungs beyond the fastest one stay slower than it by more than the tolerance
+    through the top of the ladder, the batch has outgrown something - typically the
+    cache - and the top rungs are no longer an asymptote to take a reference from:
+    comparing the top two
+    would read that rise as a curve still falling. The reference is then the fastest
+    rung itself, and the answer the smallest rung from which every rung up to it stays
+    inside the tolerance. That minimum is the low-biased estimator the median avoids,
+    which only moves the answer later, never earlier. ``slower_from`` names the turn.
+
     Read off the batched call's **absolute** per-point time rather than off the speed-up
     ratio, unlike :func:`break_even`. Saturation asks whether a bigger batch still buys
     anything, which is a property of the batched side alone; the ratio would mix in the
@@ -648,6 +655,31 @@ def saturation(
         )
 
     per_point = [per_point_seconds(rung, "best_challenger") for rung in rungs]
+
+    fastest = min(range(len(per_point)), key=per_point.__getitem__)
+    turn_ceiling = per_point[fastest] * (1.0 + tolerance)
+    # A turn is a tail that *stays* slower, through the top rung: a curve that rises and
+    # comes back is a lucky dip at the fastest rung, which the median rule below handles.
+    turned: list[int] = []
+    for index in range(len(per_point) - 1, fastest, -1):
+        if per_point[index] <= turn_ceiling:
+            break
+        turned.insert(0, index)
+    if turned:
+        start = fastest
+        while start > 0 and per_point[start - 1] <= turn_ceiling:
+            start -= 1
+        rung = rungs[start]
+        return Saturation(
+            status="saturated",
+            tolerance=tolerance,
+            reference_seconds=per_point[fastest],
+            batch_size=rung["batch_size"],
+            speedup=speedup(rung),
+            verdict=comparison_of(rung).verdict,
+            slower_from=rungs[turned[0]]["batch_size"],
+        )
+
     reference = statistics.median(per_point[-3:])
 
     # Has the curve stopped moving at all? The top two rungs differ in size by a factor

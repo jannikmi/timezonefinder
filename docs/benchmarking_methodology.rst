@@ -401,9 +401,10 @@ of tens of microseconds only falls under the 5 % tolerance past ~50,000 points. 
 need a larger pool than the committed fixtures hold, and the sweep extends each fixture with points
 from the fixture generator's own sampler and classification rule rather than enlarging the fixtures,
 which would change every tracked benchmark's input for a question none of them asks. Rungs are spaced
-densely only where the two answers fall: below the crossing a curve that is one fixed cost spread over
-N needs two rungs, and those rungs are the expensive ones, because each round answers the same number
-of points and at N=1 every one of them is a whole batched call.
+densely only where the two answers fall. Below the crossing the curve is one fixed cost spread over N,
+which the rungs at 10 and 20 already show, so the ladder starts at 10: rungs under it are the expensive
+ones, because each round answers the same number of points and at N=1 every one of them is a whole
+batched call - about 6.5 minutes of a CI render for a rung no answer on the page is read from.
 
 The measurement runs in one environment and stamps the acceleration path it bound, because the
 question is about batch size rather than about backends; ``make batch-break-even`` asserts the
