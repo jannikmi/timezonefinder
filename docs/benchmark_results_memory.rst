@@ -6,7 +6,7 @@ TimezoneFinder Memory Footprint
 
 **~1.78 MiB** allocated in the default mode, **~32.4 MiB** with ``in_memory=True`` - the default maps the coordinate data instead of reading it, which is what keeps it viable in a constrained container.
 
-*Measured on Linux x86_64, Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4932 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2436 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
 
 
@@ -96,7 +96,7 @@ Results
    * - TimezoneFinder[file_based]
      - 1.78 MiB
      - 1.78 MiB
-     - 3.62 MiB
+     - 3.63 MiB
      - 17.9 MiB
    * - TimezoneFinder[in_memory]
      - 32.4 MiB
@@ -115,7 +115,7 @@ Summary
 
 * ``in_memory=True`` holds **32.4 MiB** on the heap against **1.78 MiB** for the default file-based mode (18.2x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
-* The file-based mode's resident set grows from **3.62 MiB** at construction to **17.9 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
+* The file-based mode's resident set grows from **3.63 MiB** at construction to **17.9 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
 
 * ``TimezoneFinderL`` holds **534 KiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
 
