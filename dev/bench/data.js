@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792036876603,
+  "lastUpdate": 1792036878238,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -27914,6 +27914,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0835 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b99331a9b34f9f25746037071d4f01717336445",
+          "message": "Decide free-threaded wheels (GH-721) and declare the Free Threading classifier (#722)\n\n* Decide GH-721: free-threaded wheels from 3.15t via abi3t\n\nThe maintainer chose 3.15t and later via the abi3t stable ABI, for +3\nartifacts once and no growth per CPython release. Version-specific\ncp314t wheels are refused unless users ask for them on issue #721,\nwhich the entry now tracks (re-keyed from FT-5). cp313t is not\nbuildable on the pinned cibuildwheel 4.3.0 at all.\n\nThe entry is blocked rather than open: setuptools 84.0.0, the latest,\nstill raises on py_limited_api whenever Py_GIL_DISABLED is set.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\n* Declare the Free Threading :: 3 - Stable classifier\n\nLookups are tested multithreaded on a free-threaded build in CI and the\none thread-safety limit (cleanup() on a shared instance) is documented,\nwhich is the \"3 - Stable\" bar; that limit is why it is not \"4 - Resilient\".\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-15T04:00:31Z",
+          "tree_id": "366a41c5c2df5b6973d04fe05d7ddc41e047c45f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6b99331a9b34f9f25746037071d4f01717336445"
+        },
+        "date": 1792036877947,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.5217838287353516,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.5219154357910156,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.7821149826049805,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.782881736755371,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.369269371032715,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.3699893951416,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
           }
         ]
       }
