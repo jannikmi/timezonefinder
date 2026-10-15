@@ -1,0 +1,1 @@
+The package now declares the ``Programming Language :: Python :: Free Threading :: 3 - Stable`` classifier: lookups are supported and tested on free-threaded CPython builds, where the GIL stays disabled. Wheels for free-threaded interpreters are not published yet, so those installs build from the sdist.
