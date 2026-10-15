@@ -1,1 +1,0 @@
-The published benchmark suite times the interpreted point-in-polygon kernel over the large-polygon stratum in 5 rounds instead of 15: at ~20 s a round it took ~5 of the suite's ~7 minutes in the report render, while its rounds spread under 1 %. Every other row keeps 15, and no benchmark id changes.
