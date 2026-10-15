@@ -6,7 +6,7 @@ TimezoneFinder Memory Footprint
 
 **~1.78 MiB** allocated in the default mode, **~32.4 MiB** with ``in_memory=True`` - the default maps the coordinate data instead of reading it, which is what keeps it viable in a constrained container.
 
-*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2436 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2647 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
 
 
@@ -111,7 +111,7 @@ Summary
 ~~~~~~~
 
 
-* Importing the package costs **3.47 MiB** of resident memory before any timezone data is touched.
+* Importing the package costs **3.43 MiB** of resident memory before any timezone data is touched.
 
 * ``in_memory=True`` holds **32.4 MiB** on the heap against **1.78 MiB** for the default file-based mode (18.2x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
