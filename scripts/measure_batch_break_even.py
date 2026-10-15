@@ -127,11 +127,13 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #: integer step would spend the whole run where nothing changes - and spaced unevenly on
 #: purpose, dense only where the page's two answers fall.
 #:
-#: * **Below the crossing** the batched call is its own fixed cost spread over N, a
-#:   curve two rungs describe, so 1 and 10 stand alone. Those rungs are also the
-#:   expensive ones: every round answers ~:data:`DEFAULT_POINTS_PER_ROUND` points, and
-#:   at N=1 each costs a whole batched call, so a rung spent there is worth more than
-#:   one at the top.
+#: * **Below the crossing** the batched call is its own fixed cost spread over N, which
+#:   10 and 20 already show (0.3x and 0.5x on the CI runner), so the ladder starts at
+#:   10. The rungs under it are the expensive ones: every round answers
+#:   ~:data:`DEFAULT_POINTS_PER_ROUND` points, and at N=1 each costs a whole batched
+#:   call - that rung alone took ~6.5 of the render job's ~23 minutes for the two
+#:   default strata while answering nothing the page states. N=1 and N=2 are dropped
+#:   for that, not for lack of a value: ``--sizes 1,...`` still measures them.
 #: * **The crossing** has fallen between 20 and 100 on every recorded run, so 20 and 50
 #:   keep the bracket that narrow.
 #: * **Saturation** needs the ladder to run *past* the plateau, not to end on it:
@@ -146,7 +148,9 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #:   measured 21.9 ns per point at 50,000 and 33.5 ns at 100,000, which
 #:   :func:`saturation` reads as a turn. The top rung is kept for exactly that - it shows
 #:   a caller where a bigger batch starts to cost - and nothing above it is worth
-#:   measuring.
+#:   measuring. Between the gather rungs and the top the ladder steps 1-5-10 per decade
+#:   rather than 1-2-5: an answer here is named to the nearest rung either way, and the
+#:   2,000 and 20,000 rungs only re-confirmed a curve their neighbours already pin.
 #:
 #: The two rungs around ``NAMES_GATHER_MIN_BATCH`` are the exception, and they are
 #: imported rather than written as 127/128: ``ZoneNames.names_of`` switches from a
@@ -155,7 +159,6 @@ DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 #: next rung. It is also the most actionable thing this page can show a caller sizing
 #: batches.
 DEFAULT_LADDER: Final[tuple[int, ...]] = (
-    1,
     10,
     20,
     50,
@@ -164,10 +167,8 @@ DEFAULT_LADDER: Final[tuple[int, ...]] = (
     NAMES_GATHER_MIN_BATCH,
     500,
     1000,
-    2000,
     5000,
     10_000,
-    20_000,
     50_000,
     100_000,
 )
@@ -176,12 +177,12 @@ DEFAULT_LADDER: Final[tuple[int, ...]] = (
 #: curve compares like with like - except at the top of the ladder, where
 #: :func:`points_per_round_for` raises it to :data:`MIN_CALLS_PER_ROUND` calls. Holding
 #: 100,000-point rungs to the same work everywhere would mean 400,000 points per round,
-#: and at N=1 every one of those is a whole batched call: ~15 minutes for that rung
-#: alone. So the top rungs run longer rounds than the rest, and that is the trade - a
+#: and at N=10 every ten of those are a whole batched call: five times what that rung
+#: costs now. So the top rungs run longer rounds than the rest, and that is the trade - a
 #: longer round is more likely to catch an interruption, which ``min`` over rounds
 #: absorbs and which can only bias those rungs *slower*, i.e. toward reporting
 #: saturation no later than it happens. A candidate's round is otherwise upwards of
-#: ~80 ms at every rung, far above timer resolution at ``N = 1``.
+#: ~80 ms at every rung, far above timer resolution at the bottom of the ladder.
 DEFAULT_POINTS_PER_ROUND: Final[int] = 80_000
 
 #: Batched calls a round must contain. Below this the ``min`` over rounds stops being

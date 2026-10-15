@@ -32,6 +32,29 @@ STRATA = [
 ]
 
 
+#: Rounds for the one row that dominates the published suite's runtime. The interpreted
+#: bare kernel over the `large` stratum takes ~20 s a round on a CI runner, so the
+#: Makefile's 15 report rounds spent ~5 of the suite's ~7 minutes on it - while its
+#: rounds spread 0.6 %, against a gap of two orders of magnitude to the compiled
+#: kernel it is published beside. Five rounds describe that row as well as fifteen.
+#: The marker sits on each parameter rather than on the function: pytest-benchmark
+#: reads the *closest* `benchmark` marker, and a bare one on the function wins over a
+#: parameter's, which silently left this row at 15 rounds. Every other row keeps the
+#: report's round count, and the node ids the trend chart and
+#: `tests/test_benchmark_names.py` pin are unchanged.
+SLOW_INTERPRETED_ROUNDS = 5
+
+INTERPRETED_STRATA = [
+    pytest.param("small", id="small", marks=pytest.mark.benchmark),
+    pytest.param("medium", id="medium", marks=pytest.mark.benchmark),
+    pytest.param(
+        "large",
+        id="large",
+        marks=pytest.mark.benchmark(min_rounds=SLOW_INTERPRETED_ROUNDS),
+    ),
+]
+
+
 def _run_over(func: Callable, inputs: Iterable[tuple[int, int, np.ndarray]]) -> None:
     for x, y, poly in inputs:
         func(x, y, poly)
@@ -45,8 +68,7 @@ def test_pt_in_poly_clang(benchmark, pip_inputs_by_stratum, stratum):
     benchmark(_run_over, utils_clang.pt_in_poly_clang, inputs)
 
 
-@pytest.mark.benchmark
-@pytest.mark.parametrize("stratum", STRATA)
+@pytest.mark.parametrize("stratum", INTERPRETED_STRATA)
 @pytest.mark.usefixtures("strict_numpy_warnings")
 def test_pt_in_poly_python(benchmark, pip_inputs_by_stratum, stratum):
     # times `utils_numba` directly, so this is the JIT-compiled kernel wherever numba
