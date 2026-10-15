@@ -313,6 +313,61 @@ def test_saturation_not_reached_is_decided_by_the_top_of_the_ladder():
     assert saturation(_ladder(falling + flat), tolerance=0.05).status == "saturated"
 
 
+def test_saturation_reads_a_curve_that_turns_back_up_as_having_stopped():
+    """A batch that outgrows the cache gets slower again; that is not 'still falling'.
+
+    Shaped on a measured EPYC 7763 run, where comparing the top two rungs read the rise
+    at 100,000 as a curve that had not saturated.
+    """
+    rungs = _ladder(
+        [
+            (n, 1.2e-6, value)
+            for n, value in (
+                (1, 36e-6),
+                (1000, 74.1e-9),
+                (10_000, 25.9e-9),
+                (20_000, 22.9e-9),
+                (50_000, 21.9e-9),
+                (100_000, 33.5e-9),
+            )
+        ]
+    )
+    settled = saturation(rungs, tolerance=0.05)
+    assert settled.status == "saturated"
+    assert settled.batch_size == 20_000  # 22.9 is within 5 % of the fastest, 21.9
+    assert settled.slower_from == 100_000
+    assert settled.reference_seconds == pytest.approx(21.9e-9)
+
+
+def test_saturation_ignores_a_rise_inside_the_tolerance():
+    """A top rung a little slower than the fastest is noise, not a turn."""
+    rungs = _ladder(
+        [
+            (n, 2e-6, v)
+            for n, v in ((1, 4e-6), (100, 2e-6), (1000, 1.0e-6), (5000, 1.03e-6))
+        ]
+    )
+    assert saturation(rungs, tolerance=0.05).slower_from is None
+
+
+def test_saturation_turn_is_named_where_the_tail_stays_slower():
+    """A rise that comes back down before the top is not where the turn starts."""
+    rungs = _ladder(
+        [
+            (n, 2e-6, v)
+            for n, v in (
+                (1, 4e-6),
+                (100, 1.0e-6),
+                (1000, 1.2e-6),  # a bump, not the turn
+                (2000, 1.0e-6),
+                (5000, 1.4e-6),
+                (10_000, 1.5e-6),
+            )
+        ]
+    )
+    assert saturation(rungs, tolerance=0.05).slower_from == 5000
+
+
 def test_saturation_refuses_a_tolerance_inside_the_instruments_own_floor():
     """Below the harness's threshold nothing is demonstrable, saturation included."""
     rungs = _ladder([(n, 2e-6, 1e-6) for n in (1, 10, 100)])
