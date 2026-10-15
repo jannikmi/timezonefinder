@@ -13,7 +13,6 @@
 - **This item owns the wheel tag.** Whether a 3.15t stable-ABI build keeps `py_limited_api="cp312"`, needs a `cp315` base, or needs something else for `abi3t` is untested — cffi claims support and only 3.15.0a2 was available during scoping — and `tests/test_python_version_support.py` asserts against that literal, so whatever is chosen has to be reconciled with it.
 - **Size:** M.
 - **Status:** needs the interpreter-set decision above.
-- **Detail:** issue #364 carries the artifact arithmetic and the cibuildwheel identifier list.
 
 ## Related memory
 
