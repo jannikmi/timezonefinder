@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791975369777,
+  "lastUpdate": 1792036876603,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14493,6 +14493,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5876",
             "unit": "lookups/sec",
             "extra": "min of 116 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b99331a9b34f9f25746037071d4f01717336445",
+          "message": "Decide free-threaded wheels (GH-721) and declare the Free Threading classifier (#722)\n\n* Decide GH-721: free-threaded wheels from 3.15t via abi3t\n\nThe maintainer chose 3.15t and later via the abi3t stable ABI, for +3\nartifacts once and no growth per CPython release. Version-specific\ncp314t wheels are refused unless users ask for them on issue #721,\nwhich the entry now tracks (re-keyed from FT-5). cp313t is not\nbuildable on the pinned cibuildwheel 4.3.0 at all.\n\nThe entry is blocked rather than open: setuptools 84.0.0, the latest,\nstill raises on py_limited_api whenever Py_GIL_DISABLED is set.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\n* Declare the Free Threading :: 3 - Stable classifier\n\nLookups are tested multithreaded on a free-threaded build in CI and the\none thread-safety limit (cleanup() on a shared instance) is documented,\nwhich is the \"3 - Stable\" bar; that limit is why it is not \"4 - Resilient\".\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01NeC9fzvYRiFPAiVSh3woLT\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-15T04:00:31Z",
+          "tree_id": "366a41c5c2df5b6973d04fe05d7ddc41e047c45f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6b99331a9b34f9f25746037071d4f01717336445"
+        },
+        "date": 1792036874875,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1552764.1686604677,
+            "range": "± 35013",
+            "unit": "lookups/sec",
+            "extra": "min of 408 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1932225.266562141,
+            "range": "± 223663",
+            "unit": "lookups/sec",
+            "extra": "min of 585 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 335248.58615530684,
+            "range": "± 16106",
+            "unit": "lookups/sec",
+            "extra": "min of 109 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8019477.707707804,
+            "range": "± 169832",
+            "unit": "lookups/sec",
+            "extra": "min of 1284 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 70197113.47069734,
+            "range": "± 3580051",
+            "unit": "lookups/sec",
+            "extra": "min of 8985 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 447268.55775436736,
+            "range": "± 19085",
+            "unit": "lookups/sec",
+            "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 7596775.320547714,
+            "range": "± 220275",
+            "unit": "lookups/sec",
+            "extra": "min of 1417 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 50418473.32934243,
+            "range": "± 10617932",
+            "unit": "lookups/sec",
+            "extra": "min of 6987 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 450723.4833065911,
+            "range": "± 6759",
+            "unit": "lookups/sec",
+            "extra": "min of 133 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4250 GHz"
           }
         ]
       }
