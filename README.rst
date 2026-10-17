@@ -120,9 +120,10 @@ The exact figure depends on the acceleration backend, the machine and the datase
 benchmark reports below carry it - each states the configuration it was measured in - rather than
 this page, which would go stale.
 
-The point-in-polygon routine has three interchangeable backends, selected at import time: a
-clang-compiled C extension (built automatically when a compiler is available), Numba JIT
-compilation (preferred when the optional dependency is installed), and pure Python. All three return
+The point-in-polygon routine has three interchangeable backends, selected at import time in this
+order: a clang-compiled C extension (built automatically when a compiler is available), Numba JIT
+compilation (used only where the C extension is unavailable and the optional ``numba`` dependency
+is installed), and pure Python. All three return
 identical answers - a missing compiler costs speed, never results. Which is fastest is measured, not
 assumed: see the `acceleration path comparison
 <https://timezonefinder.readthedocs.io/en/latest/benchmark_results_acceleration_paths.html>`__.

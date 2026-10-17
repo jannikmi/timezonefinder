@@ -4,6 +4,7 @@ import re
 
 import pytest
 
+from benchmarks.candidate_comparison import CandidateComparison
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
 from scripts.configs import (
     COMPARISON_REPORT_FILE,
@@ -22,6 +23,8 @@ from scripts.render_benchmark_reports import (
     add_ci_tracking_note,
     add_fastest_slowest_bullet,
     add_headline_section,
+    _acceleration_headline,
+    _fastest_path_headline,
     format_duration,
     format_ratio,
     format_rate,
@@ -376,6 +379,55 @@ def test_acceleration_page_reports_each_pair_against_its_own_clang_baseline(tmp_
     assert page.count("2.00x") >= 2
     # and the page must say, in so many words, that it does not cross the two runs
     assert "third ratio is not derived" in page
+
+
+def test_acceleration_page_opens_with_the_fastest_path_and_reads_faster_than(
+    tmp_path,
+):
+    output = tmp_path / "acceleration.rst"
+
+    render_acceleration_paths(
+        [_fake_acceleration_run("numba"), _fake_acceleration_run("python")], output
+    )
+
+    page = output.read_text(encoding="utf-8")
+    body = page.split("\n\n", 2)[-1].lstrip()
+    # the glance line comes first, before either per-path headline
+    assert body.startswith("**Fastest measured: the C extension")
+    # the faster side is the subject, so the multiple never reads backwards
+    assert "**The C extension is 2.00x faster than Numba JIT**" in page
+    assert "**The C extension is 2.00x faster than pure Python**" in page
+    assert "2.00x the C extension" not in page
+    # the tables use the same framing, with the challenger's wins named as such
+    assert "     - The C extension is 2.00x faster\n" in page
+    assert "Rounds Numba JIT won" in page and "Rounds pure Python won" in page
+    assert "Relative to clang" not in page
+
+
+def test_acceleration_headline_names_a_faster_challenger_or_no_difference():
+    base = {
+        "baseline_name": "clang",
+        "challenger_name": "numba",
+        "rounds": 15,
+        "batch_size": 2500,
+        "threshold": 0.03,
+        "win_margin": 0.10,
+        "best_baseline": 2.0,
+    }
+    faster = CandidateComparison(**base, best_challenger=1.0, challenger_wins=15)
+    tied = CandidateComparison(**base, best_challenger=2.0, challenger_wins=7)
+    assert faster.verdict == "faster"
+    assert tied.verdict != "slower"
+
+    assert _acceleration_headline("Numba JIT", faster).startswith(
+        "**Numba JIT is 2.00x faster than the C extension**"
+    )
+    assert _acceleration_headline("pure Python", tied).startswith(
+        "**Pure Python and the C extension are indistinguishable**"
+    )
+    assert "Fastest measured: Numba JIT" in _fastest_path_headline(
+        {"numba": faster, "python": tied}
+    )
 
 
 def test_acceleration_page_prices_the_numba_extra_before_any_query(tmp_path):
