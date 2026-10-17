@@ -2,11 +2,10 @@
 
 The rest of ``benchmarks/`` compares *one* implementation across commits or
 machines. Deciding between two *candidates* in a single working tree is a
-different measurement, and ``docs/benchmarking_methodology.rst`` records three
-designs for it that produced wrong answers in this repository - each of them
-flattering the newer candidate, each of them hand-rolled again the next time
-the question came up. This module is that harness, kept where it can be reused
-instead of re-derived.
+different measurement, and three hand-rolled designs for it produced wrong
+answers in this repository - each of them flattering the newer candidate. This
+module is that harness, kept where it can be reused instead of re-derived, and
+the list below is where those failures are recorded.
 
 The four properties it exists to hold, all of which have been got wrong here:
 
@@ -32,7 +31,7 @@ The four properties it exists to hold, all of which have been got wrong here:
   which no single estimator can give.
 
 Reporting only, like every other measurement here: nothing in this module
-fails a build. See ``docs/benchmarking_methodology.rst``.
+fails a build. ``docs/benchmarking_methodology.rst`` explains it to users.
 """
 
 import math
@@ -54,7 +53,7 @@ Verdict = Literal["faster", "slower", "no difference", "unresolved"]
 
 #: Odd, so the round-level sign count cannot tie, and large enough that the
 #: two best rounds are drawn from a decent sample. 61 is the count the recorded
-#: comparisons in ``docs/benchmarking_methodology.rst`` were run at.
+#: comparisons in this module's docstring were run at.
 DEFAULT_ROUNDS: Final[int] = 61
 #: Inputs per round. One round has to be well above timer resolution while
 #: staying short enough that the machine's state is unlikely to change inside

@@ -177,7 +177,7 @@ def test_finders_on_different_paths_coexist_and_agree() -> None:
     arguments where it declared arrays - and the C kernel, which has no such guard, is
     handed numpy arrays where it expects cffi handles. Nothing could hold both alive,
     so no paired A/B of the two paths through the public API was possible -
-    and a paired A/B is the only design ``docs/benchmarking_methodology.rst`` accepts
+    and a paired A/B is the only design ``benchmarks/candidate_comparison.py`` accepts
     for two candidates in one working tree.
 
     Both finders are therefore built here, under their own patch, and then used

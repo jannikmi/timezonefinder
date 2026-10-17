@@ -656,3 +656,19 @@ def test_the_chart_export_names_the_statistics_it_did_not_find():
 
     with pytest.raises(ValueError, match="no 'median' statistic; available:"):
         to_timing_chart_entries(data, "median")
+
+
+def test_machine_label_does_not_repeat_an_advertised_clock():
+    """Intel brand strings carry their advertised clock; only the measured one shows."""
+    intel = {
+        "machine_info": {
+            "cpu": {
+                "brand_raw": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+                "hz_actual_friendly": "2.1000 GHz",
+            }
+        }
+    }
+    assert machine_label(intel) == "Intel(R) Xeon(R) Processor @ 2.1000 GHz"
+    # without a measured clock the brand string is all there is, so it stays whole
+    intel["machine_info"]["cpu"].pop("hz_actual_friendly")
+    assert machine_label(intel) == "Intel(R) Xeon(R) Processor @ 2.10GHz"

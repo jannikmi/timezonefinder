@@ -9,6 +9,7 @@ to generate RST reports and handle CLI interfaces.
 import importlib.metadata
 import json
 import platform
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Final, Literal, get_args
@@ -227,6 +228,12 @@ def cpu_info() -> dict[str, Any]:
     return cpuinfo.get_cpu_info()
 
 
+#: The advertised clock some CPU brand strings end in, e.g. Intel's ``@ 2.10GHz``.
+ADVERTISED_CLOCK_SUFFIX: Final = re.compile(
+    r"\s*@\s*[\d.]+\s*[GM]Hz\s*$", re.IGNORECASE
+)
+
+
 def cpu_model(data: dict[str, Any]) -> str | None:
     """The CPU model that produced ``data``, or ``None`` if not recorded.
 
@@ -255,7 +262,12 @@ def machine_label(data: dict[str, Any]) -> str | None:
         return None
     cpu = data.get("machine_info", {}).get("cpu") or {}
     clock = str(cpu.get("hz_actual_friendly") or "").strip()
-    return f"{model} @ {clock}" if clock else model
+    if not clock:
+        return model
+    # Intel brand strings end in their *advertised* clock ("... @ 2.10GHz"), AMD's do
+    # not. Appending the measured one to that read "@ 2.10GHz @ 2.1000 GHz"; the
+    # measured clock is the one this label exists to show, so it replaces the other.
+    return f"{ADVERTISED_CLOCK_SUFFIX.sub('', model)} @ {clock}"
 
 
 def comparability_info(data: dict[str, Any]) -> dict[str, Any]:
