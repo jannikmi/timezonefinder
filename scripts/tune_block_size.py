@@ -6,8 +6,9 @@
 ring's latitudes more tightly and so skip more of it, larger blocks mean fewer range
 comparisons to decide that. Neither side is guessable, and both are *counts* - they do
 not depend on the machine, the acceleration backend or what a candidate polygon costs to
-fetch, which is why this reports work rather than time. ``docs/benchmarking_methodology``
-explains why a count is the instrument to reach for first.
+fetch, which is why this reports work rather than time.
+``contributing/development/benchmarking-and-performance-validation.md`` explains why a
+count is the instrument to reach for first.
 
 The workload is the point-in-polygon tests the committed query fixtures actually
 produce, recorded off a real lookup rather than constructed: which polygons a point is

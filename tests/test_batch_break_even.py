@@ -274,23 +274,26 @@ def test_saturation_requires_every_larger_rung_to_stay_inside_the_tolerance():
     assert saturation(rungs, tolerance=0.05).batch_size == 1000
 
 
-def test_saturation_reference_is_the_top_rungs_not_the_ladder_minimum():
-    """A minimum over a dozen noisy rungs is biased low and would delay the answer."""
+def test_saturation_is_not_named_where_a_larger_batch_still_improves():
+    """Shaped on a measured random-point run: 10,000 is within 5 % of the top three
+    rungs' median, but 50,000 is still 9 % faster, so 10,000 has not stopped improving."""
     rungs = _ladder(
         [
-            (n, 2e-6, value)
+            (n, 1.4e-6, value)
             for n, value in (
-                (1, 4e-6),
-                (10, 2e-6),
-                (100, 1.00e-6),
-                (1000, 1.02e-6),
-                (5000, 1.01e-6),
+                (10, 4.64e-6),
+                (1000, 303e-9),
+                (5000, 266e-9),
+                (10_000, 244e-9),
+                (50_000, 222e-9),
+                (100_000, 233e-9),
             )
         ]
     )
     settled = saturation(rungs, tolerance=0.05)
-    # the ladder minimum is 1.00us at N=100; the median of the top three is 1.01us
-    assert settled.reference_seconds == pytest.approx(1.01e-6, rel=1e-9)
+    assert settled.batch_size == 50_000
+    assert settled.slower_from is None  # 233 is within 5 % of 222: noise, not a turn
+    assert settled.reference_seconds == pytest.approx(222e-9)
 
 
 def test_saturation_not_reached_while_the_curve_is_still_falling():

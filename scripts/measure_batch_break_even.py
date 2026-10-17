@@ -13,8 +13,8 @@ that are not comparable to each other and that no chart should carry.
 
 It is also the other kind of measurement: two candidates in one working tree rather than
 one implementation across commits. That is what ``benchmarks/candidate_comparison.py``
-exists for, and what ``docs/benchmarking_methodology.rst`` records three wrong designs
-for, so every rung below is one call into that harness rather than a timing loop.
+exists for - its docstring records the designs that got it wrong - so every rung below
+is one call into that harness rather than a timing loop.
 
 What it measures
 ----------------
@@ -59,7 +59,6 @@ import contextlib
 import csv
 import json
 import random
-import statistics
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -282,7 +281,7 @@ class Saturation:
 
     status: Literal["saturated", "not_reached"]
     tolerance: float
-    #: seconds per point the top of the ladder settles at
+    #: seconds per point of the fastest rung at or above the answer
     reference_seconds: float
     batch_size: int | None = None
     speedup: float | None = None
@@ -607,38 +606,27 @@ def saturation(
     rungs: Sequence[dict[str, Any]],
     tolerance: float = DEFAULT_SATURATION_TOLERANCE,
 ) -> Saturation:
-    """The smallest rung already at the ladder's asymptote, and staying there.
+    """The smallest rung from which no larger batch is more than ``tolerance`` faster.
 
-    Two steps, and the first one is not optional. **Establish that the ladder reached an
-    asymptote at all** before naming where: the top two rungs differ in size by a factor
-    of several, so if they still disagree the curve is falling off the end of the ladder
-    and there is nothing to be the smallest rung *of*. Reported as ``not_reached``,
-    which is the honest answer and is not the same as "saturates at the top rung".
+    "Stops improving" is read literally: a rung qualifies when every rung above it is
+    within ``tolerance`` of the fastest of them, so the answer is never a rung that a
+    larger one still beats. A reference taken from the top rungs instead (their median)
+    sits above the true minimum while the curve is still falling, and named a rung the
+    next decade still improved on by ~10 %.
 
-    Only then is a reference taken, as the *median* of the top three per-point times
-    rather than the minimum over the ladder: a minimum over a dozen noisy samples is
-    biased low, which would push the answer later or off the ladder entirely.
-
-    Every larger rung must also be inside the tolerance, so one lucky dip at a small
-    rung cannot qualify it.
-
-    **A curve that turns back up has stopped improving too**, and is read differently.
-    Once the rungs beyond the fastest one stay slower than it by more than the tolerance
-    through the top of the ladder, the batch has outgrown something - typically the
-    cache - and the top rungs are no longer an asymptote to take a reference from:
-    comparing the top two
-    would read that rise as a curve still falling. The reference is then the fastest
-    rung itself, and the answer the smallest rung from which every rung up to it stays
-    inside the tolerance. That minimum is the low-biased estimator the median avoids,
-    which only moves the answer later, never earlier. ``slower_from`` names the turn.
+    Two refinements. **A tail that turns slower is cut off first**: once the rungs past
+    the fastest one stay slower than it by more than the tolerance through the top of
+    the ladder, the batch has outgrown something - typically the cache - and the curve
+    has stopped improving *at* its fastest rung; ``slower_from`` names the turn. A rise
+    that comes back down before the top is noise, not a turn. **A rung needs company**:
+    when only the top rung of the (uncut) ladder qualifies, nothing above it shows that
+    the curve has flattened, so that is ``not_reached`` rather than "saturates at the
+    top rung".
 
     Read off the batched call's **absolute** per-point time rather than off the speed-up
-    ratio, unlike :func:`break_even`. Saturation asks whether a bigger batch still buys
-    anything, which is a property of the batched side alone; the ratio would mix in the
-    scalar baseline's own noise. A measured run showed why: between N=1,000 and N=2,000
-    on the unique-shortcut stratum the ratio moved 2.9 % while the batched per-point time
-    moved 0.2 % - the whole difference was the scalar loop. The cost of using an absolute
-    quantity is exposure to drift across rungs, which is exactly what
+    ratio, unlike :func:`break_even`: whether a bigger batch still buys anything is a
+    property of the batched side alone, and the ratio would mix in the scalar
+    baseline's own noise. The cost is exposure to drift across rungs, which is what
     :func:`control_spread` is published to bound.
     """
     if tolerance <= DEFAULT_THRESHOLD:
@@ -658,58 +646,30 @@ def saturation(
 
     fastest = min(range(len(per_point)), key=per_point.__getitem__)
     turn_ceiling = per_point[fastest] * (1.0 + tolerance)
-    # A turn is a tail that *stays* slower, through the top rung: a curve that rises and
-    # comes back is a lucky dip at the fastest rung, which the median rule below handles.
     turned: list[int] = []
     for index in range(len(per_point) - 1, fastest, -1):
         if per_point[index] <= turn_ceiling:
             break
         turned.insert(0, index)
-    if turned:
-        start = fastest
-        while start > 0 and per_point[start - 1] <= turn_ceiling:
-            start -= 1
-        rung = rungs[start]
+    kept = per_point[: turned[0]] if turned else per_point
+
+    for index in range(len(kept)):
+        ceiling = min(kept[index:]) * (1.0 + tolerance)
+        if all(value <= ceiling for value in kept[index:]):
+            break
+    if index == len(kept) - 1 and not turned:
         return Saturation(
-            status="saturated",
-            tolerance=tolerance,
-            reference_seconds=per_point[fastest],
-            batch_size=rung["batch_size"],
-            speedup=speedup(rung),
-            verdict=comparison_of(rung).verdict,
-            slower_from=rungs[turned[0]]["batch_size"],
+            status="not_reached", tolerance=tolerance, reference_seconds=min(kept)
         )
-
-    reference = statistics.median(per_point[-3:])
-
-    # Has the curve stopped moving at all? The top two rungs differ in size by a factor
-    # of several, so if the per-point time still falls between them the asymptote is
-    # past the end of the ladder. Without this check the answer is never `not_reached`:
-    # on any decreasing curve the median of the top three *is* the second-from-last
-    # value, so that rung would always trivially qualify and the function would report
-    # saturation for a run that plainly had not saturated.
-    top, second = max(per_point[-2:]), min(per_point[-2:])
-    if top / second - 1.0 > tolerance:
-        return Saturation(
-            status="not_reached", tolerance=tolerance, reference_seconds=reference
-        )
-
-    ceiling = reference * (1.0 + tolerance)
-
-    for index in range(len(per_point)):
-        if all(later <= ceiling for later in per_point[index:]):
-            rung = rungs[index]
-            comparison = comparison_of(rung)
-            return Saturation(
-                status="saturated",
-                tolerance=tolerance,
-                reference_seconds=reference,
-                batch_size=rung["batch_size"],
-                speedup=speedup(rung),
-                verdict=comparison.verdict,
-            )
+    rung = rungs[index]
     return Saturation(
-        status="not_reached", tolerance=tolerance, reference_seconds=reference
+        status="saturated",
+        tolerance=tolerance,
+        reference_seconds=min(kept[index:]),
+        batch_size=rung["batch_size"],
+        speedup=speedup(rung),
+        verdict=comparison_of(rung).verdict,
+        slower_from=rungs[turned[0]]["batch_size"] if turned else None,
     )
 
 
