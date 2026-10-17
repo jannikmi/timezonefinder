@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792234079093,
+  "lastUpdate": 1792236767943,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14667,6 +14667,93 @@ window.BENCHMARK_DATA = {
             "range": "± 19284",
             "unit": "lookups/sec",
             "extra": "min of 114 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2553 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "177643c6749724967f9eaa008cc51a3bcfd5a5f3",
+          "message": "Acceleration paths page: lead with the fastest path, read as \"X is N times faster than Y\"; fix stale README Numba claim (#724)",
+          "timestamp": "2026-10-17T13:32:02+02:00",
+          "tree_id": "30987c75e39cbbbb157802bb3cdbaa9d9b5ba5cf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/177643c6749724967f9eaa008cc51a3bcfd5a5f3"
+        },
+        "date": 1792236765789,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1547282.4768490144,
+            "range": "± 22492",
+            "unit": "lookups/sec",
+            "extra": "min of 409 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 2006314.2722888114,
+            "range": "± 60325",
+            "unit": "lookups/sec",
+            "extra": "min of 616 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 330440.35009800387,
+            "range": "± 5503",
+            "unit": "lookups/sec",
+            "extra": "min of 113 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7931044.328711666,
+            "range": "± 332747",
+            "unit": "lookups/sec",
+            "extra": "min of 1268 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 69961381.2742388,
+            "range": "± 3955646",
+            "unit": "lookups/sec",
+            "extra": "min of 9793 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 447530.1348904989,
+            "range": "± 17860",
+            "unit": "lookups/sec",
+            "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 7581501.136762749,
+            "range": "± 196957",
+            "unit": "lookups/sec",
+            "extra": "min of 1302 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 50438817.70205077,
+            "range": "± 2311482",
+            "unit": "lookups/sec",
+            "extra": "min of 7068 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 448535.32583582925,
+            "range": "± 17414",
+            "unit": "lookups/sec",
+            "extra": "min of 132 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
           }
         ]
       }
