@@ -2,42 +2,59 @@
 
 """Price longitude/latitude-aligned shortcut indexes against the shipped grid tree.
 
-FINDINGS (Intel Xeon, Emerald Rapids @ 2.1 GHz, 4 vCPUs of a KVM cloud VM, Linux,
+FINDINGS (Intel Xeon, Cascade Lake @ 2.8 GHz, 4 vCPUs of a KVM cloud VM, Linux,
 Python 3.13.16, data 2026d, fixture set v4, master at 6b99331)
 ==============================================================================
 
-**The shipped shape - 0.9375-degree root cells, one level of 4x4 blocks - is level with
-its own control and ahead of every candidate of its size; only one larger tree beats
-it.** Rebuilt here as ``grid_tree_0_9375deg_4x4_1levels`` it reproduces the control's
-counts exactly (0.048 / 0.115 polygons tested per random / on-land query, 507 KB) and
-times level with it: 2-6 % faster per scalar call, -3 to +6 % per batch, mostly
-unresolved. The shipped index's work optimizer is worth 0-5 % over the converter's plain
-order, also mostly unresolved. Every flat grid of up to 1 MB is slower, scalar and
-batch, those of 1.3-1.5 MB draw about level, and the touch-inclusive controls are 11-30
-% slower per scalar call than the control. Head to head the shipped shape beats the flat
-equal-area grid of H3's size by 10-16 % per scalar call and 10-25 % per batch, and two
-levels of 2x2 with the same cells by 3-4 % per scalar call (mostly unresolved) and 5-16
-% per batch.
+**Within the 400-800 KB index budget the grid tree wins every trade-off measured; the
+flat structures lose on selectivity, and the equal-area band costs its own lookup.** All
+candidates answer through the real finder against a control of the shipped cells, on
+clang and numba; ranges span both, and a time is a candidate's change against the
+control.
 
-**The one tree that beats it costs nearly twice the index.** The 1.875-degree root with
-two levels of 4x4 tests 0.026 / 0.068 polygons per query and is 6.5-12 % faster per
-scalar call and 11-26 % per batch, at 957 KB against 507 KB. Choosing it trades resident
-memory in constrained containers for that speed, which is a maintainer decision rather
-than this sweep's. The flat 0.25-degree equal-angle grid is 1-11 % faster at 2.1 MB.
+* **Grid tree** (0.9375-degree root refining where several zones meet): 0.048 / 0.115
+  polygons tested per random / on-land query and ``TimezoneFinderL`` agreeing with the
+  full lookup on 97.6 / 93.7 % of points, at 442-507 KB. One level of 4x4 blocks (507
+  KB, the shipped shape) times level with the control, which checks the sweep. Two
+  levels of 2x2 reach the same cells 65 KB cheaper but descend once more: level per
+  random scalar call, 3-4 % slower on land and 10-18 % slower per batch. Head to head,
+  one level of 4x4 is 6-11 % faster per batch and -1 to +7 % per scalar call, mostly
+  unresolved.
 
-**Correctness.** All 24 candidates gave the control's answer for 30,000 fixture points,
+* **Flat equal-angle grid** (one width everywhere, the simplest lookup): 0.095-0.111 /
+  0.201-0.211 tests and 95.1-95.7 / 89.4-90.1 % agreement at 539-663 KB, since it spends
+  2 bytes on every ocean cell. 2-17 % slower per random scalar call, 8-45 % per batch,
+  and 9-21 % / 32-60 % on land.
+
+* **Equal-area banded grid** (columns per row scaled by the cosine of latitude): the
+  most selective flat grid at its size - 0.375-degree rows test 0.083 / 0.189 at 616 KB,
+  but the per-row width and offset reads cost it what the selectivity bought: 8-19 %
+  slower per scalar call and 18-24 % per batch. Head to head the shipped tree beats it
+  by 7-11 % per scalar call and 16-26 % per batch.
+
+* **Alignment with the 7.5-degree ocean meridians**: the unaligned 0.375-degree
+  equal-area grid tests 24 % more polygons per random query than the aligned one at the
+  same size, and the unaligned 0.48 and 0.45-degree equal-angle grids 9-17 % more than
+  the aligned 0.46875.
+
+* **Exact against touch-inclusive cells**: counting every polygon that touches a cell
+  edge costs 50-60 % more polygon tests per random query on the same cells and 17-22 %
+  per random scalar call against the control.
+
+Shapes outside the budget are not built - above it they are refused by the cap, below it
+they give up selectivity the cap would pay for. Which grid tree configuration is best
+within it is a sweep of its own, not this comparison.
+
+**Correctness.** All 11 candidates gave the control's answer for 30,000 fixture points,
 for points on and one unit either side of their own cell edges, and on the 7.5-degree
 and whole-degree lines borders follow - the -180 meridian included, which every
 candidate reads as +180 the way the shipped lookup does - on both kernels and both the
 scalar and the batch path.
 
-**The H3 comparison the shipped shape was chosen by** was taken on a second server class
-(Cascade Lake), with this script at 47b50d4; its table, and the refused families whose
-code has since been dropped, are in
-``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``.
-The ranking above held across both CPU generations. ``--output`` writes every
-candidate's numbers in under two minutes: the counts exactly, the times for the machine
-it runs on.
+The H3 index the grid tree replaced is priced in
+``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md``,
+not here. ``--output`` writes every candidate's numbers in about a minute: the counts
+exactly, the times for the machine it runs on.
 
 METHOD
 ======
@@ -64,9 +81,10 @@ so a candidate index answers nothing else a finder can be asked.
 * **The shipped layout's sizes.** One ``int16`` per cell, distinct candidate lists once
   each in the narrowest widths, and the shipped header; the same arithmetic reproduces
   the shipped ``shortcuts.bin`` to the byte.
-* **The family is swept**, equal-angle and equal-area grids, aligned and not, and grid
-  trees of several shapes, with the recommendation also timed head to head against its
-  rivals.
+* **The structures are compared within the budget**: flat equal-angle and equal-area
+  grids, aligned with the ocean meridians and not, grid trees, and touch-inclusive
+  controls, every one sized by the shipped file layout between 400 and 800 KB, with the
+  shipped shape also timed head to head against its two nearest rivals.
 
 It does not certify coverage beyond the sampled gate, time ``TimezoneFinderL``, or
 measure loading, construction or ``make memory``. Times decide only when taken on
@@ -943,42 +961,47 @@ def equal_area_counts(rows: int, aligned: bool) -> list[int]:
     return counts
 
 
+# Only designs whose index binary falls in this window are compared: the cap is the
+# project's (contributing/project/project-purpose-runtime-constraints-and-non-goals.md),
+# and a design above it is refused whatever it measures, while one far below it trades
+# away selectivity the cap would pay for. The specs below are the shapes that land in it
+# on the packaged data; a data change that moves one out drops it from the sweep, which
+# the report's ``outside_budget`` lists rather than comparing it unfairly.
+INDEX_BUDGET_BYTES = (400_000, 800_000)
 EQUAL_ANGLE = (
     # width (degrees), what it aligns with
-    ("0.75", "7.5-degree"),
-    ("0.625", "7.5-degree"),
     ("0.5", "7.5-degree and whole-degree"),
     ("0.48", "neither"),
     ("0.46875", "7.5-degree"),
     ("0.45", "neither"),
-    ("0.375", "7.5-degree"),
-    ("0.36", "neither"),
-    ("0.3125", "7.5-degree"),
-    ("0.3", "7.5-degree"),
-    ("0.25", "7.5-degree and whole-degree"),
 )
 # the exact rule's control: the same cells, every polygon meeting the closed cell
 TOUCHING = ("equal_angle_0_5deg", "equal_area_0_375deg_aligned")
 EQUAL_AREA = (
     # row height (degrees), columns a multiple of 48 (7.5-degree aligned) or not
-    ("0.5", True),
     ("0.46875", True),
     ("0.375", True),
     ("0.375", False),
-    ("0.3125", True),
-    ("0.25", True),
 )
 GRID_TREES = (
-    # root columns (360 / root degrees), block side k, levels below the root
-    (192, 4, 1),
-    (384, 2, 1),
+    # root columns (360 / root degrees), block side k, levels below the root. Only the
+    # two shapes the budget admits; sweeping tree configurations is its own study.
     (384, 2, 2),
     (384, 4, 1),
-    (192, 4, 2),
 )
 
 
-def build_sweep(polygons, data, only: list[str] | None) -> list:
+def within_budget(index, outside: list[dict]) -> bool:
+    """Whether ``index`` is in the compared size window; records it in ``outside`` if not."""
+    low, high = INDEX_BUDGET_BYTES
+    if low <= index.payload_bytes <= high:
+        return True
+    outside.append({"name": index.name, "payload_bytes": index.payload_bytes})
+    print(f"skipped {index.name}: {index.payload_bytes:,} B is outside the budget")
+    return False
+
+
+def build_sweep(polygons, data, only: list[str] | None, outside: list[dict]) -> list:
     def wanted(name: str) -> bool:
         return not only or any(o in name for o in only)
 
@@ -1004,7 +1027,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
         specs[name] = (grid.family, grid.params, rows, [columns] * rows)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
-        if wanted(name):
+        if wanted(name) and within_budget(grid, outside):
             indexes.append(grid)
     for height, aligned in EQUAL_AREA:
         name = (
@@ -1026,7 +1049,7 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
         grid.params["build_seconds"] = round(time.perf_counter() - started, 1)
         specs[name] = (grid.family, grid.params, rows, counts)
         print(f"built {name}: {grid.cells:,} cells", flush=True)
-        if wanted(name):
+        if wanted(name) and within_budget(grid, outside):
             indexes.append(grid)
     for base in TOUCHING:
         name = f"{base}_touching"
@@ -1044,7 +1067,8 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             touching=True,
         )
         print(f"built {name}: {control.cells:,} cells", flush=True)
-        indexes.append(control)
+        if within_budget(control, outside):
+            indexes.append(control)
     for root_columns, k, levels in GRID_TREES:
         root = f"{360 / root_columns:g}".replace(".", "_")
         name = f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
@@ -1057,7 +1081,8 @@ def build_sweep(polygons, data, only: list[str] | None) -> list:
             f"built {name}: {tree.cells:,} root cells, blocks {tree.block_counts}",
             flush=True,
         )
-        indexes.append(tree)
+        if within_budget(tree, outside):
+            indexes.append(tree)
     return indexes
 
 
@@ -1158,7 +1183,9 @@ def main() -> None:
     control_finder.cleanup()
     print("shipped and control rows done", flush=True)
 
-    indexes = build_sweep(polygons, data, args.only)
+    report["index_budget_bytes"] = list(INDEX_BUDGET_BYTES)
+    report["outside_budget"] = []
+    indexes = build_sweep(polygons, data, args.only, report["outside_budget"])
     shared_probes = border_probes(args.probes, rng)
     malacca_x = utils.coord2int(MALACCA_WITNESS[0])
     malacca_y = utils.coord2int(MALACCA_WITNESS[1])
