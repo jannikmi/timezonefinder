@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792234077197,
+  "lastUpdate": 1792234079093,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -28067,6 +28067,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4730 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1562350ca5dcd792c51bf189cf9945ec4332307",
+          "message": "Server-hardware measurements, an 800 KB index cap, a budget-bounded aligned-index sweep; drop h3 (#723)\n\n* Measure index decisions on server hardware; port the grid sweep, drop h3\n\nContributor memory now requires a decision that rests on time to be measured\non x86-64 Linux, the hardware the package is deployed on. Consumer hardware may\nexplore and narrow, never decide, and the query-performance baseline says its\nlaptop figures rank nothing until retaken there. A prototype studying a\nstructure the package no longer has is deleted in the change that replaces\nit, with every dependency only it needed.\n\nThe aligned-index decisions now quote the H3 comparison as measured on an\nIntel Xeon cloud VM instead of an Apple M1 Pro, and drop the M1-only times of\nthe refused families.\n\nprototypes/latlng_index_bench.py runs against master again. Candidates are\nShortcutIndex subclasses in the shipped index's place, read -180 as +180 like\nthe shipped lookup (the gate counted those probes as defects and timed\nnothing), and read the root level through the same memoryview, without which\nthe shipped shape timed 4-5 % behind its own control. The control is the\nshipped grid tree re-ordered by the converter's rule. Its FINDINGS are an\nEmerald Rapids run: the shipped shape is level with its control and ahead of\neverything its size; only the 957 KB two-level 4x4 tree is faster.\n\nshortcut_resolution_query_bench.py and single_resolution_bench.py studied the\nretired H3 index and are deleted, and h3 leaves the proto group and the lock.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01U161Lr5ZBwumnYJct1HtjA\n\n* Cap the shortcut index at 800 KB and compare aligned structures within it\n\nThe project constraints now cap shortcuts.bin at 800 KB in total: the index\nexists to spare the ~30 MB of polygons work, and past that its storage\noverhead is no longer small next to them. The aligned-index decisions refuse\nthe 957 KB two-level 4x4 tree and the 2.1 MB flat grid on the cap.\n\nlatlng_index_bench.py compares only structures whose index binary falls\nbetween 400 and 800 KB - flat equal-angle and equal-area grids, aligned and\nnot, grid trees and touch-inclusive controls - and lists any shape a data\nchange moves out of the window instead of comparing it. Its FINDINGS state\nthe trade-off of each structure from a Cascade Lake run; sweeping grid tree\nconfigurations is left to a study of its own.\n\nprototypes/README.md frames the directory as studies of the present design\nand of future ideas, naming past structures only where that explains a\nchoice.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01U161Lr5ZBwumnYJct1HtjA\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-17T12:47:14+02:00",
+          "tree_id": "a4120f5c7b92bdd641adeac3183a468b535a0731",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c1562350ca5dcd792c51bf189cf9945ec4332307"
+        },
+        "date": 1792234078696,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.5217370986938477,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.5219154357910156,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.7824182510375977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.7832269668579102,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.36925792694092,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.37006664276123,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.1894 GHz"
           }
         ]
       }
