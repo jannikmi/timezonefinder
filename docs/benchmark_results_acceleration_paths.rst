@@ -4,9 +4,11 @@ Point-in-Polygon Acceleration Paths
 ===================================
 
 
-**Numba JIT: 1.06x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
+**Fastest measured: the C extension, ahead of every other path**, on ``TimezoneFinder.timezone_at()`` over uniformly random points.
 
-**pure Python: 40.4x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
+**The C extension is 1.06x faster than Numba JIT** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
+
+**The C extension is 40.4x faster than pure Python** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
 
 *Measured on Linux x86_64, Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.4713 GHz, Python 3.13.16, across 2 environments on one machine.*
 

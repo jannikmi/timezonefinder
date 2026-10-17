@@ -689,6 +689,56 @@ def add_startup_section(
     )
 
 
+_RANDOM_LOOKUP_CONTEXT = (
+    "on ``TimezoneFinder.timezone_at()`` over uniformly random points"
+)
+
+
+def _acceleration_headline(label: str, random: CandidateComparison) -> str:
+    """One path against the C extension, phrased as "X is N times faster than Y".
+
+    The faster side is always the subject, so the multiple is never below one and
+    never has to be read backwards; a difference the verdict does not support is
+    stated as none, with the verdict that says why, rather than given a direction.
+    """
+    ratio = random.best_challenger / random.best_baseline
+    suffix = ""
+    if random.verdict == "slower":
+        claim = f"The C extension is {format_ratio(ratio)} faster than {label}"
+    elif random.verdict == "faster":
+        claim = f"{label} is {format_ratio(1 / ratio)} faster than the C extension"
+    else:
+        claim = f"{label} and the C extension are indistinguishable"
+        suffix = f" ({random.verdict})"
+    return f"**{claim[0].upper()}{claim[1:]}** {_RANDOM_LOOKUP_CONTEXT}{suffix}."
+
+
+def _fastest_path_headline(random_by_path: dict[str, CandidateComparison]) -> str:
+    """The page at a glance: which path measured fastest on random lookups.
+
+    Only each path's pairing with the C extension is measured, so a path is named
+    fastest outright only where that follows from those pairings alone.
+    """
+    labels = {path: ACCELERATION_PATH_LABELS[path] for path in random_by_path}
+    faster = [p for p, c in random_by_path.items() if c.verdict == "faster"]
+    tied = [p for p, c in random_by_path.items() if c.verdict != "slower"]
+    if len(faster) == 1:
+        fastest = f"{labels[faster[0]]}, ahead of the C extension"
+    elif faster:
+        fastest = (
+            f"{' and '.join(labels[p] for p in faster)} both beat the C extension, "
+            "and are not measured against each other"
+        )
+    elif tied:
+        fastest = (
+            "the C extension, with no demonstrable difference to "
+            f"{' or '.join(labels[p] for p in tied)}"
+        )
+    else:
+        fastest = "the C extension, ahead of every other path"
+    return f"**Fastest measured: {fastest}**, {_RANDOM_LOOKUP_CONTEXT}."
+
+
 def render_acceleration_paths(
     runs: Sequence[dict[str, Any]], output_path: Path
 ) -> None:
@@ -724,21 +774,18 @@ def render_acceleration_paths(
     system_info = get_system_info(runs[0])
     paths = [run["machine_info"]["timezonefinder"]["acceleration_path"] for run in runs]
 
-    headlines = []
     lookup_rows = {
         run["machine_info"]["timezonefinder"]["acceleration_path"]: run["lookups"]
         for run in runs
     }
-    for path in paths:
-        random = _comparison_of(lookup_rows[path]["random"])
-        ratio = random.best_challenger / random.best_baseline
-        headlines.append(
-            f"**{ACCELERATION_PATH_LABELS[path]}: {format_ratio(ratio)} the C "
-            f"extension** on ``TimezoneFinder.timezone_at()`` over uniformly random "
-            f"points ({random.verdict})."
+    random_by_path = {
+        path: _comparison_of(lookup_rows[path]["random"]) for path in paths
+    }
+    reporter.add_text(_fastest_path_headline(random_by_path))
+    for path, random in random_by_path.items():
+        reporter.add_text(
+            _acceleration_headline(ACCELERATION_PATH_LABELS[path], random)
         )
-    for headline in headlines:
-        reporter.add_text(headline)
     # Not `add_headline_section`: its banner names *the* acceleration path the numbers
     # came from, which is the right thing to say on a page describing one configuration
     # and a false one here - this page's whole subject is that there are three.
