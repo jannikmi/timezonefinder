@@ -398,6 +398,10 @@ def test_acceleration_page_opens_with_the_fastest_path_and_reads_faster_than(
     assert "**The C extension is 2.00x faster than Numba JIT**" in page
     assert "**The C extension is 2.00x faster than pure Python**" in page
     assert "2.00x the C extension" not in page
+    # the tables use the same framing, with the challenger's wins named as such
+    assert "     - The C extension is 2.00x faster\n" in page
+    assert "Rounds Numba JIT won" in page and "Rounds pure Python won" in page
+    assert "Relative to clang" not in page
 
 
 def test_acceleration_headline_names_a_faster_challenger_or_no_difference():

@@ -482,18 +482,43 @@ def _comparison_of(stored: dict[str, Any]) -> CandidateComparison:
     return CandidateComparison(**stored)
 
 
-def _acceleration_row(label: str, stored: dict[str, Any]) -> list[str]:
-    comparison = _comparison_of(stored)
-    # The challenger relative to clang, as a multiple rather than a signed percentage:
-    # these span 1.0x to ~190x, and "+18913 %" is unreadable where "190x" is not.
+def _faster_side(
+    label: str, comparison: CandidateComparison
+) -> tuple[str, float] | None:
+    """Which side of a pairing is faster, and by how many times - or ``None``.
+
+    The faster side is always the subject, so the multiple is never below one and
+    never has to be read backwards; a difference the verdict does not support has
+    no faster side.
+    """
     ratio = comparison.best_challenger / comparison.best_baseline
+    if comparison.verdict == "slower":
+        return "the C extension", ratio
+    if comparison.verdict == "faster":
+        return label, 1 / ratio
+    return None
+
+
+def _capitalized(text: str) -> str:
+    return text[0].upper() + text[1:]
+
+
+def _acceleration_row(challenger: str, label: str, stored: dict[str, Any]) -> list[str]:
+    comparison = _comparison_of(stored)
+    # A multiple rather than a signed percentage: these span 1.0x to ~190x, and
+    # "+18913 %" is unreadable where "190x" is not.
+    faster = _faster_side(challenger, comparison)
+    result = (
+        f"{_capitalized(faster[0])} is {format_ratio(faster[1])} faster"
+        if faster
+        else comparison.verdict
+    )
     return [
         label,
         format_duration(comparison.best_baseline),
         format_duration(comparison.best_challenger),
-        format_ratio(ratio),
+        result,
         f"{comparison.challenger_wins} of {comparison.rounds}",
-        comparison.verdict,
     ]
 
 
@@ -504,18 +529,18 @@ def _acceleration_table(
     labels: dict[str, str],
 ) -> None:
     path = run["machine_info"]["timezonefinder"]["acceleration_path"]
+    challenger = ACCELERATION_PATH_LABELS.get(path, path)
     rows = [
-        _acceleration_row(labels.get(key, key), stored)
+        _acceleration_row(challenger, labels.get(key, key), stored)
         for key, stored in run[section].items()
     ]
     reporter.add_table(
         [
             "Workload",
             "C extension (clang)",
-            ACCELERATION_PATH_LABELS.get(path, path),
-            "Relative to clang",
-            "Rounds won",
-            "Verdict",
+            challenger,
+            "Result",
+            f"Rounds {challenger} won",
         ],
         rows,
     )
@@ -695,22 +720,19 @@ _RANDOM_LOOKUP_CONTEXT = (
 
 
 def _acceleration_headline(label: str, random: CandidateComparison) -> str:
-    """One path against the C extension, phrased as "X is N times faster than Y".
-
-    The faster side is always the subject, so the multiple is never below one and
-    never has to be read backwards; a difference the verdict does not support is
-    stated as none, with the verdict that says why, rather than given a direction.
-    """
-    ratio = random.best_challenger / random.best_baseline
-    suffix = ""
-    if random.verdict == "slower":
-        claim = f"The C extension is {format_ratio(ratio)} faster than {label}"
-    elif random.verdict == "faster":
-        claim = f"{label} is {format_ratio(1 / ratio)} faster than the C extension"
-    else:
-        claim = f"{label} and the C extension are indistinguishable"
-        suffix = f" ({random.verdict})"
-    return f"**{claim[0].upper()}{claim[1:]}** {_RANDOM_LOOKUP_CONTEXT}{suffix}."
+    """One path against the C extension, phrased as "X is N times faster than Y"."""
+    faster = _faster_side(label, random)
+    if faster is None:
+        return (
+            f"**{_capitalized(label)} and the C extension are indistinguishable** "
+            f"{_RANDOM_LOOKUP_CONTEXT} ({random.verdict})."
+        )
+    side, multiple = faster
+    slower = "the C extension" if side == label else label
+    return (
+        f"**{_capitalized(side)} is {format_ratio(multiple)} faster than {slower}** "
+        f"{_RANDOM_LOOKUP_CONTEXT}."
+    )
 
 
 def _fastest_path_headline(random_by_path: dict[str, CandidateComparison]) -> str:

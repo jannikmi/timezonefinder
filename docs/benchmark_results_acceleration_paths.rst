@@ -45,32 +45,28 @@ Numba JIT against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 19 25 12 22 13 9
+   :widths: 16 20 10 33 21
 
    * - Workload
      - C extension (clang)
      - Numba JIT
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds Numba JIT won
    * - small polygons
      - 1.70ms
      - 2.69ms
-     - 1.58x
+     - The C extension is 1.58x faster
      - 0 of 61
-     - slower
    * - medium polygons
      - 1.87ms
      - 2.90ms
-     - 1.55x
+     - The C extension is 1.55x faster
      - 0 of 61
-     - slower
    * - large polygons
      - 3.70ms
      - 4.97ms
-     - 1.34x
+     - The C extension is 1.34x faster
      - 0 of 61
-     - slower
 
 
 
@@ -82,32 +78,28 @@ pure Python against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 19 23 14 22 13 9
+   :widths: 15 19 11 33 22
 
    * - Workload
      - C extension (clang)
      - pure Python
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds pure Python won
    * - small polygons
      - 1.68ms
      - 5.62ms
-     - 3.35x
+     - The C extension is 3.35x faster
      - 0 of 15
-     - slower
    * - medium polygons
      - 1.92ms
      - 153ms
-     - 79.6x
+     - The C extension is 79.6x faster
      - 0 of 15
-     - slower
    * - large polygons
      - 3.76ms
      - 432ms
-     - 115x
+     - The C extension is 115x faster
      - 0 of 15
-     - slower
 
 
 
@@ -127,32 +119,28 @@ Numba JIT against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 28 21 10 19 11 11
+   :widths: 24 18 9 30 19
 
    * - Workload
      - C extension (clang)
      - Numba JIT
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds Numba JIT won
    * - random points
      - 2.88ms
      - 3.05ms
-     - 1.06x
+     - The C extension is 1.06x faster
      - 6 of 61
-     - slower
    * - unique-shortcut points
      - 2.47ms
      - 2.47ms
-     - 1.00x
-     - 22 of 61
      - unresolved
+     - 22 of 61
    * - ambiguous-shortcut points
      - 13.8ms
      - 15.6ms
-     - 1.13x
+     - The C extension is 1.13x faster
      - 0 of 61
-     - slower
 
 
 
@@ -164,32 +152,28 @@ pure Python against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 25 20 12 18 11 14
+   :widths: 23 18 10 29 20
 
    * - Workload
      - C extension (clang)
      - pure Python
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds pure Python won
    * - random points
      - 2.93ms
      - 118ms
-     - 40.4x
+     - The C extension is 40.4x faster
      - 0 of 15
-     - slower
    * - unique-shortcut points
      - 2.49ms
      - 2.49ms
-     - 1.00x
-     - 8 of 15
      - no difference
+     - 8 of 15
    * - ambiguous-shortcut points
      - 14.0ms
      - 3.51s
-     - 250x
+     - The C extension is 250x faster
      - 0 of 15
-     - slower
 
 
 
