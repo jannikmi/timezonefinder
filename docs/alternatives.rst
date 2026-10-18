@@ -27,6 +27,9 @@ packages are measured under one harness - same query points, same process, same 
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
 metres of a boundary costs nothing - choose the PyPI build of ``tzfpy``.** Its maintainer is a
 contributor to this project (see :doc:`5_contributing`).
+For high-volume work, weigh that against this package's batch API: ``timezone_names_at()``
+answers a whole array of points in one call and outpaces a loop of ``tzfpy`` calls on a
+representative mix (:doc:`benchmark_results_vs_tzfpy`).
 If border accuracy matters and an experimental wheel from a separate package index is acceptable,
 evaluate ``tzfpy +full`` too; this page has no measurement that entitles ``timezonefinder`` to win
 that comparison.
@@ -104,8 +107,8 @@ difference is in what they do with that dataset's geometry.
      - Imports NumPy, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
-     - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - The simplified PyPI build is faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; the ``+full`` build is not measured here (:doc:`benchmark_results_vs_tzfpy`)
+     - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it. For bulk lookups the batch API (``timezone_names_at()``) is faster than a loop of ``tzfpy`` calls on a representative query mix, since ``tzfpy`` has no batch API; it pays from a few dozen points per call (:doc:`benchmark_results_batch_break_even`)
+     - The simplified PyPI build is faster per single query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; looping it over many points is slower than this package's batch API except on ambiguous points; the ``+full`` build is not measured here (:doc:`benchmark_results_vs_tzfpy`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
