@@ -5,8 +5,115 @@
 FINDINGS
 ========
 
-Not yet taken: the counts stage below is exact on any machine, the timing stages decide
-only on x86-64 Linux, and this block is written from their stored JSON.
+Decided on an Intel Xeon ("Intel(R) Xeon(R) Processor", 4 vCPUs of a cloud VM) and
+confirmed on a second one ("Intel(R) Xeon(R) Processor @ 2.10GHz", 4 vCPUs): Linux,
+Python 3.13.16, clang, data 2026d, fixture set v4, code at ``1b5637d``. The runs are
+committed as ``contributing/improvements/measurements/grid-tree-config-sweep-2026-10-18-*.json``
+and ``report --run`` prints every figure below from them. A time is a best-round change
+against the control, as its range over three replicate processes of 61 rounds.
+
+**Outcome (B): a 0.75-degree root with one level of 4x4 blocks (480 root columns,
+0.1875-degree cells, 695,531 bytes as the converter would write it) beats the shipped
+0.9375-degree root within the cap, and the shipped reader reads it.**
+
+* **counts**: 165 configurations, 94 within the cap, 54 on the frontier, 23 timed. The
+  winner tests 0.85 / 0.84 times the control's polygons per random / on-land query.
+* **screen**: the A/A pair read level; three survived - the shipped shape, the winner,
+  and a 1.25-degree root with 2x2 then 4x4 blocks.
+* **decide**: the winner faster than the control in all four cells on clang - scalar
+  -3.4 to -7.1 % random and -7.1 to -8.8 % on land, 256-point batch -2.7 to -5.9 % and
+  -7.0 to -13.6 % - and not slower on numba. On the ladder it displaced the shipped
+  shape (faster in three cells, random scalar unresolved), and the 1.25-degree tree,
+  faster than the control in three cells, did not displace it: slower per random scalar
+  call and batch.
+* **confirm**, on fresh points and seeds: the winner faster than the control in all four
+  cells (scalar -5.1 to -7.1 % and -6.5 to -10.2 %, batch -16.8 to -19.7 % and -8.6 to
+  -17.5 %) and than the shipped shape head to head in all four; no cell decide won
+  reversed. It gates clean on clang, numba and pure Python: 30,000 fixture points, 6,000
+  on its own cell edges and 5,974 on border lines, no defect.
+* **What it trades**: 182 KB more index for those margins. The A/A pair's single best
+  rounds moved by up to about 6 %, so the margins are ranges, not points. Unpriced here and owed
+  by the change that ships it: the converter's work optimizer, which neither side here
+  carries, loading and construction time, and ``make memory``.
+
+EXPLORATORY: SELECTIVE REFINEMENT
+=================================
+
+**Not decision evidence.** One server class, no rule fixed beforehand, and the fit uses
+``screen`` numbers, which picked the survivors and are biased towards them: this section
+can refuse an idea but not adopt one. ``patterns`` prints every figure below from the
+deciding run and from the committed ``selective`` run,
+``contributing/improvements/measurements/grid-tree-selective-refinement-2026-10-18-*.json``.
+Ratios are to the control unless a line says otherwise.
+
+1. **Under full refinement the finest cell width alone sets the polygon work.** Every
+   refine-all tree ending at one width offers the same candidates and tests the same
+   polygons; the root and the depth set only lookups and bytes. The 0.1875-degree trees
+   within the cap all test 0.85x the control's polygons, at 1.89 (1.5-degree root,
+   three levels of 2x2) down to 1.28 (0.75-degree root, one level of 4x4) lookups per
+   on-land query.
+2. **Scalar time follows polygon work; batch time follows depth.** The NumPy batch
+   descent spends a fixed set of array passes per level and per selective check, which a
+   256-point batch cannot amortise. Fitted over the 23 screened trees, an extra level
+   costs ~12 % and a selective check ~16 % per random batch, and nothing measurable per
+   scalar call (R^2 0.69-0.91). Every multi-level or selective tree screened was slower
+   than the control on random batches (1.05-1.49); the two one-level trees were not
+   (0.94-1.01). The cost model has no per-level term, so it ranks scalar time well (rank
+   correlation 0.74 random, 0.81 on land) and random batch time poorly (0.38).
+3. **The cap picks the shape.** The finest full refinement within 800 KB is 0.15625
+   degrees, and every tree reaching it needs a small root and two or three levels. One
+   level of 4x4 reaches 0.1875 degrees at most (0.75-degree root, 696 KB; the
+   0.625-degree root is 889 KB). 8x8 blocks are over the cap or dominated, one level of
+   2x2 is too coarse for its bytes, and stacked 2x2 blocks pay a level for the leaves one
+   level of 4x4 reaches.
+4. **Refined selectively, one level gets near that ceiling only from a 0.625-degree root
+   with 4x4 blocks** (``selective counts``, which builds the one-level selective trees
+   ``counts`` never reaches). Finer roots and 8x8 blocks spend the budget on the root
+   table or on blocks and test 1.12-2.16x the control's polygons at 700-800 KB. At 800 KB
+   the 0.625-degree root refines about 13,500 of its 16,523 multi-zone cells:
+
+   ======================================================  =============  ==============
+   tree (per random / on-land query)                       tests          vertices
+   ======================================================  =============  ==============
+   uniform, 0.75-degree root, 696 KB                       0.85 / 0.84    0.89 / 0.84
+   uniform, 0.625-degree root, 889 KB (over the cap)       0.72 / 0.74    0.80 / 0.77
+   selective, ``select_refinement``'s stop-index rule      0.81 / 0.82    0.88 / 0.85
+   selective, expected tests (trained)                     0.83 / 0.84    0.87 / 0.86
+   selective, expected tests and vertices (trained)        0.82 / 0.82    0.82 / 0.79
+   ======================================================  =============  ==============
+
+   Counting vertices is what pays: pricing a cell by the work its ray casts do, as
+   ``scripts/shortcut_ordering.py`` prices a candidate, cuts vertices 6.2 / 6.9 % below
+   the stop-index rule at the same tests. Expected tests alone does no better than the
+   stop-index rule; a uniform training sample is thin per cell, which the ordering
+   optimiser's exact area integrals would not be.
+5. **None of it is faster than the uniform one-level tree** (``selective time``, three
+   replicate processes of 61 rounds against the deciding run's winner). Both candidates
+   gate clean on clang: 30,000 fixture points, 6,000 on their own cell edges and about 6,000
+   on border lines, no defect.
+
+   * selective encoding, a reader change: random scalar unresolved (-0.5 to +2.2 %),
+     random batch slower (+10.3 to +14.3 %), on-land scalar unresolved (-5.3 to -0.6 %),
+     on-land batch unresolved (+3.6 to +8.1 %);
+   * shared uniform blocks, which the shipped reader reads: random scalar no difference
+     (-0.3 to +2.8 %), random batch slower (+2.9 to +4.8 %), on-land scalar unresolved
+     (-1.9 to +2.1 %), on-land batch slower (+2.3 to +7.6 %).
+
+   The shared encoding points every unrefined multi-zone cell at one 4x4 block per
+   distinct list; the 23 KB those blocks cost leave fewer cells refined (tests 0.88x). It
+   runs the baseline's reader code with fewer lookups and is still slower per batch, most
+   likely its larger root table (576 x 288 cells against 480 x 240), which is not measured.
+6. **Better selection cannot rescue it.** The polygon loop is a minor share of a query
+   (``TEST_NS``'s comment cites the stage profile), so a 6-7 % vertex cut moves a query
+   by less than the 3 % a paired comparison calls a difference. By item 2's fit a
+   selective tree of three levels would need about 0.25x the control's vertex work to pay
+   its levels back per batch; the finest refine-all trees swept (0.0625 degrees, from
+   2.3 MB) reach 0.43x.
+
+**Reopen** with a compiled batch lookup, where a level costs nanoseconds rather than
+array passes, so the selective trees' scalar lead (0.89 on-land scalar at best in the
+screen) is no longer paid back per batch; then select by the ordering optimiser's exact
+integrals rather than a point sample.
 
 PRE-REGISTERED DECISION RULE
 ============================
@@ -80,6 +187,27 @@ and the expensive instrument is spent only where the cheap exact one leaves a qu
   other on fresh points drawn by the fixture samplers under a new seed, and the winner
   gated on numba and on the pure-Python fallback.
 
+Two parts are exploratory and feed none of the four stages:
+
+* **selective** builds one-level trees refined selectively, which ``counts`` never
+  reaches: it picks selective prefixes by ``estimated_ns``, which favours deep trees, and
+  widening a pre-registered space after its deciding run would need a new run.
+  ``selective counts`` fits ``ONE_LEVEL_SHAPES`` to ``ONE_LEVEL_BUDGETS`` with the
+  catalogs, packer and point oracle above, selecting by ``select_refinement`` (``stop``)
+  or by the same pruning with each multi-zone root cell's cost taken from
+  ``TRAIN_POINTS`` points uniform on the sphere under ``TRAIN_SEED``, a stream the
+  fixtures never use (``tests``, ``tests+vertices``); its counts are therefore exact and
+  comparable with ``counts``'. ``selective time`` builds ``SELECTIVE_CANDIDATE`` in the
+  selective encoding and in ``pack_shared``'s, which the shipped reader reads unchanged,
+  gates both against the control, and times each against ``SELECTIVE_BASELINE`` through
+  ``run_pairs`` in three replicate processes. Its work directory holds its own manifest
+  of saved trees in the shape ``pairs_stage`` reads, so ``counts``' selection is never
+  touched.
+* **patterns** re-reads a run: refine-all trees grouped by finest cell width, the
+  screen's ratios by structure, a least-squares fit of each cell's screen ratio on
+  vertices, lookups, extra levels and selectivity, the cost model's rank correlation with
+  each cell, and the ``selective`` run's tables.
+
 The control is the shipped cells with the converter's legacy order, as in
 ``prototypes/latlng_index_bench.py``, because no candidate carries the converter's work
 optimizer; the follow-up that ships a winner measures it against the shipped index.
@@ -96,6 +224,12 @@ USAGE
     uv run python -m prototypes.grid_tree_config_sweep counts
     uv run python -m prototypes.grid_tree_config_sweep confirm --decide <decide.json>
     uv run python -m prototypes.grid_tree_config_sweep report
+    # from the committed run
+    uv run python -m prototypes.grid_tree_config_sweep report --run <prefix>
+    # exploratory, outside the decision
+    uv run python -m prototypes.grid_tree_config_sweep selective counts
+    uv run python -m prototypes.grid_tree_config_sweep selective time
+    uv run python -m prototypes.grid_tree_config_sweep patterns
 
 ``all`` runs counts, screen and decide in a row. Every stage writes
 ``<workdir>/<stage>.json`` and reads the one before it, refusing it if the packaged
@@ -1809,6 +1943,8 @@ def gate_stage(args) -> None:
 
 def report_stage(args) -> None:
     """The FINDINGS tables, from whatever stages the workdir holds."""
+    if getattr(args, "run", None):
+        args.workdir = linked_run(args.run)
     workdir: Path = args.workdir
     counts_report = json.loads((workdir / "counts.json").read_text())
     control = counts_report["control"]
@@ -1859,10 +1995,728 @@ def report_stage(args) -> None:
                     f"- {step['incumbent']} vs {step['challenger']}: {step['verdicts']}"
                 )
             print(f"winner {stored['winner']}, outcome {stored['outcome']}")
+            print("best-round change against the control, clang:")
+            print_margins(stored["replicate_runs"])
+            print(
+                f"best-round change against the control, {stored['interpreted_run']['path']}:"
+            )
+            print_margins([stored["interpreted_run"]])
+            print("best-round change on the ladder, clang:")
+            for step in stored["ladder"]:
+                print_margins(step["runs"])
         else:
             for pair, cells in stored["confirmed"].items():
                 print(f"- {pair}: {cells}")
             print(f"reproduces: {stored['reproduces']}; gates {stored['gates']}")
+            print("best-round change, clang:")
+            print_margins(stored["runs"])
+
+
+# --- exploratory, never part of the decision: selective refinement of one level -------
+#
+# ``selective`` builds what the pre-registered space leaves out - one-level trees refined
+# selectively, whose prefixes ``counts`` never reaches because it picks selective
+# prefixes by ``estimated_ns``, which favours deep trees - and times the best of them.
+# ``patterns`` re-reads a run. Neither feeds ``screen``, ``decide`` or ``confirm``, and
+# widening the deciding space would need a new pre-registered run, not this stage.
+
+#: The committed deciding run and the committed ``selective`` run ``patterns`` reads.
+SWEEP_RUN = "contributing/improvements/measurements/grid-tree-config-sweep-2026-10-18"
+SELECTIVE_RUN = (
+    "contributing/improvements/measurements/grid-tree-selective-refinement-2026-10-18"
+)
+#: One-level shapes whose full refinement is over the cap: (root columns, block side).
+ONE_LEVEL_SHAPES = ((576, 4), (720, 4), (768, 4), (288, 8), (384, 8), (480, 8))
+ONE_LEVEL_BUDGETS = (700_000, 800_000)
+#: ``stop`` is ``select_refinement``; the others replace its leaf cost by the expected
+#: work a uniform training sample measures.
+SELECTION_METRICS = ("stop", "tests", "tests+vertices")
+TRAIN_POINTS = 1_000_000
+TRAIN_SEED = 20_261_018
+#: The tree ``selective time`` builds, in both encodings, and the tree it is timed
+#: against: the deciding run's winner.
+SELECTIVE_CANDIDATE = (576, 4, 800_000, "tests+vertices")
+SELECTIVE_BASELINE = (480, 4)
+#: Budget corrections ``fit_to_budget`` may take; counts_stage's own loop takes 8.
+SELECTIVE_FIT_STEPS = 12
+
+
+def linked_run(prefix: str) -> Path:
+    """A directory holding a committed run's ``<prefix>-<stage>.json`` as ``<stage>.json``."""
+    import tempfile
+
+    directory = Path(tempfile.mkdtemp(prefix="grid-tree-run-"))
+    for path in Path(prefix).parent.glob(f"{Path(prefix).name}-*.json"):
+        stage = path.name[len(Path(prefix).name) + 1 : -len(".json")]
+        (directory / f"{stage}.json").symlink_to(path.resolve())
+    return directory
+
+
+def print_margins(runs: list[dict], pairs: Sequence[str] | None = None) -> None:
+    """Each pair's best-round change per cell, as its range over the replicate runs."""
+    for pair in pairs or list(runs[0]["pairs"]):
+        spans = []
+        for stratum, shape in CELLS:
+            changes = [
+                run["pairs"][pair][stratum][shape]["best_challenger"]
+                / run["pairs"][pair][stratum][shape]["best_baseline"]
+                * 100
+                - 100
+                for run in runs
+            ]
+            spans.append(
+                f"{stratum}/{shape} {min(changes):+.1f} to {max(changes):+.1f} %"
+            )
+        print(f"  {pair}, best rounds over {len(runs)} run(s): " + ", ".join(spans))
+
+
+def patterns_stage(args) -> None:
+    """What a run says about shape, and what the ``selective`` run found.
+
+    Exploratory: the fit and the structure ratios use ``screen`` numbers, which picked
+    the survivors and are therefore biased towards them.
+    """
+    sweep_dir = args.workdir if args.workdir else linked_run(args.run)
+    run = {
+        s: json.loads((sweep_dir / f"{s}.json").read_text())
+        for s in ("counts", "screen", "decide")
+    }
+    rows = {r["name"]: r for r in run["counts"]["rows"]}
+    control = run["counts"]["control"]["counts"]
+
+    def finest(row: dict) -> float:
+        width = 360 / row["spec"]["root_columns"]
+        for side in row["spec"]["sides"]:
+            width /= side
+        return width
+
+    def relative(row: dict, key: str) -> str:
+        return "/".join(
+            f"{row['counts'][s][key] / control[s][key]:.2f}" for s in RANKING_STRATA
+        )
+
+    print("full refinement within the cap, grouped by finest cell width:")
+    groups: dict[float, list[dict]] = {}
+    for row in rows.values():
+        if row["within_cap"] and not row["spec"]["budget"]:
+            groups.setdefault(round(finest(row), 6), []).append(row)
+    for width in sorted(groups)[:4]:
+        members = sorted(groups[width], key=lambda r: r["projected_bytes"])
+        tests = {r["selectivity_vs_control"] for r in members}
+        listed = ", ".join(
+            f"{r['name']} {r['projected_bytes'] // 1000} KB "
+            f"{r['counts']['on_land']['reads_per_query']:.2f} reads"
+            for r in members
+        )
+        print(f"  {width:.5f} deg, tests x{sorted(tests)}: {listed}")
+    finest_width = min(finest(r) for r in rows.values() if not r["spec"]["budget"])
+    deepest = [
+        r
+        for r in rows.values()
+        if not r["spec"]["budget"] and round(finest(r), 6) == round(finest_width, 6)
+    ]
+    print(
+        f"  finest swept, {finest_width:.5f} deg: from "
+        f"{min(r['projected_bytes'] for r in deepest) / 1e6:.1f} MB, vertices x"
+        f"{min(r['counts']['random']['vertices_per_query'] for r in deepest) / control['random']['vertices_per_query']:.2f}"
+        " at best (random)"
+    )
+    print("one level of 4x4, by root (tests / vertices against the control, rnd/land):")
+    for row in sorted(rows.values(), key=lambda r: r["spec"]["root_columns"]):
+        if row["spec"]["sides"] == [4] and not row["spec"]["budget"]:
+            print(
+                f"  {row['name']:>8}: {row['projected_bytes']:>9,} B  tests "
+                f"{relative(row, 'tests_per_query')}  vertices "
+                f"{relative(row, 'vertices_per_query')}"
+            )
+
+    cells = [f"{s}/{shape}" for s, shape in CELLS]
+    results = run["screen"]["results"]
+
+    def ratio(name: str, cell: str) -> float:
+        stratum, shape = cell.split("/")
+        c = results[name]["timing"][stratum][shape]
+        return c["best_challenger"] / c["best_baseline"]
+
+    def kind(row: dict) -> str:
+        if row["spec"]["budget"]:
+            return "selective"
+        return f"{len(row['spec']['sides'])} level(s)"
+
+    timed = [n for n in results if "timing" in results[n]]
+    print(
+        "\nscreen, ratio to the control by structure "
+        "(exploratory: screen numbers, biased towards the survivors):"
+    )
+    for k in sorted({kind(rows[n]) for n in timed}):
+        names = [n for n in timed if kind(rows[n]) == k]
+        spans = "  ".join(
+            f"{c} {min(ratio(n, c) for n in names):.2f}-{max(ratio(n, c) for n in names):.2f}"
+            for c in cells
+        )
+        print(f"  {k:11} ({len(names):2}): {spans}")
+
+    print(
+        "\nleast squares on screen numbers (exploratory, biased towards the survivors),"
+        " ratio - 1 ~ vertices/control - 1, lookups - control's, extra levels, selective:"
+    )
+    fits = {}
+    for cell in cells:
+        stratum = cell.split("/")[0]
+        x, y = [], []
+        for name in timed:
+            row = rows[name]
+            c = row["counts"][stratum]
+            x.append(
+                [
+                    c["vertices_per_query"] / control[stratum]["vertices_per_query"]
+                    - 1,
+                    c["reads_per_query"] - control[stratum]["reads_per_query"],
+                    len(row["spec"]["sides"]) - 1,
+                    1.0 if row["spec"]["budget"] else 0.0,
+                ]
+            )
+            y.append(ratio(name, cell) - 1)
+        a, b = np.array(x), np.array(y)
+        fit, *_ = np.linalg.lstsq(a, b, rcond=None)
+        fits[cell] = fit
+        r2 = 1 - ((b - a @ fit) ** 2).sum() / ((b - b.mean()) ** 2).sum()
+        print(
+            f"  {cell:18} vertices {fit[0]:+.3f}  per lookup {fit[1]:+.3f}  "
+            f"per extra level {fit[2]:+.3f}  selective {fit[3]:+.3f}  R2 {r2:.2f}"
+        )
+    batch = fits["random/batch_256"]
+    print(
+        "  by the random-batch fit, a selective tree of three levels pays its levels and "
+        f"check back at x{1 - (2 * batch[2] + batch[3]) / batch[0]:.2f} of the control's "
+        "vertex work, before its lookups"
+    )
+
+    def rank(values: Sequence[float]) -> np.ndarray:
+        return np.argsort(np.argsort(values))
+
+    estimate = [rows[n]["estimated_ns"] for n in timed]
+    spearman = "  ".join(
+        f"{c} {np.corrcoef(rank(estimate), rank([ratio(n, c) for n in timed]))[0, 1]:+.2f}"
+        for c in cells
+    )
+    print(f"\nrank correlation of the sweep's cost model with the screen: {spearman}")
+    decide = run["decide"]
+    for step in decide["ladder"]:
+        print(
+            f"ladder {step['incumbent']} -> {step['challenger']}: {step['verdicts']}"
+            f" -> {'displaces' if step['displaces'] else 'holds'}"
+        )
+    print(f"winner {decide['winner']}, outcome {decide['outcome']}")
+
+    selective_dir = (
+        args.selective_workdir if args.selective_workdir else linked_run(args.selective)
+    )
+    counts_path = selective_dir / "selective-counts.json"
+    if not counts_path.exists():  # the committed run's file names
+        counts_path = selective_dir / "counts.json"
+    if counts_path.exists():
+        study = json.loads(counts_path.read_text())
+        print(f"\nselective counts ({study['environment']['cpu']}), one level:")
+        by_name = {r["name"]: r for r in study["rows"]}
+        root, side, budget, _ = SELECTIVE_CANDIDATE
+        prefix = TreeSpec(root, (side,), budget).name
+        for row in study["rows"]:
+            if row["name"].startswith(prefix) or row["name"] in ("c384_4", "c480_4"):
+                rel = row["relative"]
+                extra = (
+                    f"  refines {row['refined']:,} of {row['multi_zone_root_cells']:,}"
+                    f", shared blocks {row['shared_block_bytes']:,} B"
+                    if "refined" in row
+                    else ""
+                )
+                print(
+                    f"  {row['name']:32} {row['projected_bytes']:>9,} B  tests "
+                    + "/".join(
+                        f"{rel[s]['tests_per_query']:.2f}" for s in RANKING_STRATA
+                    )
+                    + "  vertices "
+                    + "/".join(
+                        f"{rel[s]['vertices_per_query']:.2f}" for s in RANKING_STRATA
+                    )
+                    + extra
+                )
+        shape = f"c{root}_{side}_"
+        others = [
+            r
+            for r in study["rows"]
+            if "refined" in r and not r["name"].startswith(shape)
+        ]
+        tests = [
+            r["relative"][s]["tests_per_query"] for r in others for s in RANKING_STRATA
+        ]
+        print(
+            f"  finer roots and 8x8 blocks, every budget: tests x{min(tests):.2f}-"
+            f"{max(tests):.2f}"
+        )
+        stop = by_name[f"{prefix} [stop]"]["relative"]
+        work = by_name[f"{prefix} [tests+vertices]"]["relative"]
+        cut = "/".join(
+            f"{1 - work[s]['vertices_per_query'] / stop[s]['vertices_per_query']:.1%}"
+            for s in RANKING_STRATA
+        )
+        print(f"  tests+vertices against stop, vertices cut (rnd/land): {cut}")
+    time_path = selective_dir / "selective-time.json"
+    if not time_path.exists():
+        time_path = selective_dir / "time.json"
+    if time_path.exists():
+        study = json.loads(time_path.read_text())
+        print(
+            f"\nselective time ({study['environment']['cpu']}), against "
+            f"{study['baseline']}, majority of {len(study['replicate_runs'])}:"
+        )
+        for pair, cells_ in study["verdicts"].items():
+            print(f"  {pair}: {cells_}")
+        print_margins(study["replicate_runs"])
+        for name, candidate in study["candidates"].items():
+            rel = candidate["row"]["relative"]
+            print(
+                f"  {name}: {candidate['row']['projected_bytes']:,} B, tests "
+                + "/".join(f"{rel[s]['tests_per_query']:.2f}" for s in RANKING_STRATA)
+            )
+            for path, probes in candidate["gate"].items():
+                print(
+                    f"    gate on {path}: "
+                    + ", ".join(
+                        f"{probe} {g['points']:,} points, {g['defect']} defects"
+                        for probe, g in probes.items()
+                    )
+                )
+
+
+class TrainingSample:
+    """Points uniform on the sphere, drawn under a seed the fixtures never use, and which
+    polygons hold each - found lazily, only for points that reach a candidate list."""
+
+    def __init__(self, reference: TimezoneFinder, count: int, seed: int):
+        rng = np.random.default_rng(seed)
+        self.lngs = rng.uniform(-180.0, 180.0, count)
+        self.lats = np.degrees(np.arcsin(rng.uniform(-1.0, 1.0, count)))
+        x = (self.lngs * F).astype(np.int64) + KX
+        np.add(x, X_SPAN, out=x, where=x < 0)
+        self.xy = x, np.maximum((self.lats * F).astype(np.int64) + KY, 0)
+        self.reference = reference
+        b = reference.boundaries
+        self.boxes = [
+            np.asarray(a, dtype=np.int64) for a in (b.xmin, b.xmax, b.ymin, b.ymax)
+        ]
+        self.vertices = np.asarray(b.nr_vertices, dtype=np.int64).tolist()
+        self._truth: dict[int, tuple[set[int], set[int]]] = {}
+
+    def truth(self, i: int) -> tuple[set[int], set[int]]:
+        found = self._truth.get(i)
+        if found is None:
+            x, y = utils.query2int(float(self.lngs[i]), float(self.lats[i]))
+            xmin, xmax, ymin, ymax = self.boxes
+            hits = np.flatnonzero(
+                (xmin <= x) & (x <= xmax) & (ymin <= y) & (y <= ymax)
+            ).tolist()
+            found = self._truth[i] = (
+                {h for h in hits if self.reference.inside_of_polygon(h, x, y)},
+                set(hits),
+            )
+        return found
+
+    def work(self, tree: Tree, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Per point, as ``PointOracle.counts`` counts: polygons tested, and the vertices
+        of those whose bounding box holds the point."""
+        entries, _ = descend(tree, self.lngs[points], self.lats[points])
+        tests = np.zeros(len(points))
+        vertices = np.zeros(len(points))
+        lists: dict[int, tuple[list[int], int]] = {}
+        for j in np.flatnonzero(entries < ABSENT).tolist():
+            entry = int(entries[j])
+            found = lists.get(entry)
+            if found is None:
+                found = lists[entry] = (
+                    tree.candidates_of(entry).tolist(),
+                    tree.stop_index_of(entry),
+                )
+            candidates, stop = found
+            inside, boxed = self.truth(int(points[j]))
+            tested = stop
+            for position in range(stop):
+                if candidates[position] in inside:
+                    tested = position + 1
+                    break
+            tests[j] = tested
+            vertices[j] = sum(
+                self.vertices[c] for c in candidates[:tested] if c in boxed
+            )
+        return tests, vertices
+
+
+def pack_shared(
+    spec: TreeSpec, levels: list[Level], lists: ListCatalog, refine: np.ndarray
+) -> tuple[np.ndarray, list[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+    """One level in the shipped format: a refined multi-zone root cell holds its own
+    block, an unrefined one the uniform block every unrefined cell with its list shares.
+
+    Selective refinement the shipped reader reads unchanged, at one block per distinct
+    unrefined list and one more read for the queries landing in those cells.
+    """
+    root, child = levels
+    q = spec.sides[0] ** 2
+    packer = ListPacker(lists)
+    values = root.values.astype(np.int64)
+    sets = (-2 - values[root.multi]).tolist()
+    blocks = []
+    for i in np.flatnonzero(refine).tolist():
+        children = child.values[i * q : (i + 1) * q].astype(np.int64)
+        for j in np.flatnonzero(children <= MULTI_LIMIT).tolist():
+            children[j] = -(packer.entry(int(-2 - children[j])) + 2)
+        blocks.append(children)
+    block_of = np.empty(len(sets), dtype=np.int64)
+    block_of[refine] = np.arange(len(blocks))
+    uniform: dict[int, int] = {}
+    for rank in np.flatnonzero(~refine).tolist():
+        s = sets[rank]
+        if s not in uniform:
+            uniform[s] = len(blocks)
+            blocks.append(np.full(q, -(packer.entry(s) + 2), dtype=np.int64))
+        block_of[rank] = uniform[s]
+    values[root.multi] = -(block_of + 2)
+    bounds, payload, last_change = packer.arrays()
+    return (
+        narrow(values),
+        [narrow(np.concatenate(blocks))],
+        bounds,
+        payload,
+        last_change,
+    )
+
+
+def fit_to_budget(budget: int, select, build, projected) -> tuple | None:
+    """The largest tree whose projected bytes fit ``budget``: the correction counts_stage
+    applies inline, kept apart so the deciding path stays exactly as it ran."""
+    target = float(budget)
+    best = None
+    for _ in range(SELECTIVE_FIT_STEPS):
+        refine = select(target)
+        tree = build(refine)
+        size = projected(tree)
+        fits = size <= budget
+        if fits and (best is None or size > best[0]):
+            best = (size, tree, refine)
+        if fits and size >= budget - BUDGET_SLACK:
+            break
+        target += budget - size - (0 if fits else 1_000)
+    return None if best is None else (best[1], best[2])
+
+
+def trained_refinement(
+    spec: TreeSpec,
+    levels: list[Level],
+    lists: ListCatalog,
+    sample: TrainingSample,
+    control_counts: dict,
+    metric: str,
+):
+    """``select_refinement``'s pruning at depth 1, with each multi-zone root cell's leaf
+    cost and its children's costs taken from the work the training sample measures.
+
+    ``tests+vertices`` prices a vertex so that the control's mean vertex work equals its
+    mean test work, then averages the two, as ``scripts/shortcut_ordering.py`` prices a
+    candidate by the work its ray cast does rather than per polygon.
+    """
+    root, child = levels
+    k = spec.sides[0]
+    x, y = sample.xy
+    w0, w1 = spec.widths[0], spec.widths[1]
+    cell = (y // w0) * spec.root_columns + x // w0
+    inside = np.flatnonzero(root.values[cell] <= MULTI_LIMIT)
+    rank = np.searchsorted(root.multi, cell[inside])
+    child_at = (
+        rank * k * k + ((y[inside] // w1) & (k - 1)) * k + ((x[inside] // w1) & (k - 1))
+    )
+    full_spec = TreeSpec(spec.root_columns, spec.sides)
+    full = make_tree(full_spec, *pack(full_spec, levels, lists))
+    unrefined = make_tree(
+        spec, *pack(spec, levels, lists, [np.zeros(len(root.multi), dtype=bool)])
+    )
+    tests_leaf, vertices_leaf = sample.work(unrefined, inside)
+    tests_refined, vertices_refined = sample.work(full, inside)
+    if metric == "tests":
+        leaf, refined = TEST_NS * tests_leaf, TEST_NS * tests_refined
+    else:
+        c = control_counts["random"]
+        per_vertex = TEST_NS * c["tests_per_query"] / c["vertices_per_query"]
+        leaf = 0.5 * (TEST_NS * tests_leaf + per_vertex * vertices_leaf)
+        refined = 0.5 * (TEST_NS * tests_refined + per_vertex * vertices_refined)
+    n = len(sample.lngs)
+    leaf_ns = np.bincount(rank, weights=leaf, minlength=len(root.multi)) / n
+    share = np.bincount(rank, minlength=len(root.multi)) / n
+    child_ns = np.bincount(child_at, weights=refined, minlength=len(child.values))
+    children_ns = (child_ns / n).reshape(-1, k * k).sum(axis=1)
+
+    def list_bytes(level: Level) -> np.ndarray:
+        sets = (-2 - level.values[level.multi]).tolist()
+        return np.array([2 * len(lists.sets[s]) + 5 for s in sets], dtype=np.float64)
+
+    leaf_bytes = list_bytes(root)
+    child_bytes = np.zeros(len(child.values))
+    child_bytes[child.multi] = list_bytes(child)
+    children_bytes = child_bytes.reshape(-1, k * k).sum(axis=1)
+    block = 2.0 * k * k
+
+    def solve(lam: float) -> tuple[np.ndarray, float]:
+        refine = (
+            share * READ_NS + lam * (block + children_bytes) + children_ns
+            < leaf_ns + lam * leaf_bytes
+        )
+        size = (
+            float(spec.root_columns**2)
+            + (block + children_bytes)[refine].sum()
+            + leaf_bytes[~refine].sum()
+        )
+        return refine, size
+
+    def select(target: float) -> list[np.ndarray]:
+        low, high = -12.0, 3.0
+        refine, _ = solve(10.0**high)
+        for _ in range(40):
+            middle = (low + high) / 2
+            candidate, size = solve(10.0**middle)
+            if size <= target:
+                high, refine = middle, candidate
+            else:
+                low = middle
+        return [refine]
+
+    return select
+
+
+class SelectiveSetup:
+    """What both parts of ``selective`` build on - the same catalogs, point oracle,
+    control and byte projection counts_stage sets up - plus the training sample."""
+
+    def __init__(self, workdir: Path):
+        workdir.mkdir(parents=True, exist_ok=True)
+        self.reference = finder_on("clang")
+        r = self.reference
+        data = OrderingInput(r.boundaries, r.zone_ids, r.zone_names.names)
+        ocean = np.array(
+            [bool(re.match(OCEAN_TIMEZONE_PREFIX, n)) for n in r.zone_names.names]
+        )
+        self.lists = ListCatalog(data, ocean)
+        self.catalog = CellCatalog(polygons_of(r), self.lists)
+        self.oracle = PointOracle(
+            r, {s: load_benchmark_points(STRATA[s]) for s in RANKING_STRATA}
+        )
+        self.control_path = workdir / "control.bin"
+        self.control = build_control(r.shortcuts, data, r.zone_ids, self.control_path)
+        self.list_ratio = entries_file_bytes(r.shortcuts) / entries_file_bytes(
+            self.control
+        )
+        self.control_counts = self.oracle.counts(tree_of_shipped(self.control))
+        self.sample = TrainingSample(r, TRAIN_POINTS, TRAIN_SEED)
+
+    def projected_bytes(self, tree: Tree) -> int:
+        entries = entries_file_bytes(tree)
+        return round(tree.payload_bytes - entries + entries * self.list_ratio)
+
+    def row(self, name: str, tree: Tree, **extra) -> dict:
+        counts = self.oracle.counts(tree)
+        row = {
+            "name": name,
+            "projected_bytes": self.projected_bytes(tree),
+            "reader_compatible": tree.reader_compatible,
+            "counts": counts,
+            "relative": {
+                s: {
+                    k: counts[s][k] / self.control_counts[s][k]
+                    for k in ("tests_per_query", "vertices_per_query")
+                }
+                for s in RANKING_STRATA
+            },
+            "estimated_ns": estimated_ns(counts),
+            **extra,
+        }
+        rel = row["relative"]
+        print(
+            f"{name:34} {row['projected_bytes']:>9,} B  lookups "
+            f"{counts['random']['reads_per_query']:.3f}/{counts['on_land']['reads_per_query']:.3f}"
+            f"  tests x{rel['random']['tests_per_query']:.3f}/x{rel['on_land']['tests_per_query']:.3f}"
+            f"  vertices x{rel['random']['vertices_per_query']:.3f}/x{rel['on_land']['vertices_per_query']:.3f}",
+            flush=True,
+        )
+        return row
+
+    def selector(self, spec: TreeSpec, metric: str):
+        levels = self.catalog.levels(spec.root_columns, spec.sides)
+        if metric == "stop":
+            return lambda target: select_refinement(spec, levels, self.lists, target)
+        return trained_refinement(
+            spec, levels, self.lists, self.sample, self.control_counts, metric
+        )
+
+    def selective(self, spec: TreeSpec, metric: str) -> tuple | None:
+        levels = self.catalog.levels(spec.root_columns, spec.sides)
+        return fit_to_budget(
+            spec.budget,
+            self.selector(spec, metric),
+            lambda refine: make_tree(spec, *pack(spec, levels, self.lists, refine)),
+            self.projected_bytes,
+        )
+
+    def shared(self, spec: TreeSpec, metric: str) -> tuple | None:
+        """The same selection, encoded so the shipped reader reads it unchanged."""
+        levels = self.catalog.levels(spec.root_columns, spec.sides)
+        full = TreeSpec(spec.root_columns, spec.sides)
+        return fit_to_budget(
+            spec.budget,
+            self.selector(spec, metric),
+            lambda refine: make_tree(
+                full, *pack_shared(full, levels, self.lists, refine[0])
+            ),
+            self.projected_bytes,
+        )
+
+
+def selective_counts(args) -> None:
+    started = time.perf_counter()
+    setup = SelectiveSetup(args.workdir)
+    rows = []
+    print("uniformly refined, for reference:")
+    for root_columns, side in (
+        (SHIPPED.root_columns, SHIPPED.sides[0]),
+        SELECTIVE_BASELINE,
+    ):
+        spec = TreeSpec(root_columns, (side,))
+        levels = setup.catalog.levels(root_columns, (side,))
+        rows.append(
+            setup.row(spec.name, make_tree(spec, *pack(spec, levels, setup.lists)))
+        )
+    print("\none level, refined selectively:")
+    for metric in SELECTION_METRICS:
+        for root_columns, side in ONE_LEVEL_SHAPES:
+            for budget in ONE_LEVEL_BUDGETS:
+                spec = TreeSpec(root_columns, (side,), budget)
+                found = setup.selective(spec, metric)
+                if found is None:
+                    print(f"{spec.name} [{metric}]: nothing fits", flush=True)
+                    continue
+                tree, refine = found
+                root = setup.catalog.levels(root_columns, (side,))[0]
+                unrefined = set((-2 - root.values[root.multi[~refine[0]]]).tolist())
+                rows.append(
+                    setup.row(
+                        f"{spec.name} [{metric}]",
+                        tree,
+                        refined=int(refine[0].sum()),
+                        multi_zone_root_cells=len(refine[0]),
+                        shared_block_bytes=len(unrefined) * 2 * side * side,
+                    )
+                )
+    report = stage_header("selective counts", ["clang"])
+    report.update(
+        {
+            "train": {"points": TRAIN_POINTS, "seed": TRAIN_SEED},
+            "control": setup.control_counts,
+            "rows": rows,
+            "elapsed_seconds": round(time.perf_counter() - started, 1),
+        }
+    )
+    write_stage(args.workdir, "selective-counts", report)
+    setup.reference.cleanup()
+
+
+def selective_time(args) -> None:
+    """Build, gate and save the candidate in both encodings and the baseline, then time
+    each candidate against the baseline with ``run_pairs`` in replicate processes."""
+    started = time.perf_counter()
+    workdir: Path = args.workdir
+    setup = SelectiveSetup(workdir)
+    root_columns, side, budget, metric = SELECTIVE_CANDIDATE
+    spec = TreeSpec(root_columns, (side,), budget)
+    baseline_spec = TreeSpec(SELECTIVE_BASELINE[0], (SELECTIVE_BASELINE[1],))
+    levels = setup.catalog.levels(baseline_spec.root_columns, baseline_spec.sides)
+    trees = {
+        baseline_spec.name: (
+            baseline_spec,
+            make_tree(baseline_spec, *pack(baseline_spec, levels, setup.lists)),
+        ),
+        f"{spec.name}_selective": (spec, setup.selective(spec, metric)[0]),
+        f"{spec.name}_shared": (
+            TreeSpec(root_columns, (side,)),
+            setup.shared(spec, metric)[0],
+        ),
+    }
+    rng = np.random.default_rng(args.seed)
+    gate_points = [p for f in STRATA.values() for p in load_benchmark_points(f)]
+    saved = {}
+    for name, (tree_spec, tree) in trees.items():
+        row = setup.row(name, tree)
+        gate = gate_row(
+            tree,
+            setup.control,
+            gate_points,
+            edge_probes(tree, args.probes, rng),
+            border_probes(args.probes, rng),
+            ("clang",),
+        )
+        if not gate_passed(gate):
+            raise SystemExit(f"{name} fails the gate: {gate}")
+        saved[name] = {
+            "spec": tree_spec.as_json(),
+            "sha256": save_tree(tree, workdir / f"{name}.npz"),
+            "row": row,
+            "gate": gate,
+        }
+    # pairs_stage, which run_pairs starts, reads the trees named in its workdir's
+    # counts.json `selected` and the control's digest there; this stage's own workdir
+    # holds that manifest, so the sweep's counts.json is never touched
+    manifest = stage_header("selective manifest", ["clang"])
+    manifest.update(
+        {
+            "control": {"sha256": file_digest(setup.control_path)},
+            "selected": [{"name": n, **s} for n, s in saved.items()],
+        }
+    )
+    write_stage(workdir, "counts", manifest)
+    setup.reference.cleanup()
+
+    pairs = [f"{baseline_spec.name}:{n}" for n in saved if n != baseline_spec.name]
+    replicates = [
+        run_pairs(
+            workdir,
+            pairs,
+            path="clang",
+            rounds=args.rounds,
+            seed=seed,
+            points=args.points,
+        )
+        for seed in range(args.seed_base, args.seed_base + args.replicates)
+    ]
+    verdicts_ = {
+        pair: majority([verdicts(run["pairs"][pair]) for run in replicates])
+        for pair in pairs
+    }
+    for pair, cells in verdicts_.items():
+        print(f"{pair}: {cells}")
+    print_margins(replicates)
+    report = stage_header("selective time", ["clang"])
+    report.update(
+        {
+            "baseline": baseline_spec.name,
+            "candidates": saved,
+            "rounds": args.rounds,
+            "seeds": [run["seed"] for run in replicates],
+            "replicate_runs": replicates,
+            "verdicts": verdicts_,
+            "elapsed_seconds": round(time.perf_counter() - started, 1),
+        }
+    )
+    write_stage(workdir, "selective-time", report)
+
+
+def selective_stage(args) -> None:
+    {"counts": selective_counts, "time": selective_time}[args.part](args)
 
 
 def all_stages(args) -> None:
@@ -1918,6 +2772,21 @@ def main() -> None:
     p.add_argument("--path", default="clang")
     p.add_argument("--output", type=Path, required=True)
     stage("report", report_stage)
+    sub.choices["report"].add_argument(
+        "--run", help=f"a committed run's file prefix, e.g. {SWEEP_RUN}"
+    )
+    p = sub.add_parser("patterns")
+    p.set_defaults(function=patterns_stage)
+    p.add_argument("--workdir", type=Path, help="a run's stage files, else --run")
+    p.add_argument("--run", default=SWEEP_RUN)
+    p.add_argument("--selective-workdir", type=Path, help="else --selective")
+    p.add_argument("--selective", default=SELECTIVE_RUN)
+    p = stage("selective", selective_stage)
+    p.set_defaults(workdir=Path("tmp/grid-tree-sweep-selective"))
+    p.add_argument("part", choices=("counts", "time"))
+    p.add_argument("--rounds", type=int, default=61)
+    p.add_argument("--replicates", type=int, default=3)
+    p.add_argument("--seed-base", type=int, default=100)
     args = parser.parse_args()
     args.function(args)
 
