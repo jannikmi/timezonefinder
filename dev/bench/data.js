@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792285048308,
+  "lastUpdate": 1792287011534,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14841,6 +14841,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3677",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dc18040c97b736b1ebfbaa96d9024abd78e19cc8",
+          "message": "Render benchmark reports by group; compare only when a measured input changes (#725)\n\n* Render benchmark report pages by group, all by default\n\nEvery render measured all seven pages even when a change moved one, so a\npull request touching the break-even page paid for the full suite and\nre-churned six unrelated pages.\n\n- Five report groups, one per measurement: suite (benchmarks + latency:\n  timezonefinding, polygon, initialization, vs-tzfpy), memory,\n  acceleration, break-even (page + chart), data. A group is never split.\n- `make reports REPORTS=break-even,data` measures and renders only those;\n  REPORTS defaults to all, and an unknown name stops make before anything\n  runs. The renderer's suite inputs become optional but come as a pair.\n- benchmark.yml gains a `reports` dispatch input (default all, passed\n  through env); a release push has no inputs and renders every group.\n- The artifact carries a manifest of its pages; install replaces exactly\n  those, refuses names it does not know, and reads an artifact staged\n  before the manifest existed as complete. The commit check is unchanged.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Run the per-PR benchmark comparison only when a measured input changes\n\nReport rendering, the other suites, the comparison scripts and the Makefile\ncan break the job but cannot move a measured number, so a change confined to\nthem no longer triggers the comparison. A test pins the path list and checks\nthat every core benchmark lives in a watched file.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-18T01:29:27Z",
+          "tree_id": "945308139c5ea80d6ff2f588bd791877adda637b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dc18040c97b736b1ebfbaa96d9024abd78e19cc8"
+        },
+        "date": 1792287009489,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1344187.1968885618,
+            "range": "± 27853",
+            "unit": "lookups/sec",
+            "extra": "min of 440 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1660565.7481027741,
+            "range": "± 25416",
+            "unit": "lookups/sec",
+            "extra": "min of 617 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 298286.9618406685,
+            "range": "± 1922",
+            "unit": "lookups/sec",
+            "extra": "min of 110 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7396252.762733014,
+            "range": "± 187451",
+            "unit": "lookups/sec",
+            "extra": "min of 1296 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 58450819.46539677,
+            "range": "± 4026666",
+            "unit": "lookups/sec",
+            "extra": "min of 9065 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 401615.3289835505,
+            "range": "± 6740",
+            "unit": "lookups/sec",
+            "extra": "min of 106 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6994944.054393311,
+            "range": "± 235758",
+            "unit": "lookups/sec",
+            "extra": "min of 1583 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 42592340.19613993,
+            "range": "± 3451051",
+            "unit": "lookups/sec",
+            "extra": "min of 8422 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 400758.7485220767,
+            "range": "± 9581",
+            "unit": "lookups/sec",
+            "extra": "min of 135 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
