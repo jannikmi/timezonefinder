@@ -1,6 +1,6 @@
 # GH-364 — a native candidate loop
 
-- **What it was:** moving `timezone_at`'s per-candidate work into C, so that a query costs one FFI crossing instead of one per candidate polygon. It was the last slice of issue #364's free-threading scoping; the rest of that family shipped or is [FT-5](../packaging-distribution-and-release/ft-5-free-threaded-wheels.md).
+- **What it was:** moving `timezone_at`'s per-candidate work into C, so that a query costs one FFI crossing instead of one per candidate polygon. It was the last slice of issue #364's free-threading scoping; the rest of that family shipped or is [GH-721](../packaging-distribution-and-release/gh-721-free-threaded-wheels.md).
 - **Refused by the maintainer: no native candidate loop.** Both reasons it was ranked L-worthy — the time in the coordinate fetch and the GIL — are answered by other work, and what is left does not pay for an L-sized change with a wider C surface to maintain and package.
 - **The facts that decided it, kept because they are what a re-proposal has to answer.**
   - **The fetch it was meant to remove is already cheap.** The polygon offset table serves a candidate's coordinates in ~0.83 µs. What a native loop could still remove is roughly 830 ns of fetch, ~650 ns of FFI, and the Python bbox and hole work per candidate tested — and the grid-tree index answers 95.1 % of area-weighted random queries with no geometry at all, at 0.100 candidates offered per query. That is single-digit percent of a mixed workload at most, inside the batch suite's 3–9 % noise floor.

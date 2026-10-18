@@ -482,18 +482,43 @@ def _comparison_of(stored: dict[str, Any]) -> CandidateComparison:
     return CandidateComparison(**stored)
 
 
-def _acceleration_row(label: str, stored: dict[str, Any]) -> list[str]:
-    comparison = _comparison_of(stored)
-    # The challenger relative to clang, as a multiple rather than a signed percentage:
-    # these span 1.0x to ~190x, and "+18913 %" is unreadable where "190x" is not.
+def _faster_side(
+    label: str, comparison: CandidateComparison
+) -> tuple[str, float] | None:
+    """Which side of a pairing is faster, and by how many times - or ``None``.
+
+    The faster side is always the subject, so the multiple is never below one and
+    never has to be read backwards; a difference the verdict does not support has
+    no faster side.
+    """
     ratio = comparison.best_challenger / comparison.best_baseline
+    if comparison.verdict == "slower":
+        return "the C extension", ratio
+    if comparison.verdict == "faster":
+        return label, 1 / ratio
+    return None
+
+
+def _capitalized(text: str) -> str:
+    return text[0].upper() + text[1:]
+
+
+def _acceleration_row(challenger: str, label: str, stored: dict[str, Any]) -> list[str]:
+    comparison = _comparison_of(stored)
+    # A multiple rather than a signed percentage: these span 1.0x to ~190x, and
+    # "+18913 %" is unreadable where "190x" is not.
+    faster = _faster_side(challenger, comparison)
+    result = (
+        f"{_capitalized(faster[0])} is {format_ratio(faster[1])} faster"
+        if faster
+        else comparison.verdict
+    )
     return [
         label,
         format_duration(comparison.best_baseline),
         format_duration(comparison.best_challenger),
-        format_ratio(ratio),
+        result,
         f"{comparison.challenger_wins} of {comparison.rounds}",
-        comparison.verdict,
     ]
 
 
@@ -504,18 +529,18 @@ def _acceleration_table(
     labels: dict[str, str],
 ) -> None:
     path = run["machine_info"]["timezonefinder"]["acceleration_path"]
+    challenger = ACCELERATION_PATH_LABELS.get(path, path)
     rows = [
-        _acceleration_row(labels.get(key, key), stored)
+        _acceleration_row(challenger, labels.get(key, key), stored)
         for key, stored in run[section].items()
     ]
     reporter.add_table(
         [
             "Workload",
             "C extension (clang)",
-            ACCELERATION_PATH_LABELS.get(path, path),
-            "Relative to clang",
-            "Rounds won",
-            "Verdict",
+            challenger,
+            "Result",
+            f"Rounds {challenger} won",
         ],
         rows,
     )
@@ -689,6 +714,53 @@ def add_startup_section(
     )
 
 
+_RANDOM_LOOKUP_CONTEXT = (
+    "on ``TimezoneFinder.timezone_at()`` over uniformly random points"
+)
+
+
+def _acceleration_headline(label: str, random: CandidateComparison) -> str:
+    """One path against the C extension, phrased as "X is N times faster than Y"."""
+    faster = _faster_side(label, random)
+    if faster is None:
+        return (
+            f"**{_capitalized(label)} and the C extension are indistinguishable** "
+            f"{_RANDOM_LOOKUP_CONTEXT} ({random.verdict})."
+        )
+    side, multiple = faster
+    slower = "the C extension" if side == label else label
+    return (
+        f"**{_capitalized(side)} is {format_ratio(multiple)} faster than {slower}** "
+        f"{_RANDOM_LOOKUP_CONTEXT}."
+    )
+
+
+def _fastest_path_headline(random_by_path: dict[str, CandidateComparison]) -> str:
+    """The page at a glance: which path measured fastest on random lookups.
+
+    Only each path's pairing with the C extension is measured, so a path is named
+    fastest outright only where that follows from those pairings alone.
+    """
+    labels = {path: ACCELERATION_PATH_LABELS[path] for path in random_by_path}
+    faster = [p for p, c in random_by_path.items() if c.verdict == "faster"]
+    tied = [p for p, c in random_by_path.items() if c.verdict != "slower"]
+    if len(faster) == 1:
+        fastest = f"{labels[faster[0]]}, ahead of the C extension"
+    elif faster:
+        fastest = (
+            f"{' and '.join(labels[p] for p in faster)} both beat the C extension, "
+            "and are not measured against each other"
+        )
+    elif tied:
+        fastest = (
+            "the C extension, with no demonstrable difference to "
+            f"{' or '.join(labels[p] for p in tied)}"
+        )
+    else:
+        fastest = "the C extension, ahead of every other path"
+    return f"**Fastest measured: {fastest}**, {_RANDOM_LOOKUP_CONTEXT}."
+
+
 def render_acceleration_paths(
     runs: Sequence[dict[str, Any]], output_path: Path
 ) -> None:
@@ -724,21 +796,18 @@ def render_acceleration_paths(
     system_info = get_system_info(runs[0])
     paths = [run["machine_info"]["timezonefinder"]["acceleration_path"] for run in runs]
 
-    headlines = []
     lookup_rows = {
         run["machine_info"]["timezonefinder"]["acceleration_path"]: run["lookups"]
         for run in runs
     }
-    for path in paths:
-        random = _comparison_of(lookup_rows[path]["random"])
-        ratio = random.best_challenger / random.best_baseline
-        headlines.append(
-            f"**{ACCELERATION_PATH_LABELS[path]}: {format_ratio(ratio)} the C "
-            f"extension** on ``TimezoneFinder.timezone_at()`` over uniformly random "
-            f"points ({random.verdict})."
+    random_by_path = {
+        path: _comparison_of(lookup_rows[path]["random"]) for path in paths
+    }
+    reporter.add_text(_fastest_path_headline(random_by_path))
+    for path, random in random_by_path.items():
+        reporter.add_text(
+            _acceleration_headline(ACCELERATION_PATH_LABELS[path], random)
         )
-    for headline in headlines:
-        reporter.add_text(headline)
     # Not `add_headline_section`: its banner names *the* acceleration path the numbers
     # came from, which is the right thing to say on a page describing one configuration
     # and a false one here - this page's whole subject is that there are three.

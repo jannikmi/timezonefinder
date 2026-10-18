@@ -17,6 +17,11 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    # "3 - Stable": tested multithreaded on a free-threaded build in CI
+    # (tests/test_free_threading.py and the `free-threaded` tox env) and its one
+    # thread-safety limit documented - `cleanup()` on a shared instance must wait for
+    # every thread using it (docs/1_usage.rst). That limit is why it is not "4 - Resilient".
+    "Programming Language :: Python :: Free Threading :: 3 - Stable",
 ]
 # following the official NumPy support/deprecation schedule: NEP 29
 # (https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule), which is
@@ -145,11 +150,6 @@ proto = [
     "line-profiler>=5.0.0",
     "plotly>=6.3.0",
     "tabulate>=0.9.0",
-    # No longer a runtime dependency - the grid-tree shortcut index replaced the H3
-    # one in format 4. It is still what `latlng_index_bench.py` prices an aligned
-    # index *against*, and three other prototypes study the index it indexed, so the
-    # control has to stay runnable.
-    "h3>=4",
 ]
 
 # Package extras

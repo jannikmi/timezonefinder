@@ -4,11 +4,13 @@ Point-in-Polygon Acceleration Paths
 ===================================
 
 
-**Numba JIT: 1.02x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (unresolved).
+**Fastest measured: the C extension, ahead of every other path**, on ``TimezoneFinder.timezone_at()`` over uniformly random points.
 
-**pure Python: 38.6x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
+**The C extension is 1.06x faster than Numba JIT** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
 
-*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2439 GHz, Python 3.13.16, across 2 environments on one machine.*
+**The C extension is 40.4x faster than pure Python** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
+
+*Measured on Linux x86_64, Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.4713 GHz, Python 3.13.16, across 2 environments on one machine.*
 
 The three point-in-polygon implementations, measured against each other rather than across commits. ``timezonefinder/utils.py`` binds one of them at import time, so which one a process runs is decided by its environment: the C extension wherever it loaded, the Numba-compiled function where it did not and ``numba`` is importable, and the plain Python function where neither is available. The rows below are therefore measured by rebinding the kernel rather than by installing a different environment. See :doc:`benchmarking_methodology`.
 
@@ -43,32 +45,28 @@ Numba JIT against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 19 25 12 22 13 9
+   :widths: 16 20 10 33 21
 
    * - Workload
      - C extension (clang)
      - Numba JIT
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds Numba JIT won
    * - small polygons
-     - 1.82ms
-     - 2.78ms
-     - 1.52x
+     - 1.70ms
+     - 2.69ms
+     - The C extension is 1.58x faster
      - 0 of 61
-     - slower
    * - medium polygons
-     - 1.95ms
-     - 2.98ms
-     - 1.53x
+     - 1.87ms
+     - 2.90ms
+     - The C extension is 1.55x faster
      - 0 of 61
-     - slower
    * - large polygons
-     - 2.96ms
-     - 4.83ms
-     - 1.63x
+     - 3.70ms
+     - 4.97ms
+     - The C extension is 1.34x faster
      - 0 of 61
-     - slower
 
 
 
@@ -80,32 +78,28 @@ pure Python against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 19 23 14 22 13 9
+   :widths: 15 19 11 33 22
 
    * - Workload
      - C extension (clang)
      - pure Python
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds pure Python won
    * - small polygons
-     - 1.80ms
-     - 5.85ms
-     - 3.25x
+     - 1.68ms
+     - 5.62ms
+     - The C extension is 3.35x faster
      - 0 of 15
-     - slower
    * - medium polygons
-     - 2.00ms
-     - 160ms
-     - 80.0x
+     - 1.92ms
+     - 153ms
+     - The C extension is 79.6x faster
      - 0 of 15
-     - slower
    * - large polygons
-     - 3.10ms
-     - 470ms
-     - 152x
+     - 3.76ms
+     - 432ms
+     - The C extension is 115x faster
      - 0 of 15
-     - slower
 
 
 
@@ -125,32 +119,28 @@ Numba JIT against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 28 21 10 19 11 11
+   :widths: 24 18 9 30 19
 
    * - Workload
      - C extension (clang)
      - Numba JIT
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds Numba JIT won
    * - random points
-     - 3.22ms
-     - 3.28ms
-     - 1.02x
-     - 4 of 61
-     - unresolved
+     - 2.88ms
+     - 3.05ms
+     - The C extension is 1.06x faster
+     - 6 of 61
    * - unique-shortcut points
-     - 2.68ms
-     - 2.67ms
-     - 1.00x
-     - 45 of 61
+     - 2.47ms
+     - 2.47ms
      - unresolved
+     - 22 of 61
    * - ambiguous-shortcut points
-     - 14.1ms
-     - 15.8ms
-     - 1.12x
+     - 13.8ms
+     - 15.6ms
+     - The C extension is 1.13x faster
      - 0 of 61
-     - slower
 
 
 
@@ -162,32 +152,28 @@ pure Python against the C extension
 
 .. list-table::
    :header-rows: 1
-   :widths: 27 21 12 18 11 11
+   :widths: 23 18 10 29 20
 
    * - Workload
      - C extension (clang)
      - pure Python
-     - Relative to clang
-     - Rounds won
-     - Verdict
+     - Result
+     - Rounds pure Python won
    * - random points
-     - 3.25ms
-     - 125ms
-     - 38.6x
+     - 2.93ms
+     - 118ms
+     - The C extension is 40.4x faster
      - 0 of 15
-     - slower
    * - unique-shortcut points
-     - 2.72ms
-     - 2.72ms
-     - 1.00x
-     - 11 of 15
-     - unresolved
+     - 2.49ms
+     - 2.49ms
+     - no difference
+     - 8 of 15
    * - ambiguous-shortcut points
-     - 14.6ms
-     - 3.63s
-     - 248x
+     - 14.0ms
+     - 3.51s
+     - The C extension is 250x faster
      - 0 of 15
-     - slower
 
 
 
@@ -214,21 +200,21 @@ Resident memory
      - With Numba
      - Cost of the extra
    * - added by ``import timezonefinder``
-     - 4.62 MiB
-     - 4.63 MiB
-     - +4.00 KiB
+     - 4.67 MiB
+     - 4.64 MiB
+     - -24.0 KiB
    * - added by ``TimezoneFinder()``
-     - 19.7 MiB
-     - 19.7 MiB
-     - -12.0 KiB
+     - 19.8 MiB
+     - 19.9 MiB
+     - +56.0 KiB
    * - added by the first query
-     - 128 KiB
-     - 128 KiB
-     - 0 B
+     - 144 KiB
+     - 132 KiB
+     - -12.0 KiB
    * - **the whole process, once the first answer is out**
-     - 37.4 MiB
-     - 37.4 MiB
-     - -36.0 KiB
+     - 37.7 MiB
+     - 37.6 MiB
+     - -64.0 KiB
 
 
 Every row but the last is what that step added; the last is the whole process, which is the figure a container memory limit is set against. The difference is the Numba and ``llvmlite`` import plus the code it compiles, and it is paid per process - a worker pool pays it once per worker, and it does not shrink for ``TimezoneFinderL`` or for the memory-mapped default mode, because it is not boundary data (:doc:`benchmark_results_memory` measures that part).
@@ -249,21 +235,21 @@ Time to the first answer
      - With Numba
      - Cost of the extra
    * - ``import timezonefinder``
-     - 30.8ms
-     - 30.9ms
-     - +121µs
+     - 29.2ms
+     - 29.5ms
+     - +282µs
    * - ``TimezoneFinder()``
-     - 117ms
-     - 117ms
-     - -256µs
+     - 112ms
+     - 111ms
+     - -965µs
    * - the first query
-     - 58.0µs
-     - 60.2µs
-     - +2.17µs
+     - 68.3µs
+     - 61.2µs
+     - -7.04µs
    * - **the whole way to the first answer**
-     - 148ms
-     - 147ms
-     - -132µs
+     - 142ms
+     - 141ms
+     - -690µs
 
 
 Where there is a compilation at all it lands in the construction row rather than in the query one: ``timezonefinder/utils_numba.py`` declares eager signatures, so the kernels are compiled when that module is first imported, which constructing a finder triggers on an installation without the C extension. Numba caches that output on disk beside the installed package, so the figures here are the steady state - the median over repetitions discards the one process that compiled - and the *first* process in a fresh environment pays more. Where the installed package directory is read-only or thrown away between runs, every process pays it. Later queries are what the tables above measure; this is what a process pays before the first of them, and a short-lived process or a cold-started function pays it per invocation.
@@ -293,20 +279,20 @@ The kernel a lookup reaches
      - Spread
      - Within 3 %
    * - small
-     - 1.82ms
-     - 1.80ms
-     - 1.2 %
+     - 1.70ms
+     - 1.68ms
+     - 1.5 %
      - yes
    * - medium
-     - 1.95ms
-     - 2.00ms
-     - 2.5 %
+     - 1.87ms
+     - 1.92ms
+     - 2.8 %
      - yes
    * - large
-     - 2.96ms
-     - 3.10ms
-     - 4.9 %
-     - **no**
+     - 3.70ms
+     - 3.76ms
+     - 1.6 %
+     - yes
 
 
 
@@ -326,20 +312,20 @@ What a caller actually pays
      - Spread
      - Within 3 %
    * - random
-     - 3.22ms
-     - 3.25ms
-     - 1.1 %
+     - 2.88ms
+     - 2.93ms
+     - 1.8 %
      - yes
    * - unique shortcut
-     - 2.68ms
-     - 2.72ms
-     - 1.5 %
+     - 2.47ms
+     - 2.49ms
+     - 0.6 %
      - yes
    * - ambiguous shortcut
-     - 14.1ms
-     - 14.6ms
-     - 3.5 %
-     - **no**
+     - 13.8ms
+     - 14.0ms
+     - 1.4 %
+     - yes
 
 
 Two things move these rows. The first is ordinary run-to-run variation: the C kernel is the same compiled code in both runs, so wherever its two timings differ that is the floor for comparing anything *across* the two processes - and it is wider than the 3 % a paired comparison inside one process resolves, which is the whole reason this page does not divide one run into the other.
