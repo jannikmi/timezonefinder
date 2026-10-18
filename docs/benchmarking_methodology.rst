@@ -139,7 +139,7 @@ memory pressure. See :doc:`benchmark_results_memory`.
 Comparing against another package
 ---------------------------------
 
-:doc:`benchmark_results_comparison` compares against `tzfpy <https://github.com/ringsaturn/tzfpy>`__
+:doc:`benchmark_results_vs_tzfpy` compares against `tzfpy <https://github.com/ringsaturn/tzfpy>`__
 on the same machine, in the same process and on the same query points, each package called through
 its own API. Published figures from two projects come from different machines and workloads, so they
 cannot be compared directly.

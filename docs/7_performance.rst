@@ -59,7 +59,7 @@ See :doc:`benchmark_results_memory` for the measured footprint of each class and
 Comparison against tzfpy
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-See :doc:`benchmark_results_comparison` for a head-to-head measurement against `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - both packages answering the same committed query points in the same process on the same machine - auto-generated from the ``benchmarks/test_comparison.py`` pytest-benchmark suite (``make reports``). :doc:`alternatives` is where the trade-off those numbers price is argued.
+See :doc:`benchmark_results_vs_tzfpy` for a head-to-head measurement against `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - both packages answering the same committed query points in the same process on the same machine - auto-generated from the ``benchmarks/test_comparison.py`` pytest-benchmark suite (``make reports``). :doc:`alternatives` is where the trade-off those numbers price is argued.
 
 
 C extension

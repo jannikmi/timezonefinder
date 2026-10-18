@@ -1011,3 +1011,33 @@ def test_write_report_writes_exactly_what_render_returned(tmp_path):
     assert (
         output_path.read_text(encoding="utf-8") == reporter.render().rstrip("\n") + "\n"
     )
+
+
+def test_render_comparison_states_bulk_lookups_beside_the_single_call_rows(tmp_path):
+    """The batched row answers a different question from the single-call table -
+    tzfpy has no batch API - so it gets its own section and headline sentence rather
+    than a column in the one-lookup-against-one-lookup table."""
+    data = _fake_benchmark_json(
+        "benchmarks/test_comparison.py::test_lookup_tzfpy[random]"
+    )
+    for name, seconds in (
+        ("test_lookup_timezonefinder[random]", 3.0),
+        ("test_lookup_timezonefinder_batch[random]", 0.5),
+    ):
+        data["benchmarks"].append(
+            {
+                **_fake_bench(name, mean=seconds),
+                "fullname": f"benchmarks/test_comparison.py::{name}",
+            }
+        )
+    output_path = tmp_path / "report.rst"
+
+    render_comparison(data, output_path)
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "Bulk Lookups" in text
+    assert "For bulk lookups, ``timezone_names_at()``" in text
+    # the single-call table still compares single calls only
+    section = text.split("\nLookup Throughput\n")[1]
+    single_call_table = section.split("\nBulk Lookups\n")[0]
+    assert "timezone_names_at() (in-memory)" not in single_call_table

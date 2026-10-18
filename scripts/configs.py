@@ -23,7 +23,7 @@ PERFORMANCE_REPORT_FILE = DOC_ROOT / "benchmark_results_timezonefinding.rst"
 POLYGON_REPORT_FILE = DOC_ROOT / "benchmark_results_polygon.rst"
 INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 MEMORY_REPORT_FILE = DOC_ROOT / "benchmark_results_memory.rst"
-COMPARISON_REPORT_FILE = DOC_ROOT / "benchmark_results_comparison.rst"
+COMPARISON_REPORT_FILE = DOC_ROOT / "benchmark_results_vs_tzfpy.rst"
 ACCELERATION_REPORT_FILE = DOC_ROOT / "benchmark_results_acceleration_paths.rst"
 BATCH_BREAK_EVEN_REPORT_FILE = DOC_ROOT / "benchmark_results_batch_break_even.rst"
 # The sweep the page above embeds. A generated file like the page itself, written by the

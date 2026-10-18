@@ -21,7 +21,7 @@ rather than PyPI - that embeds the unsimplified dataset behind the same *tzfpy* 
 removes the cleanest distinction this page used to make: unsimplified geometry is no longer unique
 to ``timezonefinder``. Everything measured on this page is the simplified PyPI build. The two PyPI
 packages are measured under one harness - same query points, same process, same machine - in
-:doc:`benchmark_results_comparison`.
+:doc:`benchmark_results_vs_tzfpy`.
 
 **If your query points are rarely near a timezone border - coarse geofencing, analytics
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
@@ -105,7 +105,7 @@ difference is in what they do with that dataset's geometry.
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
      - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - The simplified PyPI build is faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; the ``+full`` build is not measured here (:doc:`benchmark_results_comparison`)
+     - The simplified PyPI build is faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; the ``+full`` build is not measured here (:doc:`benchmark_results_vs_tzfpy`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
@@ -128,7 +128,7 @@ difference is in what they do with that dataset's geometry.
 
    **The speed rows are measured, not estimated.** ``benchmarks/test_comparison.py`` runs both
    packages over the same committed query points, in the same process, on the same machine, and
-   :doc:`benchmark_results_comparison` is generated from it. That harness exists because the
+   :doc:`benchmark_results_vs_tzfpy` is generated from it. That harness exists because the
    alternative - putting two published figures side by side - is exactly the comparison this
    project refuses to make about itself: an unchanged lookup path spread 134-158 % across CI
    runners alone (:doc:`benchmarking_methodology`), so two numbers from two machines say nothing
@@ -414,7 +414,7 @@ When to choose which package
 Only criteria that currently differ are listed. Dataset coverage and access to geometry exist in
 both projects, so neither is a reason to pick one. Measuring the PyPI builds together also removed
 startup from this list: they reach a first answer in about the same time
-(:doc:`benchmark_results_comparison`). The ``+full`` rows below describe its distribution contract;
+(:doc:`benchmark_results_vs_tzfpy`). The ``+full`` rows below describe its distribution contract;
 its performance and memory have not been measured by this project's harness.
 
 .. list-table::

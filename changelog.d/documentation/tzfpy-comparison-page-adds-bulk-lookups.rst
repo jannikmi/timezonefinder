@@ -1,0 +1,1 @@
+The tzfpy comparison page is renamed `Speed and startup against tzfpy <https://timezonefinder.readthedocs.io/en/latest/benchmark_results_vs_tzfpy.html>`__ and adds a *Bulk lookups* table: the same points answered by one ``timezone_names_at()`` call against a loop of tzfpy calls, since tzfpy has no batch API.

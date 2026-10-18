@@ -99,6 +99,7 @@ FUNCTION_LABELS = {
     "test_pt_in_poly_python_packed": "packed kernel (interpreted)",
     "test_initialization": "Initialization",
     "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
+    "test_lookup_timezonefinder_batch": "TimezoneFinder.timezone_names_at() (in-memory)",
     "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
     "test_lookup_tzfpy": "tzfpy.get_tz()",
     "test_first_answer": "Time to first answer",
@@ -1722,6 +1723,12 @@ COMPARISON_POINT_CLASSES = (
     "ambiguous_shortcut",
 )
 
+# the bulk table: one batched call over the same points, against the same tzfpy loop.
+# Kept out of `COMPARISON_LOOKUP_FUNCTIONS` because it answers a different question -
+# tzfpy has no batch API, so this is "answer N points with each package's best API",
+# not "one lookup against one lookup".
+COMPARISON_BATCH_FUNCTION = "test_lookup_timezonefinder_batch"
+
 # the point class the headline quotes: the only globally representative one,
 # for the reason docs/benchmarking_methodology.rst gives
 COMPARISON_HEADLINE_POINT_CLASS = "random"
@@ -1771,7 +1778,7 @@ def relative_speed_label(subject_seconds: float, reference_seconds: float) -> st
 
 def render_comparison(data: dict[str, Any], output_path: Path) -> None:
     reporter = BenchmarkReporter(
-        title="Comparison against tzfpy", output_path=output_path
+        title="Speed and Startup against tzfpy", output_path=output_path
     )
     system_info = get_system_info(data)
     batch_size = get_batch_size(system_info)
@@ -1803,6 +1810,18 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             "process on the same machine. That gap is what full-resolution "
             "boundary polygons cost; :doc:`alternatives` is where the trade is "
             "argued rather than measured."
+        )
+    headline_batch = per_query(
+        COMPARISON_BATCH_FUNCTION, COMPARISON_HEADLINE_POINT_CLASS
+    )
+    if headline_reference is not None and headline_batch is not None:
+        headlines.append(
+            f"**For bulk lookups, ``timezone_names_at()`` answers the same "
+            f"{batch_size:,} points in one call at ~{format_duration(headline_batch)} "
+            f"per point** - {relative_speed_label(headline_batch, headline_reference)} "
+            "than a loop of tzfpy calls, which has no batch API. See *Bulk Lookups* "
+            "below, and :doc:`benchmark_results_batch_break_even` for the batch size "
+            "from which batching pays."
         )
     add_headline_section(reporter, system_info, headlines, machine_label(data))
     add_ci_tracking_note(reporter, system_info, benches)
@@ -1876,6 +1895,46 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             ]
         )
     reporter.add_table(headers, rows)
+
+    batch_rows = []
+    for point_class in COMPARISON_POINT_CLASSES:
+        reference = per_query(COMPARISON_REFERENCE_FUNCTION, point_class)
+        batched = per_query(COMPARISON_BATCH_FUNCTION, point_class)
+        if batched is None:
+            continue
+        batch_rows.append(
+            [
+                PARAM_LABELS.get(point_class, point_class),
+                MEASUREMENT_UNAVAILABLE
+                if reference is None
+                else format_duration(reference),
+                format_duration(batched),
+                MEASUREMENT_UNAVAILABLE
+                if reference is None
+                else relative_speed_label(batched, reference),
+            ]
+        )
+    if batch_rows:
+        reporter.add_section("Bulk Lookups", level=2)
+        reporter.add_text(
+            f"The same {batch_size:,} points, answered by one "
+            "``timezone_names_at()`` call per pass instead of a ``timezone_at()`` "
+            "loop - this package's API for answering many points at once. tzfpy has "
+            "no batch API (its ``get_tzs()`` returns every zone at a single point), "
+            "so its column is the same ``get_tz()`` loop as above. The coordinates are "
+            "passed as ready ``float64`` arrays; converting Python lists costs extra. "
+            f"Batching pays only above a few dozen points per call and depends on the "
+            "batch size: :doc:`benchmark_results_batch_break_even`."
+        )
+        reporter.add_table(
+            [
+                "Query points",
+                FUNCTION_LABELS[COMPARISON_REFERENCE_FUNCTION],
+                f"{FUNCTION_LABELS[COMPARISON_BATCH_FUNCTION]}, per point",
+                f"vs {FUNCTION_LABELS[COMPARISON_REFERENCE_FUNCTION]}",
+            ],
+            batch_rows,
+        )
 
     lookup_benches = [
         b for b in benches if b["name"].startswith(COMPARISON_LOOKUP_FUNCTIONS)
