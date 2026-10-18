@@ -1,0 +1,690 @@
+{
+ "schema": 1,
+ "stage": "selective time",
+ "created": "2026-10-18T21:11:03+0000",
+ "command": "uv run python -m prototypes.grid_tree_config_sweep selective time",
+ "environment": {
+  "python": "3.13.16",
+  "machine": "x86_64",
+  "system": "Linux",
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "logical_cpus": 4,
+  "versions": {
+   "numpy": "2.5.2",
+   "shapely": "2.1.2",
+   "numba": "0.67.0"
+  },
+  "paths": [
+   "clang"
+  ],
+  "commit": "01ff2b3",
+  "base_commit": "",
+  "fixture": {
+   "fixture_version": 4,
+   "data_version": "2026d"
+  }
+ },
+ "data_digest": "ce78d7dfa68f3699e07e25c683add2df7fe51b9e58f0b179c7528d7fa633c5dd",
+ "baseline": "c480_4",
+ "candidates": {
+  "c480_4": {
+   "spec": {
+    "root_columns": 480,
+    "sides": [
+     4
+    ],
+    "budget": null
+   },
+   "sha256": "178847e13ae809b568dc3f0dbb7002259d8c55b8555690fc2701e869daf6d94e",
+   "row": {
+    "name": "c480_4",
+    "projected_bytes": 695531,
+    "reader_compatible": true,
+    "counts": {
+     "random": {
+      "unique_share": 0.9609,
+      "reads_per_query": 1.13,
+      "candidates_per_query": 0.0802,
+      "tests_per_query": 0.0409,
+      "vertices_per_query": 670.2671
+     },
+     "on_land": {
+      "unique_share": 0.9057,
+      "reads_per_query": 1.2756,
+      "candidates_per_query": 0.1921,
+      "tests_per_query": 0.0967,
+      "vertices_per_query": 1846.8161
+     }
+    },
+    "relative": {
+     "random": {
+      "tests_per_query": 0.8520833333333333,
+      "vertices_per_query": 0.888630198735201
+     },
+     "on_land": {
+      "tests_per_query": 0.8386816999132697,
+      "vertices_per_query": 0.8369514278285918
+     }
+    },
+    "estimated_ns": 188.224
+   },
+   "gate": {
+    "clang": {
+     "fixtures": {
+      "points": 30000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "own_cell_edges": {
+      "points": 6000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "border_lines": {
+      "points": 5974,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     }
+    }
+   }
+  },
+  "c576_4_sel800k_selective": {
+   "spec": {
+    "root_columns": 576,
+    "sides": [
+     4
+    ],
+    "budget": 800000
+   },
+   "sha256": "cf1565c3914e9b4890e7080eb63bbee2ad1a87fa713bb9c07e8aafa604c507da",
+   "row": {
+    "name": "c576_4_sel800k_selective",
+    "projected_bytes": 793522,
+    "reader_compatible": false,
+    "counts": {
+     "random": {
+      "unique_share": 0.9617,
+      "reads_per_query": 1.0969,
+      "candidates_per_query": 0.0785,
+      "tests_per_query": 0.0393,
+      "vertices_per_query": 621.9169
+     },
+     "on_land": {
+      "unique_share": 0.9077,
+      "reads_per_query": 1.2128,
+      "candidates_per_query": 0.1889,
+      "tests_per_query": 0.0948,
+      "vertices_per_query": 1747.3637
+     }
+    },
+    "relative": {
+     "random": {
+      "tests_per_query": 0.81875,
+      "vertices_per_query": 0.824528219337903
+     },
+     "on_land": {
+      "tests_per_query": 0.8222029488291414,
+      "vertices_per_query": 0.7918809802724003
+     }
+    },
+    "estimated_ns": 180.013
+   },
+   "gate": {
+    "clang": {
+     "fixtures": {
+      "points": 30000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "own_cell_edges": {
+      "points": 6000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "border_lines": {
+      "points": 5983,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     }
+    }
+   }
+  },
+  "c576_4_sel800k_shared": {
+   "spec": {
+    "root_columns": 576,
+    "sides": [
+     4
+    ],
+    "budget": null
+   },
+   "sha256": "5b75f9be0fd043bee4508dbc4fa43aaaee0708c2511b9f0d5a7c90d9d5233531",
+   "row": {
+    "name": "c576_4_sel800k_shared",
+    "projected_bytes": 792542,
+    "reader_compatible": true,
+    "counts": {
+     "random": {
+      "unique_share": 0.9588,
+      "reads_per_query": 1.1074,
+      "candidates_per_query": 0.0847,
+      "tests_per_query": 0.0424,
+      "vertices_per_query": 637.9479
+     },
+     "on_land": {
+      "unique_share": 0.9011,
+      "reads_per_query": 1.2383,
+      "candidates_per_query": 0.2031,
+      "tests_per_query": 0.1021,
+      "vertices_per_query": 1773.121
+     }
+    },
+    "relative": {
+     "random": {
+      "tests_per_query": 0.8833333333333333,
+      "vertices_per_query": 0.8457818818195076
+     },
+     "on_land": {
+      "tests_per_query": 0.8855160450997398,
+      "vertices_per_query": 0.8035538311924293
+     }
+    },
+    "estimated_ns": 194.453
+   },
+   "gate": {
+    "clang": {
+     "fixtures": {
+      "points": 30000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "own_cell_edges": {
+      "points": 6000,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     },
+     "border_lines": {
+      "points": 5981,
+      "overlap": 0,
+      "uncovered": 0,
+      "control_wrong": 0,
+      "defect": 0,
+      "scalar_differs": 0
+     }
+    }
+   }
+  }
+ },
+ "rounds": 61,
+ "seeds": [
+  100,
+  101,
+  102
+ ],
+ "replicate_runs": [
+  {
+   "schema": 1,
+   "stage": "pairs",
+   "created": "2026-10-18T21:10:56+0000",
+   "command": "uv run python -m prototypes.grid_tree_config_sweep pairs --workdir tmp/grid-tree-sweep-selective --path clang --rounds 61 --seed 100 --points 2000 --output tmp/grid-tree-sweep-selective/pairs-clang-100-59941323.json --pairs c480_4:c576_4_sel800k_selective c480_4:c576_4_sel800k_shared",
+   "environment": {
+    "python": "3.13.16",
+    "machine": "x86_64",
+    "system": "Linux",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logical_cpus": 4,
+    "versions": {
+     "numpy": "2.5.2",
+     "shapely": "2.1.2",
+     "numba": "0.67.0"
+    },
+    "paths": [
+     "clang"
+    ],
+    "commit": "01ff2b3",
+    "base_commit": "",
+    "fixture": {
+     "fixture_version": 4,
+     "data_version": "2026d"
+    }
+   },
+   "data_digest": "ce78d7dfa68f3699e07e25c683add2df7fe51b9e58f0b179c7528d7fa633c5dd",
+   "path": "clang",
+   "rounds": 61,
+   "seed": 100,
+   "fresh_points": null,
+   "pairs": {
+    "c480_4:c576_4_sel800k_selective": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0021204240000542995,
+       "best_challenger": 0.002140047000011691,
+       "challenger_wins": 30,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0006334060000199315,
+       "best_challenger": 0.0007206080000514703,
+       "challenger_wins": 4,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.002734612000040215,
+       "best_challenger": 0.002653173999988212,
+       "challenger_wins": 44,
+       "verdict": "unresolved"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0010977210000646664,
+       "best_challenger": 0.001124812000057318,
+       "challenger_wins": 15,
+       "verdict": "unresolved"
+      }
+     }
+    },
+    "c480_4:c576_4_sel800k_shared": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0021663519999037817,
+       "best_challenger": 0.0021726749999970707,
+       "challenger_wins": 29,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.000622170000042388,
+       "best_challenger": 0.000713689000008344,
+       "challenger_wins": 11,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.002796412000066084,
+       "best_challenger": 0.0027344819999370884,
+       "challenger_wins": 33,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0011010250000254018,
+       "best_challenger": 0.0011488009999993665,
+       "challenger_wins": 16,
+       "verdict": "slower"
+      }
+     }
+    }
+   }
+  },
+  {
+   "schema": 1,
+   "stage": "pairs",
+   "created": "2026-10-18T21:11:00+0000",
+   "command": "uv run python -m prototypes.grid_tree_config_sweep pairs --workdir tmp/grid-tree-sweep-selective --path clang --rounds 61 --seed 101 --points 2000 --output tmp/grid-tree-sweep-selective/pairs-clang-101-59941323.json --pairs c480_4:c576_4_sel800k_selective c480_4:c576_4_sel800k_shared",
+   "environment": {
+    "python": "3.13.16",
+    "machine": "x86_64",
+    "system": "Linux",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logical_cpus": 4,
+    "versions": {
+     "numpy": "2.5.2",
+     "shapely": "2.1.2",
+     "numba": "0.67.0"
+    },
+    "paths": [
+     "clang"
+    ],
+    "commit": "01ff2b3",
+    "base_commit": "",
+    "fixture": {
+     "fixture_version": 4,
+     "data_version": "2026d"
+    }
+   },
+   "data_digest": "ce78d7dfa68f3699e07e25c683add2df7fe51b9e58f0b179c7528d7fa633c5dd",
+   "path": "clang",
+   "rounds": 61,
+   "seed": 101,
+   "fresh_points": null,
+   "pairs": {
+    "c480_4:c576_4_sel800k_selective": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.002254974000038601,
+       "best_challenger": 0.0022214370000028794,
+       "challenger_wins": 31,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0006681950000029246,
+       "best_challenger": 0.0007574609999210224,
+       "challenger_wins": 9,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.002796109999962937,
+       "best_challenger": 0.0027687270001024444,
+       "challenger_wins": 38,
+       "verdict": "unresolved"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0011406910000459902,
+       "best_challenger": 0.001154483000050277,
+       "challenger_wins": 16,
+       "verdict": "unresolved"
+      }
+     }
+    },
+    "c480_4:c576_4_sel800k_shared": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0022051100000908264,
+       "best_challenger": 0.0022697260000086317,
+       "challenger_wins": 26,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0006686380000928693,
+       "best_challenger": 0.000713895999979286,
+       "challenger_wins": 24,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0028595820000418826,
+       "best_challenger": 0.00281194800004414,
+       "challenger_wins": 25,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0011676650000254085,
+       "best_challenger": 0.0012167649999810237,
+       "challenger_wins": 23,
+       "verdict": "slower"
+      }
+     }
+    }
+   }
+  },
+  {
+   "schema": 1,
+   "stage": "pairs",
+   "created": "2026-10-18T21:11:03+0000",
+   "command": "uv run python -m prototypes.grid_tree_config_sweep pairs --workdir tmp/grid-tree-sweep-selective --path clang --rounds 61 --seed 102 --points 2000 --output tmp/grid-tree-sweep-selective/pairs-clang-102-59941323.json --pairs c480_4:c576_4_sel800k_selective c480_4:c576_4_sel800k_shared",
+   "environment": {
+    "python": "3.13.16",
+    "machine": "x86_64",
+    "system": "Linux",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logical_cpus": 4,
+    "versions": {
+     "numpy": "2.5.2",
+     "shapely": "2.1.2",
+     "numba": "0.67.0"
+    },
+    "paths": [
+     "clang"
+    ],
+    "commit": "01ff2b3",
+    "base_commit": "",
+    "fixture": {
+     "fixture_version": 4,
+     "data_version": "2026d"
+    }
+   },
+   "data_digest": "ce78d7dfa68f3699e07e25c683add2df7fe51b9e58f0b179c7528d7fa633c5dd",
+   "path": "clang",
+   "rounds": 61,
+   "seed": 102,
+   "fresh_points": null,
+   "pairs": {
+    "c480_4:c576_4_sel800k_selective": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0022946980000142503,
+       "best_challenger": 0.0022727399999666886,
+       "challenger_wins": 32,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0006545139999616367,
+       "best_challenger": 0.0007621319999771003,
+       "challenger_wins": 18,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0029869349999671613,
+       "best_challenger": 0.002897851000057017,
+       "challenger_wins": 39,
+       "verdict": "unresolved"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_selective",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0011422300000276664,
+       "best_challenger": 0.001267245000008188,
+       "challenger_wins": 27,
+       "verdict": "unresolved"
+      }
+     }
+    },
+    "c480_4:c576_4_sel800k_shared": {
+     "random": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0022378910000497854,
+       "best_challenger": 0.0022785830000202623,
+       "challenger_wins": 27,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0006804659999488649,
+       "best_challenger": 0.0007021200000281169,
+       "challenger_wins": 23,
+       "verdict": "slower"
+      }
+     },
+     "on_land": {
+      "scalar": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 2000,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.002894062999985181,
+       "best_challenger": 0.0029058999999733715,
+       "challenger_wins": 27,
+       "verdict": "no difference"
+      },
+      "batch_256": {
+       "baseline_name": "c480_4",
+       "challenger_name": "c576_4_sel800k_shared",
+       "rounds": 61,
+       "batch_size": 8,
+       "threshold": 0.03,
+       "win_margin": 0.1,
+       "best_baseline": 0.0011876700000357232,
+       "best_challenger": 0.0012168209999572355,
+       "challenger_wins": 21,
+       "verdict": "unresolved"
+      }
+     }
+    }
+   }
+  }
+ ],
+ "verdicts": {
+  "c480_4:c576_4_sel800k_selective": {
+   "random/scalar": "no difference",
+   "random/batch_256": "slower",
+   "on_land/scalar": "unresolved",
+   "on_land/batch_256": "unresolved"
+  },
+  "c480_4:c576_4_sel800k_shared": {
+   "random/scalar": "no difference",
+   "random/batch_256": "slower",
+   "on_land/scalar": "no difference",
+   "on_land/batch_256": "slower"
+  }
+ },
+ "elapsed_seconds": 30.3
+}
