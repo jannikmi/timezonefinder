@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792236770114,
+  "lastUpdate": 1792285046745,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14754,6 +14754,93 @@ window.BENCHMARK_DATA = {
             "range": "± 17414",
             "unit": "lookups/sec",
             "extra": "min of 132 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5303 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3db79e0f587577047b1d9c51937dab765c618b00",
+          "message": "Run the batch break-even ladder past saturation (#720)\n\n* Run the batch break-even ladder past saturation\n\nThe sweep's ladder ended at 5,000 points (2,000 for unique-shortcut points,\nhalf their 5,000-point fixture), so the unique-shortcut curve read \"still\nimproving\" on every run and the chart could not show where either curve\nlevels off.\n\n- Ladder now 1, 10, 20, 50, 100, 127, 128, 500, 1k, 2k, 5k, 10k, 20k: dense\n  around the crossing and the plateau, thinned below the crossing (2, 5)\n  and between the gather switch and 500 (200) to pay for the top rungs.\n- Points per round raised from 25,000 to 80,000, held constant across\n  rungs, so the 20,000 rung keeps four calls per round.\n- Fixture pools are topped up to twice the top rung with the fixture\n  generator's own sampler and classification, keeping the fixture as the\n  prefix; a caller's --points CSV is never topped up.\n- The chart marks the saturation rung (only when the control passes, the\n  headline's rule) and labels speed-up ticks up to 100x.\n\nA local run put both strata's saturation at N=5,000 with 10k and 20k flat.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Name an Intel runner by its measured clock only\n\nIntel brand strings end in the advertised clock, so machine_label appended\nthe measured one beside it and chart subtitles read\n\"Intel(R) Xeon(R) Processor @ 2.10GHz @ 2.1000 GHz\". The advertised suffix\nis now dropped when a measured clock is present; cpu_model, which reports\nare compared on, is unchanged.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* commit CI results\n\n* Extend the break-even ladder to 100,000 points\n\nThe CI render (EPYC 7763) still read the unique-shortcut stratum as not\nsaturated: its batched time fell 12 % from 10,000 to 20,000, because a\nper-call fixed cost of tens of microseconds against ~20 ns per point only\ndrops under the 5 % tolerance past ~50,000.\n\n- Ladder gains 50,000 and 100,000; probes stay level to ~100,000 before\n  the batch outgrows the cache.\n- Points per round stay 80,000 except where a rung would get fewer than\n  four batched calls: those rounds answer 4 x N instead. Holding every\n  rung to 400,000 would cost ~15 min at N=1 alone; a longer round can\n  only bias its rung slower, i.e. toward saturating no later than it\n  does. Page, chart subtitle, methodology and contributor memory say so.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* commit CI results\n\n* Read a curve that turns back up as having stopped improving\n\nThe 100,000-point render (EPYC 7763) measured the unique-shortcut stratum\nat 21.9 ns per point at 50,000 and 33.5 ns at 100,000 - the batch\noutgrowing the cache - and saturation() reported \"not reached\", because\nits still-falling check compared the top two rungs in either direction.\n\nWhen the rungs past the fastest one stay slower than it by more than the\ntolerance through the top of the ladder, the fastest rung is now the\nreference and the answer is the smallest rung within tolerance of it;\nthe turn is named (slower_from) and the page says so. A rise that comes\nback down is still a dip handled by the median rule.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Cut the report render's two most expensive measurements\n\nThe render job's log put ~5 of the benchmark suite's 7 minutes on one\nrow and ~6.5 of the break-even sweep's ~13 on one rung, neither of which\ncarries an answer its page states.\n\n- test_pt_in_poly_python[large] runs 5 rounds instead of 15 (~20 s a\n  round, rounds spread 0.6 %). The marker sits on each parameter: a bare\n  function marker is the closest one and silently overrode it. Node ids\n  are unchanged; the CI's --benchmark-min-rounds=15 still yields 5.\n- The break-even ladder starts at 10 (N=1 and N=2 dropped; 10 and 20\n  already show the fixed-cost curve) and steps 1-5-10 per decade above\n  the gather rungs (2,000 and 20,000 dropped).\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Drop the changelog fragment for the machine-label fix\n\nA minor bugfix in report labelling; it needs no entry of its own.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Exempt benchmark and report tooling tuning from changelog entries\n\nRound counts, sweep rungs, render runtime and generated-page label fixes\nchange nothing a user installs, calls or reads; the rendered reports are\ntheir own current state. The changelog policy now says so, the core\ncontract routes to it, and this PR's two such fragments are removed. New\npages, user-facing measurement tools and changed published conclusions\nstill get an entry.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Keep only hard-to-reproduce findings in contributor memory\n\ndesigning-a-candidate-comparison.md drops commit hashes, dates, CPU\nmodels, run timings and the history of which pages once repeated a\nfigure, keeping each rule and its mechanism. The one measurement kept is\nthe one a noisy runner is needed to reproduce: saturation moving while\nthe crossing held as the control spread grew. The contributor-memory\nrules now say when a measured figure earns its place, and the comments\nthis PR added in the sweep script and the polygon benchmark follow the\nsame rule.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* commit CI results\n\n* Name saturation where no larger batch still improves; one-panel chart; user-facing docs\n\n- saturation() names the smallest rung from which every larger rung is\n  within the tolerance of the fastest of them. Taking the reference from\n  the median of the top three rungs named 10,000 for random points while\n  50,000 was still 9 % faster. A tail that stays slower (the cache) is\n  still cut off and named; a lone top rung is still \"not reached\".\n- The sweep chart drops the rounds-won panel: it read 0 below the\n  crossing and 1 above it, repeating the speed-up curve and the band.\n- docs/benchmarking_methodology.rst is rewritten for users reading the\n  numbers (5,500 -> 1,300 words); derivations stay at their constants and\n  the failed comparison designs in candidate_comparison.py, and references\n  to the page are repointed. The break-even page's prose is cut the same\n  way. documentation-maintenance-rules.md now asks for short, user-facing\n  docs pages with implementation detail left in code.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* add CI results\n\n* Add bulk lookups to the tzfpy comparison and rename the page\n\nThe comparison suite gains test_lookup_timezonefinder_batch: the same\nfixture points answered by one timezone_names_at() call, with the arrays\nbuilt before the clock starts. tzfpy has no batch API (get_tzs returns\nevery zone at one point), so the page states it as a separate \"Bulk\nLookups\" table and headline sentence against the same get_tz() loop,\nnever as a column of the one-lookup table, and points to the break-even\npage for the batch size from which batching pays.\n\nThe page is renamed from \"Comparison against tzfpy\"\n(benchmark_results_comparison.rst) to \"Speed and Startup against tzfpy\"\n(benchmark_results_vs_tzfpy.rst), with every reference updated. Its\ncommitted content is a pure rename until the next CI render rewrites it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* add CI benchmark pages\n\n* Mention the batch API's bulk-lookup speed in the alternatives page\n\nThe speed row and the 'choose tzfpy' recommendation now say that\ntimezone_names_at() outpaces a loop of tzfpy calls on a representative\nmix (tzfpy has no batch API), linking the measured pages instead of\nquoting figures.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Add a bulk-lookup row to 'When to choose which package'\n\nLookup throughput is split into one point per call (tzfpy PyPI build)\nand many points per call (timezonefinder's timezone_names_at() on a\nrepresentative mix; about even on land-only points, slower on\nborder-heavy ones), linking the measured page.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Condense 'The position in one paragraph' and make the choice precise\n\n'High-volume classification' conflated two workloads with opposite\nanswers: one lookup per call (tzfpy's PyPI build is faster) and many\npoints per call (timezone_names_at() outpaces a tzfpy loop on a\nrepresentative mix). The section now recommends by that distinction,\ndrops the narrative about the +full variant changing this page, and\ncuts the paragraph on speed as a constraint to one sentence.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-18T02:56:37+02:00",
+          "tree_id": "72c25b5a2f6d9004bf682e9815812a458d7f530e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3db79e0f587577047b1d9c51937dab765c618b00"
+        },
+        "date": 1792285045118,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 776568.0228545172,
+            "range": "± 13768",
+            "unit": "lookups/sec",
+            "extra": "min of 246 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 963504.7523898893,
+            "range": "± 12818",
+            "unit": "lookups/sec",
+            "extra": "min of 345 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 180751.26298143578,
+            "range": "± 9471",
+            "unit": "lookups/sec",
+            "extra": "min of 65 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4122460.1522651482,
+            "range": "± 104077",
+            "unit": "lookups/sec",
+            "extra": "min of 885 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33616157.26821589,
+            "range": "± 2630194",
+            "unit": "lookups/sec",
+            "extra": "min of 7045 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 245214.1312784391,
+            "range": "± 3009",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 3887039.5218663844,
+            "range": "± 98945",
+            "unit": "lookups/sec",
+            "extra": "min of 976 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24163227.433476184,
+            "range": "± 1488217",
+            "unit": "lookups/sec",
+            "extra": "min of 4568 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 242325.3384388053,
+            "range": "± 3677",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           }
         ]
       }
