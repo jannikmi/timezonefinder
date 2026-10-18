@@ -624,3 +624,44 @@ def test_the_benchmark_workflow_asserts_both_halves_of_the_path() -> None:
         "an acceleration-path assertion in benchmark.yml no longer refuses an "
         "environment with numba installed"
     )
+
+
+# What the per-pull-request comparison measures can only move when one of these does.
+# Anything wider runs a 2-pass, double-build job on changes that cannot move a number;
+# anything narrower lets a change to the measured path go unmeasured.
+MEASURED_INPUT_PATHS = {
+    "timezonefinder/**",
+    "packages/timezonefinder-data/**",
+    "benchmarks/conftest.py",
+    "benchmarks/test_timezone_finding.py",
+    "tests/fixtures/benchmarks/**",
+    "tests/auxiliaries.py",
+    "scripts/measure_memory.py",
+    "scripts/_memory_probe.py",
+    "setup.py",
+    "pyproject.toml",
+    "uv.lock",
+    ".github/workflows/benchmark.yml",
+}
+
+
+@pytest.mark.unit
+def test_the_comparison_runs_only_when_a_measured_input_changes(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    paths = benchmark_workflow[True]["pull_request"]["paths"]
+    assert set(paths) == MEASURED_INPUT_PATHS
+    assert len(paths) == len(set(paths))
+
+
+@pytest.mark.unit
+def test_every_core_benchmark_lives_in_a_file_the_filter_watches() -> None:
+    """A `benchmark_core` case moved to another file would stop triggering the
+    comparison that tracks it, with nothing red anywhere."""
+    holding_core = {
+        f"benchmarks/{path.name}"
+        for path in (PROJECT_ROOT / "benchmarks").glob("test_*.py")
+        if "pytest.mark.benchmark_core" in path.read_text(encoding="utf-8")
+    }
+    assert holding_core
+    assert holding_core <= MEASURED_INPUT_PATHS
