@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792287011534,
+  "lastUpdate": 1792287013502,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -28526,6 +28526,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2391 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dc18040c97b736b1ebfbaa96d9024abd78e19cc8",
+          "message": "Render benchmark reports by group; compare only when a measured input changes (#725)\n\n* Render benchmark report pages by group, all by default\n\nEvery render measured all seven pages even when a change moved one, so a\npull request touching the break-even page paid for the full suite and\nre-churned six unrelated pages.\n\n- Five report groups, one per measurement: suite (benchmarks + latency:\n  timezonefinding, polygon, initialization, vs-tzfpy), memory,\n  acceleration, break-even (page + chart), data. A group is never split.\n- `make reports REPORTS=break-even,data` measures and renders only those;\n  REPORTS defaults to all, and an unknown name stops make before anything\n  runs. The renderer's suite inputs become optional but come as a pair.\n- benchmark.yml gains a `reports` dispatch input (default all, passed\n  through env); a release push has no inputs and renders every group.\n- The artifact carries a manifest of its pages; install replaces exactly\n  those, refuses names it does not know, and reads an artifact staged\n  before the manifest existed as complete. The commit check is unchanged.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n* Run the per-PR benchmark comparison only when a measured input changes\n\nReport rendering, the other suites, the comparison scripts and the Makefile\ncan break the job but cannot move a measured number, so a change confined to\nthem no longer triggers the comparison. A test pins the path list and checks\nthat every core benchmark lives in a watched file.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KTyPHiLCxrgbQZyA6LkSej\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-18T01:29:27Z",
+          "tree_id": "945308139c5ea80d6ff2f588bd791877adda637b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dc18040c97b736b1ebfbaa96d9024abd78e19cc8"
+        },
+        "date": 1792287013032,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.521693229675293,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.5218715667724609,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.7826662063598633,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.7834749221801758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.36814308166504,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.36895179748535,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 3.9998 GHz"
           }
         ]
       }
