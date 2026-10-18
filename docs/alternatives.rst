@@ -436,8 +436,11 @@ its performance and memory have not been measured by this project's harness.
      - ``timezonefinder``
    * - Source builds where a Rust toolchain is unavailable
      - ``timezonefinder``
-   * - Lookup throughput
+   * - Lookup throughput, one point per call
      - ``tzfpy`` PyPI build (``+full`` not measured here)
+   * - Lookup throughput, many points per call (bulk or batch workloads)
+     - ``timezonefinder`` via ``timezone_names_at()`` on a representative point mix; about even
+       on land-only points and slower on border-heavy ones (:doc:`benchmark_results_vs_tzfpy`)
    * - Minimal distribution size
      - ``tzfpy`` PyPI build
 
