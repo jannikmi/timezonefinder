@@ -25,6 +25,7 @@ format change is refused by the resolver instead of at the first lookup.
 
 ## Releases
 
+- `4.2026.5` - timezone-boundary-builder [2026e](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026e), 2026-10-18 - Updated the packaged boundaries to upstream 2026e.
 - `3.2026.4` - timezone-boundary-builder [2026d](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026d), 2026-09-21 - Updated the packaged boundaries to upstream 2026d.
 - `3.2026.3.post1` - timezone-boundary-builder [2026c](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026c), 2026-09-10 - Recompiled shortcut candidates in estimated full-lookup work order.
 - `3.2026.3` - timezone-boundary-builder [2026c](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026c), 2026-09-02 - Introduced shortcut format 3 with conservative polygon-cell overlap coverage.
