@@ -72,6 +72,13 @@ on:
         type: boolean
         required: false
         default: false
+      reports:
+        description: >-
+          With render_reports, which report groups to measure and render
+          (comma-separated: suite, memory, acceleration, break-even, data).
+          Every other page is left as it is. A release renders all.
+        required: false
+        default: "all"
       calibrate_shortcuts:
         description: Calibrate and validate the shortcut-ordering cost model
         type: boolean
@@ -616,14 +623,21 @@ jobs:
           token: ${{ github.token }}
 
       - name: Measure and render the published pages
-        run: make reports
+        # through env, never interpolated into the script: the input is free text.
+        # A push to a release branch has no inputs and renders every group.
+        env:
+          REPORTS: ${{ inputs.reports || 'all' }}
+        run: make reports REPORTS="$REPORTS"
 
       - name: Stage reports bound to this commit
+        env:
+          REPORTS: ${{ inputs.reports || 'all' }}
         run: |
           set -euo pipefail
           uv run python -m scripts.benchmark_report_artifact stage \
             --output-dir tmp/benchmark-pages \
-            --commit "$GITHUB_SHA"
+            --commit "$GITHUB_SHA" \
+            --reports "$REPORTS"
 
       - name: Upload the rendered pages
         uses: actions/upload-artifact@v7

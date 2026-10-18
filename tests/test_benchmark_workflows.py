@@ -185,6 +185,29 @@ def test_the_report_job_uploads_read_only_commit_bound_pages(
 
 
 @pytest.mark.unit
+def test_the_report_job_renders_the_selected_groups_and_stages_exactly_those(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    """Measuring one set of groups and staging another would install pages the run
+    never measured, or drop the ones it did."""
+    dispatch_inputs = benchmark_workflow[True]["workflow_dispatch"]["inputs"]
+    assert dispatch_inputs["reports"]["default"] == "all"
+    steps = benchmark_workflow["jobs"]["render-reports"]["steps"]
+    render = next(step for step in steps if "make reports" in str(step.get("run", "")))
+    stage = next(
+        step
+        for step in steps
+        if "benchmark_report_artifact stage" in str(step.get("run", ""))
+    )
+    for step in (render, stage):
+        # free text from the dispatch form, so through env and never interpolated
+        assert step["env"]["REPORTS"] == "${{ inputs.reports || 'all' }}"
+        assert "${{" not in step["run"]
+    assert 'REPORTS="$REPORTS"' in render["run"]
+    assert '--reports "$REPORTS"' in stage["run"]
+
+
+@pytest.mark.unit
 def test_the_release_installs_only_reports_for_its_exact_commit() -> None:
     instructions = RELEASE_WORKFLOW.read_text(encoding="utf-8")
     push = instructions.index('git push -u origin "$release_branch"')

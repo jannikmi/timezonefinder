@@ -2205,18 +2205,21 @@ def main() -> None:
     parser.add_argument(
         "--benchmark-json",
         type=Path,
-        required=True,
-        help="Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`",
+        help=(
+            "Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`. "
+            "Feeds the timezone-finding, polygon, initialization and tzfpy pages; "
+            "omit it, with --latency-json, to leave those four untouched."
+        ),
     )
     parser.add_argument(
         "--latency-json",
         type=Path,
-        required=True,
         help=(
             "Path to a JSON file produced by `scripts.measure_query_latency` "
-            "(`make latency`). Required, because the per-query distribution is a "
-            "section of the timezone-finding report rather than a page of its own - "
-            "rendering without it would silently drop that section."
+            "(`make latency`). Required whenever --benchmark-json is given, because "
+            "the per-query distribution is a section of the timezone-finding report "
+            "rather than a page of its own - rendering without it would silently drop "
+            "that section."
         ),
     )
     parser.add_argument(
@@ -2251,19 +2254,35 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    if (args.benchmark_json is None) != (args.latency_json is None):
+        parser.error(
+            "--benchmark-json and --latency-json come together: the timezone-finding "
+            "page is built from both"
+        )
+    if not (
+        args.benchmark_json
+        or args.memory_json
+        or args.acceleration_json
+        or args.batch_break_even_json
+    ):
+        parser.error("nothing to render: pass at least one measurement JSON")
 
-    data = load_benchmark_json(args.benchmark_json)
-    latency = load_benchmark_json(args.latency_json)
-    render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
-    render_polygon(data, POLYGON_REPORT_FILE)
-    render_initialization(data, INITIALIZATION_REPORT_FILE)
-    render_comparison(data, COMPARISON_REPORT_FILE)
-    written = [
-        PERFORMANCE_REPORT_FILE,
-        POLYGON_REPORT_FILE,
-        INITIALIZATION_REPORT_FILE,
-        COMPARISON_REPORT_FILE,
-    ]
+    written: list[Path] = []
+    if args.benchmark_json is not None:
+        data = load_benchmark_json(args.benchmark_json)
+        latency = load_benchmark_json(args.latency_json)
+        render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
+        render_polygon(data, POLYGON_REPORT_FILE)
+        render_initialization(data, INITIALIZATION_REPORT_FILE)
+        render_comparison(data, COMPARISON_REPORT_FILE)
+        written.extend(
+            [
+                PERFORMANCE_REPORT_FILE,
+                POLYGON_REPORT_FILE,
+                INITIALIZATION_REPORT_FILE,
+                COMPARISON_REPORT_FILE,
+            ]
+        )
     if args.memory_json is not None:
         render_memory(load_benchmark_json(args.memory_json), MEMORY_REPORT_FILE)
         written.append(MEMORY_REPORT_FILE)
