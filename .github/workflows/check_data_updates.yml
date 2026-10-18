@@ -215,7 +215,7 @@ jobs:
             tests/fixtures/reduced_zones \
             docs/benchmark_results_acceleration_paths.rst \
             docs/benchmark_results_batch_break_even.rst \
-            docs/benchmark_results_comparison.rst \
+            docs/benchmark_results_vs_tzfpy.rst \
             docs/benchmark_results_initialization.rst \
             docs/benchmark_results_memory.rst \
             docs/benchmark_results_polygon.rst \

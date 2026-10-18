@@ -33,12 +33,17 @@ POINT_CLASSES = ("random", "on_land", "unique_shortcut", "ambiguous_shortcut")
 
 # the cross-package suite (benchmarks/test_comparison.py). Listed by
 # comprehension rather than by hand because it is the one suite whose ids are
-# a full product - three implementations over the same four point classes -
-# and spelling out twelve near-identical strings hides a typo instead of
+# a full product - four implementations over the same four point classes -
+# and spelling out sixteen near-identical strings hides a typo instead of
 # catching one.
 EXPECTED_COMPARISON_NAMES = {
     f"benchmarks/test_comparison.py::test_lookup_{implementation}[{point_class}]"
-    for implementation in ("timezonefinder", "timezonefinderl", "tzfpy")
+    for implementation in (
+        "timezonefinder",
+        "timezonefinder_batch",
+        "timezonefinderl",
+        "tzfpy",
+    )
     for point_class in POINT_CLASSES
 } | {
     f"benchmarks/test_comparison.py::test_first_answer[{case}]"

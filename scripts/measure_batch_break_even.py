@@ -8,13 +8,13 @@ Why this is not a ``benchmarks/`` suite
 ``benchmarks/test_timezone_finding.py`` measures the batch API at one fixed size
 (``BATCH_SIZE``, 2,500) so that two commits can be compared, and its node ids are the
 trend chart's join key. The question here is the *shape* of the curve that measurement
-takes a single point on, and a sweep would add a node id per rung - fourteen metrics
+takes a single point on, and a sweep would add a node id per rung - a dozen metrics
 that are not comparable to each other and that no chart should carry.
 
 It is also the other kind of measurement: two candidates in one working tree rather than
 one implementation across commits. That is what ``benchmarks/candidate_comparison.py``
-exists for, and what ``docs/benchmarking_methodology.rst`` records three wrong designs
-for, so every rung below is one call into that harness rather than a timing loop.
+exists for - its docstring records the designs that got it wrong - so every rung below
+is one call into that harness rather than a timing loop.
 
 What it measures
 ----------------
@@ -55,10 +55,10 @@ Usage::
 """
 
 import argparse
+import contextlib
 import csv
 import json
 import random
-import statistics
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -75,6 +75,11 @@ from benchmarks.candidate_comparison import (
 from scripts.assert_acceleration_path import active_acceleration_path
 from scripts.benchmark_utils import cpu_info, get_system_status
 from scripts.configs import DEBUG
+from scripts.generate_benchmark_fixtures import (
+    generate_on_land_points,
+    generate_random_points,
+    generate_shortcut_points,
+)
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -118,36 +123,53 @@ def point_class_label(point_class: str) -> str:
 DEFAULT_POINT_CLASSES: Final[tuple[str, ...]] = ("random", "unique_shortcut")
 
 #: The rungs. Log-spaced, because the interesting region spans four decades and an
-#: integer step would spend the whole run where nothing changes.
+#: integer step would spend the whole run where nothing changes - and spaced unevenly on
+#: purpose, dense only where the page's two answers fall.
+#:
+#: * **Below the crossing** the batched call is its own fixed cost spread over N, which
+#:   10 and 20 already show, so the ladder starts at 10. Rungs under it are the
+#:   expensive ones: every round answers ~:data:`DEFAULT_POINTS_PER_ROUND` points, and at
+#:   N=1 each costs a whole batched call. ``--sizes 1,...`` still measures them.
+#: * **The crossing** has fallen between 20 and 100, so 20 and 50 keep the bracket
+#:   narrow.
+#: * **Saturation** needs the ladder to run *past* the plateau, not to end on it:
+#:   :func:`saturation` reads it off the top rungs. The per-call fixed cost is tens of
+#:   microseconds against tens of nanoseconds per point on the unique-shortcut stratum,
+#:   so that curve can still be falling at 20,000; past ~50,000 the batch outgrows the
+#:   cache and gets slower again, which :func:`saturation` reads as a turn. The top
+#:   rung is kept to show that turn, and nothing above it is worth measuring. Above the
+#:   gather rungs the ladder steps 1-5-10 per decade: an answer is named to the nearest
+#:   rung either way.
 #:
 #: The two rungs around ``NAMES_GATHER_MIN_BATCH`` are the exception, and they are
 #: imported rather than written as 127/128: ``ZoneNames.names_of`` switches from a
-#: Python loop to a numpy gather exactly there, so a plain 1-2-5 ladder steps over a
-#: real discontinuity inside the measured path and renders it as noise between 100 and
-#: 200. It is also the most actionable thing this page can show a caller sizing batches.
+#: Python loop to a numpy gather exactly there, so a log ladder steps over a real
+#: discontinuity inside the measured path and renders it as noise between 100 and the
+#: next rung. It is also the most actionable thing this page can show a caller sizing
+#: batches.
 DEFAULT_LADDER: Final[tuple[int, ...]] = (
-    1,
-    2,
-    5,
     10,
     20,
     50,
     100,
     NAMES_GATHER_MIN_BATCH - 1,
     NAMES_GATHER_MIN_BATCH,
-    200,
     500,
     1000,
-    2000,
     5000,
+    10_000,
+    50_000,
+    100_000,
 )
 
 #: Points each round asks both candidates to answer, held constant across rungs so the
-#: curve compares like with like. A round is then tens of milliseconds at every rung -
-#: far above timer resolution at ``N = 1``, and short enough that the machine's state is
-#: unlikely to change inside one, which is the reasoning behind the harness's own
-#: ``DEFAULT_BATCH_SIZE``.
-DEFAULT_POINTS_PER_ROUND: Final[int] = 25_000
+#: curve compares like with like - except at the top of the ladder, where
+#: :func:`points_per_round_for` raises it to :data:`MIN_CALLS_PER_ROUND` calls. Raising
+#: it for every rung instead would multiply the cost of the bottom rungs, where every
+#: few points are a whole batched call. A longer round is more likely to catch an
+#: interruption, which ``min`` over rounds absorbs and which can only bias those rungs
+#: *slower*, i.e. toward reporting saturation no later than it happens.
+DEFAULT_POINTS_PER_ROUND: Final[int] = 80_000
 
 #: Batched calls a round must contain. Below this the ``min`` over rounds stops being
 #: "the least perturbed round" and becomes "the luckiest single call".
@@ -259,16 +281,22 @@ class Saturation:
 
     status: Literal["saturated", "not_reached"]
     tolerance: float
-    #: seconds per point the top of the ladder settles at
+    #: seconds per point of the fastest rung at or above the answer
     reference_seconds: float
     batch_size: int | None = None
     speedup: float | None = None
     verdict: str | None = None
+    #: the rung from which every larger one is slower per point than the fastest by more
+    #: than the tolerance - where the batch has outgrown something, typically the cache
+    slower_from: int | None = None
 
     def describe(self) -> str:
         if self.status == "not_reached":
             return "not reached within the ladder"
-        return f"N={self.batch_size} ({self.speedup:.2f}x, {self.verdict})"
+        described = f"N={self.batch_size} ({self.speedup:.2f}x, {self.verdict})"
+        if self.slower_from is not None:
+            described += f", slower again from N={self.slower_from}"
+        return described
 
 
 @dataclass(frozen=True)
@@ -387,6 +415,45 @@ def ladder_for(sizes: Sequence[int], pool_size: int) -> list[int]:
     return rungs
 
 
+def top_up_pool(
+    finder: TimezoneFinder,
+    point_class: str,
+    points: Sequence[tuple[float, float]],
+    pool_size: int,
+    seed: int,
+) -> list[tuple[float, float]]:
+    """The committed fixture, extended to ``pool_size`` points of the same class.
+
+    The fixtures are sized for the suites' fixed ``BATCH_SIZE``, not for this ladder:
+    half of 5,000 unique-shortcut points ends the ladder at 2,500, below where that
+    stratum stops improving. Enlarging them would rewrite every tracked benchmark's
+    input and reset the trend chart for a question none of those rows asks, so the
+    sweep draws the rest itself - with the fixture generator's own sampler and its own
+    classification rule, so the extra points are the same population and not merely the
+    same label. The fixture stays the prefix, so every rung a fixture-sized pool could
+    already measure draws from the points it always did, and a fixed ``seed`` keeps the
+    whole pool reproducible.
+    """
+    missing = pool_size - len(points)
+    if missing <= 0:
+        return list(points)
+
+    rng = random.Random(seed)
+    # the generators narrate on stdout, which is this script's report channel
+    with contextlib.redirect_stdout(sys.stderr):
+        if point_class == "random":
+            extra = generate_random_points(rng, missing)
+        elif point_class == "on_land":
+            extra = generate_on_land_points(finder, rng, missing)
+        elif point_class == "unique_shortcut":
+            extra, _ = generate_shortcut_points(finder, rng, missing, 0)
+        elif point_class == "ambiguous_shortcut":
+            _, extra = generate_shortcut_points(finder, rng, 0, missing)
+        else:
+            raise ValueError(f"no sampler for point class {point_class!r}")
+    return [*points, *extra]
+
+
 def prepare_pool(
     points: Sequence[tuple[float, float]], batch_size: int, rng: random.Random
 ) -> list[PreparedBatch]:
@@ -428,6 +495,35 @@ def _scalar_caller(
     return lambda batch: [lookup(lng=lng, lat=lat) for lng, lat in batch.points]
 
 
+def scaled_rungs(run: dict[str, Any]) -> list[int]:
+    """Batch sizes whose rounds answered more than the target, across every sweep.
+
+    Read off what each rung stored rather than recomputed, so a run taken under other
+    settings reports the rungs it actually scaled.
+    """
+    target = run["machine_info"]["timezonefinder"]["points_per_round_target"]
+    return sorted(
+        {
+            rung["batch_size"]
+            for sweep in run["sweeps"]
+            for rung in sweep["rungs"]
+            if rung["points_per_round"] > target
+        }
+    )
+
+
+def points_per_round_for(batch_size: int, target: int) -> int:
+    """The points one round of this rung answers: the target, or more at the top.
+
+    Never fewer than :data:`MIN_CALLS_PER_ROUND` batched calls, because below that the
+    minimum over rounds stops being the least perturbed round and becomes the luckiest
+    single call. Rungs the target already covers are left at it, so everything below
+    the top of the ladder still times the same work; see
+    :data:`DEFAULT_POINTS_PER_ROUND` for what the exception costs.
+    """
+    return max(target, MIN_CALLS_PER_ROUND * batch_size)
+
+
 def measure_rung(
     finder: TimezoneFinder,
     points: Sequence[tuple[float, float]],
@@ -438,16 +534,9 @@ def measure_rung(
     seed: int,
 ) -> dict[str, Any]:
     """One paired comparison at one batch size."""
-    calls_per_round = points_per_round_target // batch_size
-    if calls_per_round < MIN_CALLS_PER_ROUND:
-        raise ValueError(
-            f"batch size {batch_size:,} leaves only {calls_per_round} batched call(s) "
-            f"per round at --points-per-round {points_per_round_target:,}, below the "
-            f"{MIN_CALLS_PER_ROUND} this harness requires: with fewer, the minimum over "
-            "rounds stops being the least perturbed round and becomes the luckiest "
-            f"single call. Raise --points-per-round to at least "
-            f"{batch_size * MIN_CALLS_PER_ROUND:,}, or drop this rung from --sizes."
-        )
+    calls_per_round = (
+        points_per_round_for(batch_size, points_per_round_target) // batch_size
+    )
 
     pool = prepare_pool(points, batch_size, random.Random(seed + batch_size))
     comparison = compare_candidates(
@@ -517,28 +606,27 @@ def saturation(
     rungs: Sequence[dict[str, Any]],
     tolerance: float = DEFAULT_SATURATION_TOLERANCE,
 ) -> Saturation:
-    """The smallest rung already at the ladder's asymptote, and staying there.
+    """The smallest rung from which no larger batch is more than ``tolerance`` faster.
 
-    Two steps, and the first one is not optional. **Establish that the ladder reached an
-    asymptote at all** before naming where: the top two rungs differ in size by a factor
-    of several, so if they still disagree the curve is falling off the end of the ladder
-    and there is nothing to be the smallest rung *of*. Reported as ``not_reached``,
-    which is the honest answer and is not the same as "saturates at the top rung".
+    "Stops improving" is read literally: a rung qualifies when every rung above it is
+    within ``tolerance`` of the fastest of them, so the answer is never a rung that a
+    larger one still beats. A reference taken from the top rungs instead (their median)
+    sits above the true minimum while the curve is still falling, and named a rung the
+    next decade still improved on by ~10 %.
 
-    Only then is a reference taken, as the *median* of the top three per-point times
-    rather than the minimum over the ladder: a minimum over a dozen noisy samples is
-    biased low, which would push the answer later or off the ladder entirely.
-
-    Every larger rung must also be inside the tolerance, so one lucky dip at a small
-    rung cannot qualify it.
+    Two refinements. **A tail that turns slower is cut off first**: once the rungs past
+    the fastest one stay slower than it by more than the tolerance through the top of
+    the ladder, the batch has outgrown something - typically the cache - and the curve
+    has stopped improving *at* its fastest rung; ``slower_from`` names the turn. A rise
+    that comes back down before the top is noise, not a turn. **A rung needs company**:
+    when only the top rung of the (uncut) ladder qualifies, nothing above it shows that
+    the curve has flattened, so that is ``not_reached`` rather than "saturates at the
+    top rung".
 
     Read off the batched call's **absolute** per-point time rather than off the speed-up
-    ratio, unlike :func:`break_even`. Saturation asks whether a bigger batch still buys
-    anything, which is a property of the batched side alone; the ratio would mix in the
-    scalar baseline's own noise. A measured run showed why: between N=1,000 and N=2,000
-    on the unique-shortcut stratum the ratio moved 2.9 % while the batched per-point time
-    moved 0.2 % - the whole difference was the scalar loop. The cost of using an absolute
-    quantity is exposure to drift across rungs, which is exactly what
+    ratio, unlike :func:`break_even`: whether a bigger batch still buys anything is a
+    property of the batched side alone, and the ratio would mix in the scalar
+    baseline's own noise. The cost is exposure to drift across rungs, which is what
     :func:`control_spread` is published to bound.
     """
     if tolerance <= DEFAULT_THRESHOLD:
@@ -555,36 +643,33 @@ def saturation(
         )
 
     per_point = [per_point_seconds(rung, "best_challenger") for rung in rungs]
-    reference = statistics.median(per_point[-3:])
 
-    # Has the curve stopped moving at all? The top two rungs differ in size by a factor
-    # of several, so if the per-point time still falls between them the asymptote is
-    # past the end of the ladder. Without this check the answer is never `not_reached`:
-    # on any decreasing curve the median of the top three *is* the second-from-last
-    # value, so that rung would always trivially qualify and the function would report
-    # saturation for a run that plainly had not saturated.
-    top, second = max(per_point[-2:]), min(per_point[-2:])
-    if top / second - 1.0 > tolerance:
+    fastest = min(range(len(per_point)), key=per_point.__getitem__)
+    turn_ceiling = per_point[fastest] * (1.0 + tolerance)
+    turned: list[int] = []
+    for index in range(len(per_point) - 1, fastest, -1):
+        if per_point[index] <= turn_ceiling:
+            break
+        turned.insert(0, index)
+    kept = per_point[: turned[0]] if turned else per_point
+
+    for index in range(len(kept)):
+        ceiling = min(kept[index:]) * (1.0 + tolerance)
+        if all(value <= ceiling for value in kept[index:]):
+            break
+    if index == len(kept) - 1 and not turned:
         return Saturation(
-            status="not_reached", tolerance=tolerance, reference_seconds=reference
+            status="not_reached", tolerance=tolerance, reference_seconds=min(kept)
         )
-
-    ceiling = reference * (1.0 + tolerance)
-
-    for index in range(len(per_point)):
-        if all(later <= ceiling for later in per_point[index:]):
-            rung = rungs[index]
-            comparison = comparison_of(rung)
-            return Saturation(
-                status="saturated",
-                tolerance=tolerance,
-                reference_seconds=reference,
-                batch_size=rung["batch_size"],
-                speedup=speedup(rung),
-                verdict=comparison.verdict,
-            )
+    rung = rungs[index]
     return Saturation(
-        status="not_reached", tolerance=tolerance, reference_seconds=reference
+        status="saturated",
+        tolerance=tolerance,
+        reference_seconds=min(kept[index:]),
+        batch_size=rung["batch_size"],
+        speedup=speedup(rung),
+        verdict=comparison_of(rung).verdict,
+        slower_from=rungs[turned[0]]["batch_size"] if turned else None,
     )
 
 
@@ -802,7 +887,9 @@ def main() -> None:
         default=DEFAULT_POINTS_PER_ROUND,
         help=(
             "points each round answers, held constant across rungs so the curve "
-            f"compares like with like (default: {DEFAULT_POINTS_PER_ROUND:,})"
+            "compares like with like, and raised only where a rung would otherwise "
+            f"get fewer than {MIN_CALLS_PER_ROUND} batched calls "
+            f"(default: {DEFAULT_POINTS_PER_ROUND:,})"
         ),
     )
     parser.add_argument(
@@ -843,6 +930,19 @@ def main() -> None:
 
     finder = TimezoneFinder(in_memory=args.in_memory)
     try:
+        if not args.points:
+            # Room for the top requested rung, under ladder_for's half-the-pool cap. A
+            # caller's own CSV is never topped up: it is their workload, and points this
+            # script invented would make the answer stop being theirs.
+            sources = [
+                (
+                    name,
+                    source,
+                    top_up_pool(finder, name, points, 2 * max(sizes), args.seed),
+                )
+                for name, source, points in sources
+            ]
+
         # One finder for the whole run. The names form is warmed at or above
         # NAMES_GATHER_MIN_BATCH: ZoneNames builds its gather lookup array lazily on the
         # first such call, so whichever rung triggered it would otherwise pay a one-off

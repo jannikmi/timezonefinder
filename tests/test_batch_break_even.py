@@ -20,6 +20,7 @@ from benchmarks.candidate_comparison import (
 from scripts.measure_batch_break_even import (
     CONTROL_MIN_BATCH_SIZE,
     DEFAULT_LADDER,
+    DEFAULT_POINTS_PER_ROUND,
     MIN_CALLS_PER_ROUND,
     MIN_POOL_BATCHES,
     PreparedBatch,
@@ -30,12 +31,15 @@ from scripts.measure_batch_break_even import (
     control_spread,
     ladder_for,
     load_points_csv,
-    measure_rung,
     per_point_seconds,
+    points_per_round_for,
     prepare_pool,
     saturation,
+    scaled_rungs,
     speedup,
+    top_up_pool,
 )
+from timezonefinder.shortcut_index import ABSENT
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 pytestmark = pytest.mark.unit
@@ -90,7 +94,9 @@ def _rung(
     test that does not care about the second estimator gets a resolved verdict; pass it
     explicitly to build the disagreement that reads as ``unresolved``.
     """
-    calls_per_round = max(1, points_per_round_target // batch_size)
+    calls_per_round = (
+        points_per_round_for(batch_size, points_per_round_target) // batch_size
+    )
     points_per_round = calls_per_round * batch_size
     if challenger_wins is None:
         ratio = challenger_per_point / baseline_per_point
@@ -268,23 +274,26 @@ def test_saturation_requires_every_larger_rung_to_stay_inside_the_tolerance():
     assert saturation(rungs, tolerance=0.05).batch_size == 1000
 
 
-def test_saturation_reference_is_the_top_rungs_not_the_ladder_minimum():
-    """A minimum over a dozen noisy rungs is biased low and would delay the answer."""
+def test_saturation_is_not_named_where_a_larger_batch_still_improves():
+    """Shaped on a measured random-point run: 10,000 is within 5 % of the top three
+    rungs' median, but 50,000 is still 9 % faster, so 10,000 has not stopped improving."""
     rungs = _ladder(
         [
-            (n, 2e-6, value)
+            (n, 1.4e-6, value)
             for n, value in (
-                (1, 4e-6),
-                (10, 2e-6),
-                (100, 1.00e-6),
-                (1000, 1.02e-6),
-                (5000, 1.01e-6),
+                (10, 4.64e-6),
+                (1000, 303e-9),
+                (5000, 266e-9),
+                (10_000, 244e-9),
+                (50_000, 222e-9),
+                (100_000, 233e-9),
             )
         ]
     )
     settled = saturation(rungs, tolerance=0.05)
-    # the ladder minimum is 1.00us at N=100; the median of the top three is 1.01us
-    assert settled.reference_seconds == pytest.approx(1.01e-6, rel=1e-9)
+    assert settled.batch_size == 50_000
+    assert settled.slower_from is None  # 233 is within 5 % of 222: noise, not a turn
+    assert settled.reference_seconds == pytest.approx(222e-9)
 
 
 def test_saturation_not_reached_while_the_curve_is_still_falling():
@@ -305,6 +314,61 @@ def test_saturation_not_reached_is_decided_by_the_top_of_the_ladder():
     flat = [(n, 2e-6, 1e-6 + 100e-6 / n) for n in (1000, 2000, 5000)]
     assert saturation(_ladder(falling), tolerance=0.05).status == "not_reached"
     assert saturation(_ladder(falling + flat), tolerance=0.05).status == "saturated"
+
+
+def test_saturation_reads_a_curve_that_turns_back_up_as_having_stopped():
+    """A batch that outgrows the cache gets slower again; that is not 'still falling'.
+
+    Shaped on a measured EPYC 7763 run, where comparing the top two rungs read the rise
+    at 100,000 as a curve that had not saturated.
+    """
+    rungs = _ladder(
+        [
+            (n, 1.2e-6, value)
+            for n, value in (
+                (1, 36e-6),
+                (1000, 74.1e-9),
+                (10_000, 25.9e-9),
+                (20_000, 22.9e-9),
+                (50_000, 21.9e-9),
+                (100_000, 33.5e-9),
+            )
+        ]
+    )
+    settled = saturation(rungs, tolerance=0.05)
+    assert settled.status == "saturated"
+    assert settled.batch_size == 20_000  # 22.9 is within 5 % of the fastest, 21.9
+    assert settled.slower_from == 100_000
+    assert settled.reference_seconds == pytest.approx(21.9e-9)
+
+
+def test_saturation_ignores_a_rise_inside_the_tolerance():
+    """A top rung a little slower than the fastest is noise, not a turn."""
+    rungs = _ladder(
+        [
+            (n, 2e-6, v)
+            for n, v in ((1, 4e-6), (100, 2e-6), (1000, 1.0e-6), (5000, 1.03e-6))
+        ]
+    )
+    assert saturation(rungs, tolerance=0.05).slower_from is None
+
+
+def test_saturation_turn_is_named_where_the_tail_stays_slower():
+    """A rise that comes back down before the top is not where the turn starts."""
+    rungs = _ladder(
+        [
+            (n, 2e-6, v)
+            for n, v in (
+                (1, 4e-6),
+                (100, 1.0e-6),
+                (1000, 1.2e-6),  # a bump, not the turn
+                (2000, 1.0e-6),
+                (5000, 1.4e-6),
+                (10_000, 1.5e-6),
+            )
+        ]
+    )
+    assert saturation(rungs, tolerance=0.05).slower_from == 5000
 
 
 def test_saturation_refuses_a_tolerance_inside_the_instruments_own_floor():
@@ -368,6 +432,54 @@ def test_default_ladder_straddles_the_names_gather_threshold():
     assert NAMES_GATHER_MIN_BATCH - 1 in DEFAULT_LADDER
 
 
+def test_points_per_round_hold_the_target_below_the_top_of_the_ladder():
+    """Every rung the target already covers times the same work."""
+    for size in DEFAULT_LADDER:
+        if size * MIN_CALLS_PER_ROUND <= DEFAULT_POINTS_PER_ROUND:
+            assert points_per_round_for(size, DEFAULT_POINTS_PER_ROUND) == (
+                DEFAULT_POINTS_PER_ROUND
+            )
+
+
+def test_points_per_round_never_leave_a_rung_short_of_its_calls():
+    """Raised rather than refused at the top: the default ladder must be measurable."""
+    for size in DEFAULT_LADDER:
+        points = points_per_round_for(size, DEFAULT_POINTS_PER_ROUND)
+        assert points // size >= MIN_CALLS_PER_ROUND
+    # and the default ladder does reach past the target, or nothing here is exercised
+    assert max(DEFAULT_LADDER) * MIN_CALLS_PER_ROUND > DEFAULT_POINTS_PER_ROUND
+
+
+def test_scaled_rungs_are_read_off_what_each_rung_stored():
+    run = _fake_run()
+    assert scaled_rungs(run) == []
+    run["sweeps"][0]["rungs"].append(_rung(10_000, 1.3e-6, 8.0e-7))  # 4 x 10,000
+    assert scaled_rungs(run) == [10_000]
+
+
+def test_top_up_keeps_the_fixture_as_the_prefix_and_reaches_the_size():
+    fixture = [(1.0, 2.0), (3.0, 4.0)]
+    pool = top_up_pool(None, "random", fixture, 50, seed=3)  # type: ignore[arg-type]
+    assert pool[:2] == fixture
+    assert len(pool) == 50
+    assert pool == top_up_pool(None, "random", fixture, 50, seed=3)  # type: ignore[arg-type]
+
+
+def test_top_up_leaves_a_pool_that_is_already_large_enough_alone():
+    fixture = [(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)]
+    assert top_up_pool(None, "random", fixture, 2, seed=0) == fixture  # type: ignore[arg-type]
+
+
+def test_top_up_draws_the_class_it_extends(tf):
+    """A topped-up unique-shortcut pool must still be unique-shortcut points, or the top
+    rungs would measure a different stratum from the bottom ones under the same label."""
+    pool = top_up_pool(tf, "unique_shortcut", [], 200, seed=0)
+    assert len(pool) == 200
+    for lng, lat in pool:
+        entry = tf.shortcuts.entry_at(lng, lat)
+        assert entry != ABSENT and entry >= 0
+
+
 def test_ladder_is_capped_at_half_the_pool():
     """At N == pool size only one batch exists without replacement, which is no sample."""
     assert ladder_for((1, 10, 100, 1000), pool_size=200) == [1, 10, 100]
@@ -405,22 +517,6 @@ def test_pool_is_reproducible_under_a_seed():
     first = prepare_pool(points, 10, random.Random(7))
     second = prepare_pool(points, 10, random.Random(7))
     assert [batch.points for batch in first] == [batch.points for batch in second]
-
-
-def test_a_rung_with_too_few_calls_per_round_is_refused():
-    """Below a handful of calls, ``min`` over rounds is the luckiest call, not the
-    least perturbed round."""
-    points = [(float(i), float(-i)) for i in range(50)]
-    with pytest.raises(ValueError, match="--points-per-round"):
-        measure_rung(
-            finder=None,
-            points=points,
-            batch_size=10,
-            api="names",
-            rounds=3,
-            points_per_round_target=10 * (MIN_CALLS_PER_ROUND - 1),
-            seed=0,
-        )
 
 
 # --- the CSV a downstream user brings ------------------------------------------------
@@ -567,6 +663,9 @@ def test_chart_is_well_formed_xml_and_carries_its_annotations(tmp_path: Path):
     assert "break-even" in markup
     assert f"names gather ({NAMES_GATHER_MIN_BATCH})" in markup
     assert "the two estimators do not resolve this rung" in markup
+    rungs = _fake_run()["sweeps"][0]["rungs"]
+    assert f"~{saturation(rungs).batch_size:,}" in markup
+    assert "stops improving" in markup
 
 
 def test_chart_frame_carries_both_estimators(tmp_path: Path):
@@ -676,11 +775,13 @@ def test_saturation_is_withheld_from_the_headline_when_the_control_fails(
     ):
         rung["comparison"]["best_baseline"] *= factor
 
-    page = tmp_path / "page.rst"
-    render_batch_break_even(run, page, tmp_path / "sweep.svg")
+    page, chart = tmp_path / "page.rst", tmp_path / "sweep.svg"
+    render_batch_break_even(run, page, chart)
     text = page.read_text(encoding="utf-8")
 
     assert "not established on this run" in text
     assert "stops improving beyond" not in text
+    # the chart follows the same rule: no marker the headline would refuse to state
+    assert "stops improving" not in chart.read_text(encoding="utf-8")
     # the crossing survives a noisy baseline and must still be stated
     assert "points per call" in text

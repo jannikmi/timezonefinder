@@ -12,7 +12,7 @@
 
 ### Benchmarking (`benchmarks/`, pytest-benchmark)
 
-**The reasoning behind these measurements - why the CI numbers are noisy, why a pull request is compared against its own merge base, where every threshold comes from - is documented once, in [Benchmarking Methodology](https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html). Read it before interpreting any number below.** What follows is operational only.
+**What a user needs to read the numbers - why CI numbers are noisy, why a pull request is compared against its own merge base, what the flags mean - is on [Benchmarking Methodology](https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html). Where each threshold comes from is recorded at its constant (`ALERT_THRESHOLD` and `MEMORY_ALERT_THRESHOLD` in `benchmark.yml`, `REGRESSION_THRESHOLD_PCT` in `scripts/compare_benchmark_runs.py`), and the comparison designs that went wrong in `benchmarks/candidate_comparison.py`.** What follows is operational only.
 
 **Running benchmarks locally**
 

@@ -5,31 +5,28 @@ Alternatives
 The position in one paragraph
 -----------------------------
 
-``timezonefinder`` optimises for **correctness at timezone borders**. It stores the boundary
-polygons exactly as the source dataset provides them - every vertex of every polygon and every
-hole, at the ~11 cm resolution its source publishes - and never simplifies them. :doc:`data_report` is generated
-from the packaged data and carries the current counts. Speed is the constraint that work is done
-under, not the goal: the grid-tree spatial
-index, the integer coordinate representation and the optional acceleration backends exist to make
-full-resolution geometry affordable, not to shave the last microsecond off a lookup.
+``timezonefinder`` optimises for **correctness at timezone borders**: it stores the boundary
+polygons exactly as the source dataset publishes them, every vertex and every hole, and never
+simplifies them (:doc:`data_report` carries the counts). Its spatial index, integer coordinates and
+acceleration backends exist to make that full-resolution geometry affordable.
 
-`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade in its PyPI build,
-deliberately and well. It ships simplified polygons, which makes it smaller and faster per query,
-at the cost of accuracy near the borders those polygons describe. Its maintainer also publishes an
-experimental full-precision variant - ``+full`` wheels served from the project's own package index
-rather than PyPI - that embeds the unsimplified dataset behind the same *tzfpy* API. That variant
-removes the cleanest distinction this page used to make: unsimplified geometry is no longer unique
-to ``timezonefinder``. Everything measured on this page is the simplified PyPI build. The two PyPI
-packages are measured under one harness - same query points, same process, same machine - in
-:doc:`benchmark_results_comparison`.
+`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade in its PyPI build: it ships
+simplified polygons, so it is smaller and faster per single lookup, at the cost of accuracy near
+borders. Its maintainer, also a contributor here (:doc:`5_contributing`), publishes an experimental
+``+full`` variant with the unsimplified dataset, served from the project's own package index rather
+than PyPI. Everything measured on this page is the PyPI build; :doc:`benchmark_results_vs_tzfpy`
+measures both packages on the same points, in the same process, on the same machine.
 
-**If your query points are rarely near a timezone border - coarse geofencing, analytics
-aggregation, high-volume classification where an occasional wrong answer within a few hundred
-metres of a boundary costs nothing - choose the PyPI build of ``tzfpy``.** Its maintainer is a
-contributor to this project (see :doc:`5_contributing`).
-If border accuracy matters and an experimental wheel from a separate package index is acceptable,
-evaluate ``tzfpy +full`` too; this page has no measurement that entitles ``timezonefinder`` to win
-that comparison.
+- **Choose the PyPI build of** ``tzfpy`` if an occasional wrong answer within a few hundred metres
+  of a border costs nothing *and* you look up one point per call - coarse geofencing, or a lookup
+  per request or event in a service.
+- **Choose** ``timezonefinder`` if border accuracy matters, or if you look up many points at once -
+  classifying a dataset, a batch job, an analytics aggregation. ``timezone_names_at()`` answers a
+  whole array in one call and outpaces a loop of ``tzfpy`` calls on a representative point mix; it
+  is about even on land-only points and slower on border-heavy ones.
+- If border accuracy matters and an experimental wheel from a separate package index is acceptable,
+  also evaluate ``tzfpy +full``; this project has not measured it.
+
 
 What remains distinct
 ---------------------
@@ -104,8 +101,8 @@ difference is in what they do with that dataset's geometry.
      - Imports NumPy, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
-     - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - The simplified PyPI build is faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; the ``+full`` build is not measured here (:doc:`benchmark_results_comparison`)
+     - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it. For bulk lookups the batch API (``timezone_names_at()``) is faster than a loop of ``tzfpy`` calls on a representative query mix, since ``tzfpy`` has no batch API; it pays from a few dozen points per call (:doc:`benchmark_results_batch_break_even`)
+     - The simplified PyPI build is faster per single query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most; looping it over many points is slower than this package's batch API except on ambiguous points; the ``+full`` build is not measured here (:doc:`benchmark_results_vs_tzfpy`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
@@ -128,7 +125,7 @@ difference is in what they do with that dataset's geometry.
 
    **The speed rows are measured, not estimated.** ``benchmarks/test_comparison.py`` runs both
    packages over the same committed query points, in the same process, on the same machine, and
-   :doc:`benchmark_results_comparison` is generated from it. That harness exists because the
+   :doc:`benchmark_results_vs_tzfpy` is generated from it. That harness exists because the
    alternative - putting two published figures side by side - is exactly the comparison this
    project refuses to make about itself: an unchanged lookup path spread 134-158 % across CI
    runners alone (:doc:`benchmarking_methodology`), so two numbers from two machines say nothing
@@ -414,7 +411,7 @@ When to choose which package
 Only criteria that currently differ are listed. Dataset coverage and access to geometry exist in
 both projects, so neither is a reason to pick one. Measuring the PyPI builds together also removed
 startup from this list: they reach a first answer in about the same time
-(:doc:`benchmark_results_comparison`). The ``+full`` rows below describe its distribution contract;
+(:doc:`benchmark_results_vs_tzfpy`). The ``+full`` rows below describe its distribution contract;
 its performance and memory have not been measured by this project's harness.
 
 .. list-table::
@@ -433,8 +430,11 @@ its performance and memory have not been measured by this project's harness.
      - ``timezonefinder``
    * - Source builds where a Rust toolchain is unavailable
      - ``timezonefinder``
-   * - Lookup throughput
+   * - Lookup throughput, one point per call
      - ``tzfpy`` PyPI build (``+full`` not measured here)
+   * - Lookup throughput, many points per call (bulk or batch workloads)
+     - ``timezonefinder`` via ``timezone_names_at()`` on a representative point mix; about even
+       on land-only points and slower on border-heavy ones (:doc:`benchmark_results_vs_tzfpy`)
    * - Minimal distribution size
      - ``tzfpy`` PyPI build
 

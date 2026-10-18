@@ -53,6 +53,7 @@ passing and failing by environment.
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION
@@ -176,6 +177,21 @@ def test_lookup_timezonefinderl(benchmark, request, points_fixture_name):
     # which is the same bargain simplified polygons strike
     points = request.getfixturevalue(points_fixture_name)
     benchmark(_run_timezonefinder, TimezoneFinderL(), points)
+
+
+@pytest.mark.benchmark(min_rounds=LOOKUP_MIN_ROUNDS)
+@pytest.mark.parametrize("points_fixture_name", POINT_FIXTURES)
+def test_lookup_timezonefinder_batch(benchmark, request, points_fixture_name):
+    # the bulk row: the same points answered by one batched call, which is this
+    # package's own API for the job "answer N points" - tzfpy has none (its `get_tzs`
+    # returns every zone at *one* point), so the page states this beside the
+    # single-call rows rather than in place of them. The arrays are built before the
+    # clock starts, in the contiguous float64 form the batch API takes without copying.
+    points = request.getfixturevalue(points_fixture_name)
+    lngs = np.ascontiguousarray([lng for lng, _ in points], dtype=np.float64)
+    lats = np.ascontiguousarray([lat for _, lat in points], dtype=np.float64)
+    finder = TimezoneFinder(in_memory=IN_MEMORY)
+    benchmark(finder.timezone_names_at, lngs=lngs, lats=lats)
 
 
 @pytest.mark.benchmark(min_rounds=LOOKUP_MIN_ROUNDS)
