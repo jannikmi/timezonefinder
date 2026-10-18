@@ -5,38 +5,29 @@
 FINDINGS
 ========
 
-Decided on an Intel Xeon ("Intel(R) Xeon(R) Processor", 4 vCPUs of a cloud VM) and
-confirmed on a second one ("Intel(R) Xeon(R) Processor @ 2.10GHz", 4 vCPUs): Linux,
-Python 3.13.16, clang, data 2026d, fixture set v4, code at ``1b5637d``. The runs are
-committed as ``contributing/improvements/measurements/grid-tree-config-sweep-2026-10-18-*.json``
-and ``report --run`` prints every figure below from them. The counts file keeps its
-summary and the timed configurations only: ``counts`` regenerates every row exactly, on
-any machine. A time is a best-round change against the control, as its range over
-three replicate processes of 61 rounds.
+Decided and confirmed on two x86-64 Intel Xeon cloud VMs, Linux, clang, data 2026d.
 
-**Outcome (B): a 0.75-degree root with one level of 4x4 blocks (480 root columns,
-0.1875-degree cells, 695,531 bytes as the converter would write it) beats the shipped
-0.9375-degree root within the cap, and the shipped reader reads it.**
+**Outcome (B): a 0.75-degree root with one level of 4x4 blocks (480 root columns)
+beats the shipped 0.9375-degree root within the cap, and the shipped reader reads it.**
 
-* **counts**: 165 configurations, 94 within the cap, 54 on the frontier, 23 timed. The
-  winner tests 0.85 / 0.84 times the control's polygons per random / on-land query.
-* **screen**: the A/A pair read level; three survived - the shipped shape, the winner,
-  and a 1.25-degree root with 2x2 then 4x4 blocks.
-* **decide**: the winner faster than the control in all four cells on clang - scalar
-  -3.4 to -7.1 % random and -7.1 to -8.8 % on land, 256-point batch -2.7 to -5.9 % and
-  -7.0 to -13.6 % - and not slower on numba. On the ladder it displaced the shipped
-  shape (faster in three cells, random scalar unresolved), and the 1.25-degree tree,
-  faster than the control in three cells, did not displace it: slower per random scalar
-  call and batch.
-* **confirm**, on fresh points and seeds: the winner faster than the control in all four
-  cells (scalar -5.1 to -7.1 % and -6.5 to -10.2 %, batch -16.8 to -19.7 % and -8.6 to
-  -17.5 %) and than the shipped shape head to head in all four; no cell decide won
-  reversed. It gates clean on clang, numba and pure Python: 30,000 fixture points, 6,000
-  on its own cell edges and 5,974 on border lines, no defect.
-* **What it trades**: 182 KB more index for those margins. The A/A pair's single best
-  rounds moved by up to about 6 %, so the margins are ranges, not points. Unpriced here
-  and owed by the change that ships it: the converter's work optimizer, which neither
-  side here carries, loading and construction time, and ``make memory``.
+* **Why it wins.** Under full refinement the finest cell width alone sets the polygon
+  work; the root and the depth set only lookups and bytes. Scalar time follows the
+  polygon work, and batch time follows the depth, because the NumPy batch descent pays a
+  fixed cost per level. So the best tree reaches the finest cells the cap allows in a
+  single level, and a 0.75-degree root with 4x4 blocks is that tree: every one-level
+  tree with finer cells is over the cap.
+* **decide** found it faster than the control in every cell - scalar and batch, random
+  and on land - and not slower on numba. On the ladder it displaced the shipped shape,
+  and the runner-up, a 1.25-degree root with two levels, was faster than the control but
+  lost to it head to head.
+* **confirm**, on a second machine with fresh points and seeds, found it faster than the
+  control and than the shipped shape in every cell, and it gates clean on clang, numba
+  and pure Python.
+* **Deeper and selective trees** can test fewer polygons within the cap, but every one
+  screened was slower than the control per random batch.
+* **What it trades** is a larger index, still within the cap. Unpriced here and owed by
+  the change that ships it: the converter's work optimizer, which neither side here
+  carries, loading and construction time, and ``make memory``.
 
 PRE-REGISTERED DECISION RULE
 ============================
@@ -122,12 +113,10 @@ USAGE
     uv run python -m prototypes.grid_tree_config_sweep counts
     uv run python -m prototypes.grid_tree_config_sweep screen
     uv run python -m prototypes.grid_tree_config_sweep decide
-    # on a second machine, from the first one's committed verdicts
+    # on a second machine, from the first one's decide.json
     uv run python -m prototypes.grid_tree_config_sweep counts
     uv run python -m prototypes.grid_tree_config_sweep confirm --decide <decide.json>
     uv run python -m prototypes.grid_tree_config_sweep report
-    # from the committed run
-    uv run python -m prototypes.grid_tree_config_sweep report --run <prefix>
 
 ``all`` runs counts, screen and decide in a row. Every stage writes
 ``<workdir>/<stage>.json`` and reads the one before it, refusing it if the packaged
@@ -1841,8 +1830,6 @@ def gate_stage(args) -> None:
 
 def report_stage(args) -> None:
     """The FINDINGS tables, from whatever stages the workdir holds."""
-    if getattr(args, "run", None):
-        args.workdir = linked_run(args.run)
     workdir: Path = args.workdir
     counts_report = json.loads((workdir / "counts.json").read_text())
     control = counts_report["control"]
@@ -1893,56 +1880,10 @@ def report_stage(args) -> None:
                     f"- {step['incumbent']} vs {step['challenger']}: {step['verdicts']}"
                 )
             print(f"winner {stored['winner']}, outcome {stored['outcome']}")
-            print("best-round change against the control, clang:")
-            print_margins(stored["replicate_runs"])
-            print(
-                f"best-round change against the control, {stored['interpreted_run']['path']}:"
-            )
-            print_margins([stored["interpreted_run"]])
-            print("best-round change on the ladder, clang:")
-            for step in stored["ladder"]:
-                print_margins(step["runs"])
         else:
             for pair, cells in stored["confirmed"].items():
                 print(f"- {pair}: {cells}")
             print(f"reproduces: {stored['reproduces']}; gates {stored['gates']}")
-            print("best-round change, clang:")
-            print_margins(stored["runs"])
-
-
-# --- reading a committed run ---------------------------------------------------------
-
-#: The committed run ``report --run`` reads by default in its help text.
-SWEEP_RUN = "contributing/improvements/measurements/grid-tree-config-sweep-2026-10-18"
-
-
-def linked_run(prefix: str) -> Path:
-    """A directory holding a committed run's ``<prefix>-<stage>.json`` as ``<stage>.json``."""
-    import tempfile
-
-    directory = Path(tempfile.mkdtemp(prefix="grid-tree-run-"))
-    for path in Path(prefix).parent.glob(f"{Path(prefix).name}-*.json"):
-        stage = path.name[len(Path(prefix).name) + 1 : -len(".json")]
-        (directory / f"{stage}.json").symlink_to(path.resolve())
-    return directory
-
-
-def print_margins(runs: list[dict], pairs: Sequence[str] | None = None) -> None:
-    """Each pair's best-round change per cell, as its range over the replicate runs."""
-    for pair in pairs or list(runs[0]["pairs"]):
-        spans = []
-        for stratum, shape in CELLS:
-            changes = [
-                run["pairs"][pair][stratum][shape]["best_challenger"]
-                / run["pairs"][pair][stratum][shape]["best_baseline"]
-                * 100
-                - 100
-                for run in runs
-            ]
-            spans.append(
-                f"{stratum}/{shape} {min(changes):+.1f} to {max(changes):+.1f} %"
-            )
-        print(f"  {pair}, best rounds over {len(runs)} run(s): " + ", ".join(spans))
 
 
 def all_stages(args) -> None:
@@ -1998,9 +1939,6 @@ def main() -> None:
     p.add_argument("--path", default="clang")
     p.add_argument("--output", type=Path, required=True)
     stage("report", report_stage)
-    sub.choices["report"].add_argument(
-        "--run", help=f"a committed run's file prefix, e.g. {SWEEP_RUN}"
-    )
     args = parser.parse_args()
     args.function(args)
 
