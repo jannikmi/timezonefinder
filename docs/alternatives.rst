@@ -5,34 +5,28 @@ Alternatives
 The position in one paragraph
 -----------------------------
 
-``timezonefinder`` optimises for **correctness at timezone borders**. It stores the boundary
-polygons exactly as the source dataset provides them - every vertex of every polygon and every
-hole, at the ~11 cm resolution its source publishes - and never simplifies them. :doc:`data_report` is generated
-from the packaged data and carries the current counts. Speed is the constraint that work is done
-under, not the goal: the grid-tree spatial
-index, the integer coordinate representation and the optional acceleration backends exist to make
-full-resolution geometry affordable, not to shave the last microsecond off a lookup.
+``timezonefinder`` optimises for **correctness at timezone borders**: it stores the boundary
+polygons exactly as the source dataset publishes them, every vertex and every hole, and never
+simplifies them (:doc:`data_report` carries the counts). Its spatial index, integer coordinates and
+acceleration backends exist to make that full-resolution geometry affordable.
 
-`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade in its PyPI build,
-deliberately and well. It ships simplified polygons, which makes it smaller and faster per query,
-at the cost of accuracy near the borders those polygons describe. Its maintainer also publishes an
-experimental full-precision variant - ``+full`` wheels served from the project's own package index
-rather than PyPI - that embeds the unsimplified dataset behind the same *tzfpy* API. That variant
-removes the cleanest distinction this page used to make: unsimplified geometry is no longer unique
-to ``timezonefinder``. Everything measured on this page is the simplified PyPI build. The two PyPI
-packages are measured under one harness - same query points, same process, same machine - in
-:doc:`benchmark_results_vs_tzfpy`.
+`tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade in its PyPI build: it ships
+simplified polygons, so it is smaller and faster per single lookup, at the cost of accuracy near
+borders. Its maintainer, also a contributor here (:doc:`5_contributing`), publishes an experimental
+``+full`` variant with the unsimplified dataset, served from the project's own package index rather
+than PyPI. Everything measured on this page is the PyPI build; :doc:`benchmark_results_vs_tzfpy`
+measures both packages on the same points, in the same process, on the same machine.
 
-**If your query points are rarely near a timezone border - coarse geofencing, analytics
-aggregation, high-volume classification where an occasional wrong answer within a few hundred
-metres of a boundary costs nothing - choose the PyPI build of ``tzfpy``.** Its maintainer is a
-contributor to this project (see :doc:`5_contributing`).
-For high-volume work, weigh that against this package's batch API: ``timezone_names_at()``
-answers a whole array of points in one call and outpaces a loop of ``tzfpy`` calls on a
-representative mix (:doc:`benchmark_results_vs_tzfpy`).
-If border accuracy matters and an experimental wheel from a separate package index is acceptable,
-evaluate ``tzfpy +full`` too; this page has no measurement that entitles ``timezonefinder`` to win
-that comparison.
+- **Choose the PyPI build of** ``tzfpy`` if an occasional wrong answer within a few hundred metres
+  of a border costs nothing *and* you look up one point per call - coarse geofencing, or a lookup
+  per request or event in a service.
+- **Choose** ``timezonefinder`` if border accuracy matters, or if you look up many points at once -
+  classifying a dataset, a batch job, an analytics aggregation. ``timezone_names_at()`` answers a
+  whole array in one call and outpaces a loop of ``tzfpy`` calls on a representative point mix; it
+  is about even on land-only points and slower on border-heavy ones.
+- If border accuracy matters and an experimental wheel from a separate package index is acceptable,
+  also evaluate ``tzfpy +full``; this project has not measured it.
+
 
 What remains distinct
 ---------------------
