@@ -8,26 +8,22 @@ committed run can be redrawn without re-measuring - the decoupling
 ``scripts/render_benchmark_reports.py`` and
 ``contributing/development/generated-file-regeneration-rules.md`` both require.
 
-Two panels on a shared logarithmic x axis, because the repository's verdict rule is that
-a difference is believed only where **both** estimators show it
-(``benchmarks/candidate_comparison.py``). Drawing one and labelling the other states the
-rule; drawing both shows it, and where the panels disagree the reader is looking
-directly at what ``unresolved`` means.
-
-* top - the best-round speed-up, the estimator least sensitive to noise
-* bottom - the round-level win share, which assumes nothing about the noise distribution
+One panel: the best-round speed-up on a logarithmic x axis. The harness's second
+estimator, the share of rounds the batch won, is not drawn: on this measurement it reads
+0 below the crossing and 1 above it, so it repeats what the speed-up curve and the
+shaded break-even band already show. Where the two estimators disagree the marker is
+drawn hollow instead, which is the one thing the second panel added.
 
 Deliberately **not** a box plot over rounds. That would show the spread of per-round
-timings, which ``docs/benchmarking_methodology.rst`` defines as measurement noise rather
-than a difference in what was measured - it is why the tracked estimator is ``min`` -
-so putting the machine's interference in the most prominent position on the page invites
-exactly the misreading the three recorded A/B failures were about. The interval this
+timings, which is measurement noise rather than a difference in what was measured - it
+is why the tracked estimator is ``min`` - so it would put the machine's interference in
+the most prominent position on the page. The interval this
 measurement genuinely has lives on the *x* axis, where the shaded break-even band puts
 it: it is the resolution limit of a discrete ladder, not a spread in any measured
 quantity.
 
-seaborn rather than direct matplotlib: fourteen rungs, two panels, two estimators and
-four annotated rules benefit from its long-form data and semantic grouping APIs. The
+seaborn rather than direct matplotlib: a dozen rungs, two point classes and four
+annotated rules benefit from its long-form data and semantic grouping APIs. The
 smaller ``tzfpy`` agreement chart uses matplotlib directly, under the same deterministic
 SVG constraints.
 """
@@ -46,15 +42,19 @@ import seaborn as sns  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter  # noqa: E402
 
-from benchmarks.candidate_comparison import DEFAULT_WIN_MARGIN  # noqa: E402
 from scripts.benchmark_utils import machine_label  # noqa: E402
 from scripts.measure_batch_break_even import (  # noqa: E402
+    MIN_CALLS_PER_ROUND,
     break_even,
     comparison_of,
+    control_spread,
     per_point_seconds,
     point_class_label,
+    saturation,
+    scaled_rungs,
     speedup,
 )
+from scripts.render_benchmark_reports import batch_break_even_settings  # noqa: E402
 
 #: Salt for the element ids matplotlib derives by hashing. Its default is ``None``, which
 #: means a fresh ``uuid4`` per process - so without this line the committed SVG differs
@@ -66,7 +66,7 @@ SVG_HASH_SALT = "timezonefinder-batch-break-even"
 #: here" - a rung where the two estimators disagree must not read as a measured value.
 UNRESOLVED_VERDICTS = frozenset({"no difference", "unresolved"})
 
-FIGURE_SIZE = (11.0, 8.0)
+FIGURE_SIZE = (11.0, 6.5)
 PALETTE = "colorblind"
 
 
@@ -125,9 +125,10 @@ def _subtitle(run: dict[str, Any]) -> str:
             "in memory" if info.get("in_memory") else "memory mapped",
         ]
     )
-    where = [
-        f"{info['rounds']} rounds x ~{info['points_per_round_target']:,} points per rung"
-    ]
+    per_round = f"~{info['points_per_round_target']:,} points per round"
+    if scaled_rungs(run):
+        per_round += f" ({MIN_CALLS_PER_ROUND} calls at the top rungs)"
+    where = [f"{info['rounds']} rounds x {per_round}"]
     machine = machine_label(run)
     if machine:
         where.append(machine)
@@ -138,7 +139,7 @@ def _subtitle(run: dict[str, Any]) -> str:
 
 #: Where the speed-up axis gets a labelled tick. A 1-2-5 ladder per decade, which is what
 #: a log axis is readable at, filtered to the range the data actually occupies.
-SPEEDUP_TICKS = (0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0)
+SPEEDUP_TICKS = (0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0)
 
 
 def _label_speedup_axis(ax, values: Sequence[float]) -> None:
@@ -196,6 +197,44 @@ def _draw_unresolved(
         )
 
 
+def _annotate_saturation(ax, run: dict[str, Any], classes: Sequence[str]) -> None:
+    """Point at the rung where each curve stops improving, where the run can say so.
+
+    The page states that answer in words, and a chart that left it out made the reader
+    find the knee of a log-log curve by eye. Drawn under exactly the page's rule: only
+    when the control certifies the ladder, because saturation is read across rungs and
+    a wandering baseline moves it - a marker the headline withholds would publish the
+    noise the headline refused to.
+    """
+    settings = batch_break_even_settings(run["machine_info"]["timezonefinder"])
+    palette = dict(zip(classes, sns.color_palette(PALETTE, len(classes)), strict=True))
+    for sweep in run["sweeps"]:
+        rungs = sweep["rungs"]
+        control = control_spread(
+            rungs,
+            threshold=settings.control_spread_threshold,
+            min_batch_size=settings.control_spread_min_batch_size,
+        )
+        settles = saturation(rungs, tolerance=settings.saturation_tolerance)
+        if not control.within_threshold or settles.batch_size is None:
+            continue
+        rung = next(r for r in rungs if r["batch_size"] == settles.batch_size)
+        color = palette[point_class_label(sweep["point_class"])]
+        # below the curve: the curves rise left to right, so the space under the right
+        # half of the panel is the one place neither curve nor legend occupies
+        ax.annotate(
+            f"stops improving\n~{settles.batch_size:,}",
+            xy=(settles.batch_size, speedup(rung)),
+            xytext=(0, -34),
+            textcoords="offset points",
+            fontsize=8,
+            color=color,
+            ha="center",
+            va="top",
+            arrowprops={"arrowstyle": "->", "color": color, "linewidth": 1.0},
+        )
+
+
 def render_sweep(run: dict[str, Any], output_path: Path) -> str:
     """Write the sweep to ``output_path`` as SVG and return the markup written."""
     _configure_matplotlib()
@@ -205,14 +244,7 @@ def render_sweep(run: dict[str, Any], output_path: Path) -> str:
     classes = list(dict.fromkeys(frame["point_class"]))
     rungs = sorted(frame["batch_size"].unique())
 
-    figure, (top, bottom) = plt.subplots(
-        2,
-        1,
-        sharex=True,
-        figsize=FIGURE_SIZE,
-        height_ratios=[3, 1],
-        constrained_layout=True,
-    )
+    figure, top = plt.subplots(figsize=FIGURE_SIZE, constrained_layout=True)
 
     # --- top: the best-round speed-up -------------------------------------------
     sns.lineplot(
@@ -260,6 +292,8 @@ def render_sweep(run: dict[str, Any], output_path: Path) -> str:
                 va="top",
             )
 
+    _annotate_saturation(top, run, classes)
+
     names_gather = run["machine_info"]["timezonefinder"].get("names_gather_min_batch")
     if names_gather and rungs[0] <= names_gather <= rungs[-1]:
         top.annotate(
@@ -290,40 +324,19 @@ def render_sweep(run: dict[str, Any], output_path: Path) -> str:
     # reaches, and the break-even label sits top-centre on the band
     top.legend(handles, labels, loc="upper left", frameon=True, fontsize=8)
 
-    # --- bottom: the round-level win share ---------------------------------------
-    sns.lineplot(
-        data=frame,
-        x="batch_size",
-        y="win_share",
-        hue="point_class",
-        marker="o",
-        markersize=6,
-        legend=False,
-        ax=bottom,
-    )
-    _annotate_rungs(bottom, frame, run)
-    _draw_unresolved(bottom, frame, "win_share", classes)
-    bottom.axhline(0.5, color="0.25", linewidth=1.4, zorder=2)
-    # the band inside which the sign count is not allowed to claim a direction, taken
-    # from the harness rather than restated, so the two cannot drift apart
-    bottom.axhspan(
-        0.5 - DEFAULT_WIN_MARGIN, 0.5 + DEFAULT_WIN_MARGIN, color="0.9", zorder=0
-    )
-    bottom.set_ylim(-0.02, 1.02)
-    bottom.set_ylabel("rounds won\nby the batch")
-    bottom.set_xlabel("batch size (points per batched call)")
+    top.set_xlabel("batch size (points per batched call)")
 
-    # --- shared x ------------------------------------------------------------------
-    bottom.set_xscale("log")
-    bottom.xaxis.set_major_locator(FixedLocator(rungs))
-    # a tick at every rung, but a label only where one fits: fourteen labels on a log
+    # --- x axis ------------------------------------------------------------------
+    top.set_xscale("log")
+    top.xaxis.set_major_locator(FixedLocator(rungs))
+    # a tick at every rung, but a label only where one fits: a dozen labels on a log
     # axis overlap (127 and 128 land on top of each other), and the decades plus the
     # ladder's ends are what a reader navigates by
     labelled = {rungs[0], rungs[-1]} | {r for r in rungs if _is_decade(r)}
-    bottom.xaxis.set_major_formatter(
+    top.xaxis.set_major_formatter(
         FuncFormatter(lambda value, _: f"{int(value):,}" if value in labelled else "")
     )
-    bottom.xaxis.set_minor_formatter(NullFormatter())
+    top.xaxis.set_minor_formatter(NullFormatter())
 
     figure.suptitle(
         "Batched lookups against a scalar loop, by batch size",

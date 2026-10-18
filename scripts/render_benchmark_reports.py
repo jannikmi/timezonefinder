@@ -99,6 +99,7 @@ FUNCTION_LABELS = {
     "test_pt_in_poly_python_packed": "packed kernel (interpreted)",
     "test_initialization": "Initialization",
     "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
+    "test_lookup_timezonefinder_batch": "TimezoneFinder.timezone_names_at() (in-memory)",
     "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
     "test_lookup_tzfpy": "tzfpy.get_tz()",
     "test_first_answer": "Time to first answer",
@@ -1012,7 +1013,12 @@ def _batch_break_even_headline(
     elif settles.batch_size is not None and settles.speedup is not None:
         closing = (
             f", and stops improving beyond ~{settles.batch_size:,} "
-            f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})."
+            f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})"
+            + (
+                f"; from {settles.slower_from:,} points it is slower per point again."
+                if settles.slower_from is not None
+                else "."
+            )
         )
     else:
         closing = ", and had not stopped improving at the top of the ladder."
@@ -1065,70 +1071,30 @@ def render_batch_break_even(
         f"{acceleration_path_label(system_info)} point-in-polygon path.*"
     )
     reporter.add_text(
-        f"``{batch_api}()`` amortises validation, the integer scaling and the shortcut "
-        f"table read over a whole batch, and the cell arithmetic vectorises with it "
-        f"and still resolves ambiguous points one at a time. So it is faster per point "
-        f"than calling ``{scalar_api}()`` in a loop only once the batch is large enough "
-        f"to pay back its own fixed cost. This page is where that happens, and where "
-        f"growing the batch further stops helping. See :doc:`benchmarking_methodology`."
-    )
-    reporter.add_note(
-        "Nothing on this page is on the continuous-integration trend chart, which "
-        "tracks one fixed batch size. These are on-demand measurements, taken by "
-        "``make batch-break-even``. Both answers move with the machine *and* with the "
-        "workload, so read them as this configuration's, and run the script on your own "
-        "coordinates to get yours."
-    )
-
-    reporter.add_section("How this is measured", level=1)
-    reporter.add_text(
-        f"Each row below is one paired comparison: a ``{scalar_api}()`` loop over N "
-        f"points against a single ``{batch_api}()`` call on the same N points, with the "
-        "same draw handed to both candidates, the order alternating round by round, and "
-        "two estimators reported so that a difference neither can demonstrate reads as "
-        "``unresolved`` rather than as a number "
-        "(``benchmarks/candidate_comparison.py``)."
-    )
-    reporter.add_text(
-        f"Every rung times the same amount of work - about "
-        f"{info['points_per_round_target']:,} points per round, whatever the batch size "
-        f"- so the rungs are comparable to each other, and both answers are read off the "
-        "ratio *within* a rung rather than off absolute times across rungs, which is "
-        "what keeps drift over the run out of the curve. Points are drawn without "
-        "replacement inside a batch: a repeated coordinate would be answered from the "
-        "batch's own cell lookup and would flatter exactly the effect being measured."
-    )
-    reporter.add_text(
-        "The coordinate arrays are prepared before the clock starts, in the contiguous "
-        "``float64`` form the batch API takes without copying. A caller holding Python "
-        "lists pays one conversion per axis per call on top of what these rows show."
-    )
-    reporter.add_text(
-        "**The two answers do not survive a noisy machine equally well.** Where batching "
-        "starts paying is a comparison *within* one rung, so drift over the run cancels "
-        "out of it and it reproduces. Where it stops improving is the batched call's "
-        "per-point time compared *across* rungs, which drift moves directly - so it is "
-        "quoted only when the control below certifies that the ladder measured one "
-        "thing, and withheld when it does not."
+        f"``{batch_api}()`` spreads its fixed cost per call over the whole batch, so it "
+        f"beats a ``{scalar_api}()`` loop only above some batch size, and stops getting "
+        "faster per point at a larger one. Both depend on the machine and on how "
+        "clustered the coordinates are - points sharing a shortcut cell are answered "
+        "together, so a clustered stream pays off sooner than the uniformly random "
+        "points measured here. Run ``scripts/measure_batch_break_even.py --points "
+        "your.csv`` (columns ``lng,lat``) to measure your own. How the sweep is taken: "
+        ":doc:`benchmarking_methodology`."
     )
 
     reporter.add_section("The sweep", level=1)
     render_sweep(run, chart_path)
     reporter.add_text(f".. image:: {chart_path.name}")
-    reporter.add_text(
-        "The upper panel is the best-round speed-up; the lower one is the share of "
-        "rounds the batched call won, which assumes nothing about how the noise is "
-        "distributed. A difference is believed only where both agree, so the shaded band "
-        "- where the crossing lies - is exactly where the upper panel passes 1.0 and the "
-        "lower one passes one half. Hollow markers are rungs neither estimator resolves."
+    caption = (
+        "Speed-up of one batched call over the loop on the same points. The shaded "
+        "band is where batching starts paying, an arrow marks where it stops improving, "
+        "and hollow markers are batch sizes with no clear winner."
     )
-    names_gather = info.get("names_gather_min_batch")
-    if names_gather:
-        reporter.add_text(
-            f"The dotted rule at {names_gather} is not a measurement artefact: "
-            "``ZoneNames.names_of`` converts ids to names with a Python loop below that "
-            "size and a numpy gather at or above it, so the per-point cost steps there."
+    if info.get("names_gather_min_batch"):
+        caption += (
+            f" The dotted line at {info['names_gather_min_batch']} is where "
+            "``ZoneNames.names_of`` switches from a Python loop to a numpy gather."
         )
+    reporter.add_text(caption)
 
     for sweep in sweeps:
         label = point_class_label(sweep["point_class"])
@@ -1146,31 +1112,12 @@ def render_batch_break_even(
         )
 
         crossing = break_even(sweep["rungs"])
-        bracket = crossing.bracket
-        if bracket is not None:
-            reporter.add_text(
-                f"The crossing is reported as the interval ({bracket[0]}, "
-                f"{bracket[1]}] rather than as a number, because that is all a "
-                "ladder of discrete sizes can establish. The rungs inside it read "
-                "``no difference`` or ``unresolved`` by construction: that is what it "
-                "means for the crossing to be in there, not a defect in the run."
-            )
-        if crossing.status == "no_terminal_run":
+        if crossing.non_monotone:
             reporter.add_note(
                 "This sweep won at "
                 + ", ".join(f"N={size}" for size in crossing.non_monotone)
-                + " but not at the largest batch size measured, so no crossing is "
-                "established: a break-even is the size beyond which batching never "
-                "loses again, and this ladder does not end in a win. Re-measure on a "
-                "quieter machine before reading anything off it."
-            )
-        elif crossing.non_monotone:
-            reporter.add_note(
-                "This sweep won at "
-                + ", ".join(f"N={size}" for size in crossing.non_monotone)
-                + " and then lost again higher up the ladder. The interval above is the "
-                "point beyond which it never loses; a ladder that crosses more than once "
-                "is a sign to re-measure rather than a finer answer."
+                + " and lost again at a larger batch size. Re-measure on a quieter "
+                "machine before reading a crossing off it."
             )
 
         control = control_spread(
@@ -1179,50 +1126,26 @@ def render_batch_break_even(
             min_batch_size=settings.control_spread_min_batch_size,
         )
         reporter.add_text(
-            f"Control: the scalar loop answers the same points at every rung, so its "
-            f"per-point time should not depend on the batch size. Across the "
-            f"{control.rungs_used} rungs at or above N={control.min_batch_size} it "
-            f"spread **{control.spread * 100:.1f} %** "
-            f"({format_duration(control.fastest)} to "
-            f"{format_duration(control.slowest)}), against a "
-            f"{control.threshold * 100:.0f} % threshold - "
+            f"Check: the loop's per-point time, which should not depend on the batch "
+            f"size, varied **{control.spread * 100:.1f} %** across batch sizes from "
+            f"{control.min_batch_size} up (limit {control.threshold * 100:.0f} %)"
             + (
-                "so the ladder measured one thing."
+                "."
                 if control.within_threshold
-                else "**above the threshold**, so read the curve with suspicion and "
-                "re-measure on a quieter machine."
+                else " - too much to say where batching stops improving on this run."
             )
-            + " It is published as the reader's check and is never divided into "
-            "anything. The smaller rungs are excluded because the harness's own "
-            "per-batch cost lands on them divided by a very small N."
         )
 
-    reporter.add_section("What this does not say", level=1)
-    reporter.add_text(
-        "**Both answers are properties of the workload, not only of the library.** The "
-        "batch path answers every point that falls in one shortcut cell from a single lookup, "
-        "so a clustered stream - a delivery round, a city, a sensor network - amortises "
-        "sooner than the uniformly random points measured here, which share almost "
-        "nothing. Random points are the conservative case."
-    )
-    reporter.add_text(
-        "They are also properties of this machine and this acceleration path. "
-        "``scripts/measure_batch_break_even.py`` takes ``--points your.csv`` (two "
-        "columns, ``lng,lat``) and reports the same two numbers for your coordinates on "
-        "your hardware, which is the only way to get the answer that applies to you."
-    )
     if batch_api == "timezone_names_at":
         reporter.add_text(
             "This page measures name-returning lookups. "
-            "``scripts/measure_batch_break_even.py --api ids`` runs the corresponding "
-            "like-for-like comparison of ``timezone_ids_at()`` against a "
-            "``timezone_id_at()`` loop, with the per-point name conversion absent from "
-            "both sides."
+            "``scripts/measure_batch_break_even.py --api ids`` compares "
+            "``timezone_ids_at()`` against a ``timezone_id_at()`` loop instead."
         )
     else:
         reporter.add_text(
             "This page measures id-returning lookups. Run the script with ``--api names`` "
-            "for the corresponding comparison where both sides return timezone names."
+            "for the comparison where both sides return timezone names."
         )
 
     add_system_status_section(
@@ -1800,6 +1723,12 @@ COMPARISON_POINT_CLASSES = (
     "ambiguous_shortcut",
 )
 
+# the bulk table: one batched call over the same points, against the same tzfpy loop.
+# Kept out of `COMPARISON_LOOKUP_FUNCTIONS` because it answers a different question -
+# tzfpy has no batch API, so this is "answer N points with each package's best API",
+# not "one lookup against one lookup".
+COMPARISON_BATCH_FUNCTION = "test_lookup_timezonefinder_batch"
+
 # the point class the headline quotes: the only globally representative one,
 # for the reason docs/benchmarking_methodology.rst gives
 COMPARISON_HEADLINE_POINT_CLASS = "random"
@@ -1849,7 +1778,7 @@ def relative_speed_label(subject_seconds: float, reference_seconds: float) -> st
 
 def render_comparison(data: dict[str, Any], output_path: Path) -> None:
     reporter = BenchmarkReporter(
-        title="Comparison against tzfpy", output_path=output_path
+        title="Speed and Startup against tzfpy", output_path=output_path
     )
     system_info = get_system_info(data)
     batch_size = get_batch_size(system_info)
@@ -1881,6 +1810,18 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             "process on the same machine. That gap is what full-resolution "
             "boundary polygons cost; :doc:`alternatives` is where the trade is "
             "argued rather than measured."
+        )
+    headline_batch = per_query(
+        COMPARISON_BATCH_FUNCTION, COMPARISON_HEADLINE_POINT_CLASS
+    )
+    if headline_reference is not None and headline_batch is not None:
+        headlines.append(
+            f"**For bulk lookups, ``timezone_names_at()`` answers the same "
+            f"{batch_size:,} points in one call at ~{format_duration(headline_batch)} "
+            f"per point** - {relative_speed_label(headline_batch, headline_reference)} "
+            "than a loop of tzfpy calls, which has no batch API. See *Bulk Lookups* "
+            "below, and :doc:`benchmark_results_batch_break_even` for the batch size "
+            "from which batching pays."
         )
     add_headline_section(reporter, system_info, headlines, machine_label(data))
     add_ci_tracking_note(reporter, system_info, benches)
@@ -1954,6 +1895,46 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             ]
         )
     reporter.add_table(headers, rows)
+
+    batch_rows = []
+    for point_class in COMPARISON_POINT_CLASSES:
+        reference = per_query(COMPARISON_REFERENCE_FUNCTION, point_class)
+        batched = per_query(COMPARISON_BATCH_FUNCTION, point_class)
+        if batched is None:
+            continue
+        batch_rows.append(
+            [
+                PARAM_LABELS.get(point_class, point_class),
+                MEASUREMENT_UNAVAILABLE
+                if reference is None
+                else format_duration(reference),
+                format_duration(batched),
+                MEASUREMENT_UNAVAILABLE
+                if reference is None
+                else relative_speed_label(batched, reference),
+            ]
+        )
+    if batch_rows:
+        reporter.add_section("Bulk Lookups", level=2)
+        reporter.add_text(
+            f"The same {batch_size:,} points, answered by one "
+            "``timezone_names_at()`` call per pass instead of a ``timezone_at()`` "
+            "loop - this package's API for answering many points at once. tzfpy has "
+            "no batch API (its ``get_tzs()`` returns every zone at a single point), "
+            "so its column is the same ``get_tz()`` loop as above. The coordinates are "
+            "passed as ready ``float64`` arrays; converting Python lists costs extra. "
+            f"Batching pays only above a few dozen points per call and depends on the "
+            "batch size: :doc:`benchmark_results_batch_break_even`."
+        )
+        reporter.add_table(
+            [
+                "Query points",
+                FUNCTION_LABELS[COMPARISON_REFERENCE_FUNCTION],
+                f"{FUNCTION_LABELS[COMPARISON_BATCH_FUNCTION]}, per point",
+                f"vs {FUNCTION_LABELS[COMPARISON_REFERENCE_FUNCTION]}",
+            ],
+            batch_rows,
+        )
 
     lookup_benches = [
         b for b in benches if b["name"].startswith(COMPARISON_LOOKUP_FUNCTIONS)
@@ -2224,18 +2205,21 @@ def main() -> None:
     parser.add_argument(
         "--benchmark-json",
         type=Path,
-        required=True,
-        help="Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`",
+        help=(
+            "Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`. "
+            "Feeds the timezone-finding, polygon, initialization and tzfpy pages; "
+            "omit it, with --latency-json, to leave those four untouched."
+        ),
     )
     parser.add_argument(
         "--latency-json",
         type=Path,
-        required=True,
         help=(
             "Path to a JSON file produced by `scripts.measure_query_latency` "
-            "(`make latency`). Required, because the per-query distribution is a "
-            "section of the timezone-finding report rather than a page of its own - "
-            "rendering without it would silently drop that section."
+            "(`make latency`). Required whenever --benchmark-json is given, because "
+            "the per-query distribution is a section of the timezone-finding report "
+            "rather than a page of its own - rendering without it would silently drop "
+            "that section."
         ),
     )
     parser.add_argument(
@@ -2270,19 +2254,35 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    if (args.benchmark_json is None) != (args.latency_json is None):
+        parser.error(
+            "--benchmark-json and --latency-json come together: the timezone-finding "
+            "page is built from both"
+        )
+    if not (
+        args.benchmark_json
+        or args.memory_json
+        or args.acceleration_json
+        or args.batch_break_even_json
+    ):
+        parser.error("nothing to render: pass at least one measurement JSON")
 
-    data = load_benchmark_json(args.benchmark_json)
-    latency = load_benchmark_json(args.latency_json)
-    render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
-    render_polygon(data, POLYGON_REPORT_FILE)
-    render_initialization(data, INITIALIZATION_REPORT_FILE)
-    render_comparison(data, COMPARISON_REPORT_FILE)
-    written = [
-        PERFORMANCE_REPORT_FILE,
-        POLYGON_REPORT_FILE,
-        INITIALIZATION_REPORT_FILE,
-        COMPARISON_REPORT_FILE,
-    ]
+    written: list[Path] = []
+    if args.benchmark_json is not None:
+        data = load_benchmark_json(args.benchmark_json)
+        latency = load_benchmark_json(args.latency_json)
+        render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
+        render_polygon(data, POLYGON_REPORT_FILE)
+        render_initialization(data, INITIALIZATION_REPORT_FILE)
+        render_comparison(data, COMPARISON_REPORT_FILE)
+        written.extend(
+            [
+                PERFORMANCE_REPORT_FILE,
+                POLYGON_REPORT_FILE,
+                INITIALIZATION_REPORT_FILE,
+                COMPARISON_REPORT_FILE,
+            ]
+        )
     if args.memory_json is not None:
         render_memory(load_benchmark_json(args.memory_json), MEMORY_REPORT_FILE)
         written.append(MEMORY_REPORT_FILE)

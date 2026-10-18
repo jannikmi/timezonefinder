@@ -9,8 +9,7 @@ The pytest-benchmark suites compare *one* implementation across commits or machi
 and their node ids are the join key for the trend chart, which is calibrated for a
 single configuration. Comparing the acceleration paths is the other measurement: two
 candidates in one working tree, which is what ``benchmarks/candidate_comparison.py``
-exists for and what ``docs/benchmarking_methodology.rst`` records three wrong designs
-for. Nothing here adds a node id, so the chart and the per-pull-request job are
+exists for, and where the designs that got it wrong are recorded. Nothing here adds a node id, so the chart and the per-pull-request job are
 untouched.
 
 Why one environment cannot answer the whole question

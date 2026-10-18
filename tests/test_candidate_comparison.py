@@ -3,7 +3,7 @@
 ``benchmarks/candidate_comparison.py`` is a measurement instrument, so its own
 correctness cannot be read off a run: a harness that fails to alternate the
 order still prints a plausible number, which is exactly how the designs
-``docs/benchmarking_methodology.rst`` records produced wrong answers. Every
+its docstring records produced wrong answers. Every
 property is therefore asserted here against an injected clock, so no assertion
 depends on how fast the machine running the suite is.
 """

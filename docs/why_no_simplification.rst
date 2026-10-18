@@ -143,7 +143,7 @@ What simplification would buy, and how the package gets it anyway
        low-accuracy option inside this package, and it never loads polygons.
 
 The remaining difference is real. ``tzfpy`` is faster per lookup by a single-digit factor, and its
-wheel is several times smaller (:doc:`benchmark_results_comparison`). That gap is the price of border
+wheel is several times smaller (:doc:`benchmark_results_vs_tzfpy`). That gap is the price of border
 accuracy, and this page accepts it on purpose.
 
 

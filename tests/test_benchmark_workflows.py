@@ -185,6 +185,29 @@ def test_the_report_job_uploads_read_only_commit_bound_pages(
 
 
 @pytest.mark.unit
+def test_the_report_job_renders_the_selected_groups_and_stages_exactly_those(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    """Measuring one set of groups and staging another would install pages the run
+    never measured, or drop the ones it did."""
+    dispatch_inputs = benchmark_workflow[True]["workflow_dispatch"]["inputs"]
+    assert dispatch_inputs["reports"]["default"] == "all"
+    steps = benchmark_workflow["jobs"]["render-reports"]["steps"]
+    render = next(step for step in steps if "make reports" in str(step.get("run", "")))
+    stage = next(
+        step
+        for step in steps
+        if "benchmark_report_artifact stage" in str(step.get("run", ""))
+    )
+    for step in (render, stage):
+        # free text from the dispatch form, so through env and never interpolated
+        assert step["env"]["REPORTS"] == "${{ inputs.reports || 'all' }}"
+        assert "${{" not in step["run"]
+    assert 'REPORTS="$REPORTS"' in render["run"]
+    assert '--reports "$REPORTS"' in stage["run"]
+
+
+@pytest.mark.unit
 def test_the_release_installs_only_reports_for_its_exact_commit() -> None:
     instructions = RELEASE_WORKFLOW.read_text(encoding="utf-8")
     push = instructions.index('git push -u origin "$release_branch"')
@@ -601,3 +624,44 @@ def test_the_benchmark_workflow_asserts_both_halves_of_the_path() -> None:
         "an acceleration-path assertion in benchmark.yml no longer refuses an "
         "environment with numba installed"
     )
+
+
+# What the per-pull-request comparison measures can only move when one of these does.
+# Anything wider runs a 2-pass, double-build job on changes that cannot move a number;
+# anything narrower lets a change to the measured path go unmeasured.
+MEASURED_INPUT_PATHS = {
+    "timezonefinder/**",
+    "packages/timezonefinder-data/**",
+    "benchmarks/conftest.py",
+    "benchmarks/test_timezone_finding.py",
+    "tests/fixtures/benchmarks/**",
+    "tests/auxiliaries.py",
+    "scripts/measure_memory.py",
+    "scripts/_memory_probe.py",
+    "setup.py",
+    "pyproject.toml",
+    "uv.lock",
+    ".github/workflows/benchmark.yml",
+}
+
+
+@pytest.mark.unit
+def test_the_comparison_runs_only_when_a_measured_input_changes(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    paths = benchmark_workflow[True]["pull_request"]["paths"]
+    assert set(paths) == MEASURED_INPUT_PATHS
+    assert len(paths) == len(set(paths))
+
+
+@pytest.mark.unit
+def test_every_core_benchmark_lives_in_a_file_the_filter_watches() -> None:
+    """A `benchmark_core` case moved to another file would stop triggering the
+    comparison that tracks it, with nothing red anywhere."""
+    holding_core = {
+        f"benchmarks/{path.name}"
+        for path in (PROJECT_ROOT / "benchmarks").glob("test_*.py")
+        if "pytest.mark.benchmark_core" in path.read_text(encoding="utf-8")
+    }
+    assert holding_core
+    assert holding_core <= MEASURED_INPUT_PATHS

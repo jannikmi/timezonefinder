@@ -31,13 +31,15 @@ name: benchmark
 #                     Gated by `paths`: the job is a double checkout + double
 #                     `uv sync` + double C-extension build + a 2-pass timing
 #                     sandwich, which is wasted on a push that cannot move the
-#                     tracked numbers (docs, CI config unrelated to this file,
-#                     changelog-only). Listed paths are everything that can:
-#                     the package itself, the data distribution, the benchmark
-#                     suite, the measurement/comparison scripts this job
-#                     shells out to, the build inputs (`setup.py`,
-#                     `pyproject.toml`, `uv.lock`), `Makefile` (owns the
-#                     `benchmarks-ci`/`memory-ci` targets), and this file.
+#                     numbers it compares. Listed paths are exactly the inputs
+#                     that can: the package and its data, the measured core
+#                     benchmarks with their fixtures and loader, the memory
+#                     harness, the build inputs (`setup.py`, `pyproject.toml`,
+#                     `uv.lock`), and this file. Report rendering, the other
+#                     suites, the comparison/export scripts and the Makefile
+#                     are deliberately absent: they can break the job but not
+#                     move a number, their logic is unit-tested in ordinary CI,
+#                     and the next master push runs the job anyway.
 # - workflow_dispatch: either repeat the identical core measurement N times to
 #                     characterise the runner pool's spread, or render the full
 #                     published report suite on one named CI machine for a
@@ -52,12 +54,15 @@ on:
     paths:
       - "timezonefinder/**"
       - "packages/timezonefinder-data/**"
-      - "benchmarks/**"
-      - "scripts/**"
+      - "benchmarks/conftest.py"
+      - "benchmarks/test_timezone_finding.py"
+      - "tests/fixtures/benchmarks/**"
+      - "tests/auxiliaries.py"
+      - "scripts/measure_memory.py"
+      - "scripts/_memory_probe.py"
       - "setup.py"
       - "pyproject.toml"
       - "uv.lock"
-      - "Makefile"
       - ".github/workflows/benchmark.yml"
   workflow_dispatch:
     inputs:
@@ -72,6 +77,13 @@ on:
         type: boolean
         required: false
         default: false
+      reports:
+        description: >-
+          With render_reports, which report groups to measure and render
+          (comma-separated: suite, memory, acceleration, break-even, data).
+          Every other page is left as it is. A release renders all.
+        required: false
+        default: "all"
       calibrate_shortcuts:
         description: Calibrate and validate the shortcut-ordering cost model
         type: boolean
@@ -616,14 +628,21 @@ jobs:
           token: ${{ github.token }}
 
       - name: Measure and render the published pages
-        run: make reports
+        # through env, never interpolated into the script: the input is free text.
+        # A push to a release branch has no inputs and renders every group.
+        env:
+          REPORTS: ${{ inputs.reports || 'all' }}
+        run: make reports REPORTS="$REPORTS"
 
       - name: Stage reports bound to this commit
+        env:
+          REPORTS: ${{ inputs.reports || 'all' }}
         run: |
           set -euo pipefail
           uv run python -m scripts.benchmark_report_artifact stage \
             --output-dir tmp/benchmark-pages \
-            --commit "$GITHUB_SHA"
+            --commit "$GITHUB_SHA" \
+            --reports "$REPORTS"
 
       - name: Upload the rendered pages
         uses: actions/upload-artifact@v7

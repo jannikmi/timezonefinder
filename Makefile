@@ -38,7 +38,8 @@
 #   memory-ci  - the exact memory measurement the benchmark CI workflow records
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
 #   reports    - benchmarks + latency + memory + acceleration-paths + batch-break-even
-#                + render docs/benchmark_results_*.rst + the data report
+#                + render docs/benchmark_results_*.rst + the data report; REPORTS=
+#                suite,memory,acceleration,break-even,data limits it to those groups
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
@@ -269,16 +270,38 @@ batch-break-even:
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_batch_break_even \
 		--output=$(BATCH_BREAK_EVEN_JSON)
 
+# The report groups a render can be limited to, one per measurement - see REPORT_GROUPS
+# in scripts/benchmark_report_artifact.py, which names the same groups and maps each to
+# the pages it writes. `make reports` renders all of them; `make reports
+# REPORTS=break-even,data` measures and renders only those, leaving every other page as
+# it is. A group is never split: `suite`'s one pytest JSON feeds four pages, and the
+# timezone-finding page embeds the latency distribution.
+REPORT_GROUPS := suite memory acceleration break-even data
+REPORTS ?= all
+comma := ,
+SELECTED_REPORTS := $(if $(filter all,$(REPORTS)),$(REPORT_GROUPS),$(subst $(comma), ,$(REPORTS)))
+UNKNOWN_REPORTS := $(filter-out $(REPORT_GROUPS),$(SELECTED_REPORTS))
+ifneq ($(UNKNOWN_REPORTS),)
+$(error unknown report group(s) "$(UNKNOWN_REPORTS)" in REPORTS; choose from $(REPORT_GROUPS) or all)
+endif
+selected = $(filter $(1),$(SELECTED_REPORTS))
+REPORT_TARGETS := \
+	$(if $(call selected,suite),benchmarks latency) \
+	$(if $(call selected,memory),memory) \
+	$(if $(call selected,acceleration),acceleration-paths) \
+	$(if $(call selected,break-even),batch-break-even)
+RENDER_ARGS := \
+	$(if $(call selected,suite),--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON)) \
+	$(if $(call selected,memory),--memory-json=$(MEMORY_JSON)) \
+	$(if $(call selected,acceleration),--acceleration-json=$(ACCELERATION_JSON_PYTHON) \
+		--acceleration-json=$(ACCELERATION_JSON_NUMBA)) \
+	$(if $(call selected,break-even),--batch-break-even-json=$(BATCH_BREAK_EVEN_JSON))
+
 # --group benchmark: drawing the sweep needs seaborn, which is deliberately absent from
 # the measurement environments above so that no measured process ever imports it.
-reports: check-data benchmarks latency memory acceleration-paths batch-break-even
-	uv run --group benchmark python -m scripts.render_benchmark_reports \
-		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
-		--memory-json=$(MEMORY_JSON) \
-		--acceleration-json=$(ACCELERATION_JSON_PYTHON) \
-		--acceleration-json=$(ACCELERATION_JSON_NUMBA) \
-		--batch-break-even-json=$(BATCH_BREAK_EVEN_JSON)
-	uv run python -m scripts.reporting
+reports: check-data $(REPORT_TARGETS)
+	$(if $(strip $(RENDER_ARGS)),uv run --group benchmark python -m scripts.render_benchmark_reports $(strip $(RENDER_ARGS)))
+	$(if $(call selected,data),uv run python -m scripts.reporting)
 
 # Correctness, not speed, so it is not part of `benchmarks` and writes no report
 # page: the rate depends on which `tzfpy` release is installed, and a committed

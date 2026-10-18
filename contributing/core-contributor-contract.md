@@ -14,7 +14,7 @@ Keep changes focused and production-ready: no placeholders, speculative compatib
 
 Add targeted tests for behavioral changes. Select integration, slow, acceleration-path, benchmark, or documentation gates by the changed subsystem rather than running expensive suites reflexively. Rebase onto current `master` before the final gate, because rebasing afterwards invalidates it.
 
-Every change needs a fragment in the matching unreleased changelog section, with development-only changes under `internal/`. Changes confined to contributor memory, provider adapters, and their structural tests are the exception and receive no changelog entry. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
+Every change needs a fragment in the matching unreleased changelog section, with development-only changes under `internal/`. Changes confined to contributor memory, provider adapters, and their structural tests receive no changelog entry, and neither do the narrower cases the [changelog policy](development/changelog-and-release-note-policy.md) lists, such as tuning or minor fixes to the benchmark and report tooling. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
 
 The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md), which says how to match its routes.
 
