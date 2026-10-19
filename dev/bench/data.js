@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792444462897,
+  "lastUpdate": 1792444464918,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -29138,6 +29138,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "802c0c205b5bf41ace15eace7c02142cec0dd79a",
+          "message": "DOC-7: move the README to Markdown, one line per sentence (#730)\n\n* DOC-7: move README.rst to README.md, one line per sentence\n\nConverted by hand rather than with a converter so the prose is reflowed\nand every link and image target stays absolute for PyPI. The rendered\ntext and the 48 link and image targets match the reStructuredText page\nexactly; two badges gained the alt text they lacked.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Stop promising the withdrawn PERF-10 ordering in the calibration changelog fragment\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Retire DOC-7 from the improvement register\n\nThe README now is Markdown; DOC-6 is blocked on DOC-9 alone.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Say format 4, not format 3, is the pending data-format window in the sequencing notes\n\nFormat 3 published as timezonefinder-data 3.2026.3; the aligned grid\ntree holds format 4, unreleased.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* DOC-7: name README.md in the changelog policy, state the wrapping convention's scope exactly\n\nReview follow-up: the cosmetic-documentation exception still named\nREADME.rst, the sequencing notes said the maintenance rules state a\nwrapping convention they do not, and the changelog fragment carried a\ncontributor-only detail.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Correct the format-4 cross-reference and the calibration fragment's performance claim\n\nReview follow-up: the pending-format sentence pointed at the wrong\nbullet and missed IDX-8, which carries a format change but cannot ride\nformat 4 yet; the calibration fragment no longer states a measured\neffect, which the changelog policy leaves to the reports.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T23:13:29+02:00",
+          "tree_id": "f0b7b7bc2d0baeff58d00f30522bb797d7b4b1b3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/802c0c205b5bf41ace15eace7c02142cec0dd79a"
+        },
+        "date": 1792444464440,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6954803466796875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6956586837768555,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9563922882080078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.957106590270996,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.54285526275635,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.54362106323242,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
           }
         ]
       }
