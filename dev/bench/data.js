@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792449073910,
+  "lastUpdate": 1792449075863,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -29291,6 +29291,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6941 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c3aece9557905160d4ae8b6fc13ff8b886db6c1",
+          "message": "PREC-1: record the containment-everywhere overlap precedence decision (#734)\n\n* PREC-1: record containment-everywhere overlap precedence decision\n\nThe maintainer chose option (a): where two zones overlap, the zone with the\nsmaller spherical area takes precedence in every cell, replacing the legacy\nper-cell vertex-count key. PREC-1 returns to open and moves among the\neligible rows; the decision is added to the shortcut-ordering topic module\nand the item notes that its answer measurements predate the grid tree.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: changelog names the zones that flip against the last published release\n\nThe grid tree index has not shipped, so the baseline for what flips is the\nlast published timezonefinder-data (H3 index), not master.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: the data release note also names the precedence change and its flips\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T22:30:22Z",
+          "tree_id": "0428e8e81b7845edf0a2b91cf1efb8ca85986209",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3c3aece9557905160d4ae8b6fc13ff8b886db6c1"
+        },
+        "date": 1792449075386,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6954841613769531,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6956624984741211,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.956197738647461,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9570064544677734,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.542924880981445,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.54364776611328,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
           }
         ]
       }
