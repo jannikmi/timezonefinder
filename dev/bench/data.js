@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792440641022,
+  "lastUpdate": 1792444462897,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15189,6 +15189,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4650",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "802c0c205b5bf41ace15eace7c02142cec0dd79a",
+          "message": "DOC-7: move the README to Markdown, one line per sentence (#730)\n\n* DOC-7: move README.rst to README.md, one line per sentence\n\nConverted by hand rather than with a converter so the prose is reflowed\nand every link and image target stays absolute for PyPI. The rendered\ntext and the 48 link and image targets match the reStructuredText page\nexactly; two badges gained the alt text they lacked.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Stop promising the withdrawn PERF-10 ordering in the calibration changelog fragment\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Retire DOC-7 from the improvement register\n\nThe README now is Markdown; DOC-6 is blocked on DOC-9 alone.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Say format 4, not format 3, is the pending data-format window in the sequencing notes\n\nFormat 3 published as timezonefinder-data 3.2026.3; the aligned grid\ntree holds format 4, unreleased.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* DOC-7: name README.md in the changelog policy, state the wrapping convention's scope exactly\n\nReview follow-up: the cosmetic-documentation exception still named\nREADME.rst, the sequencing notes said the maintenance rules state a\nwrapping convention they do not, and the changelog fragment carried a\ncontributor-only detail.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n* Correct the format-4 cross-reference and the calibration fragment's performance claim\n\nReview follow-up: the pending-format sentence pointed at the wrong\nbullet and missed IDX-8, which carries a format change but cannot ride\nformat 4 yet; the calibration fragment no longer states a measured\neffect, which the changelog policy leaves to the reports.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_015kxK1cK3nMJ6biz1ejgf8J\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T23:13:29+02:00",
+          "tree_id": "f0b7b7bc2d0baeff58d00f30522bb797d7b4b1b3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/802c0c205b5bf41ace15eace7c02142cec0dd79a"
+        },
+        "date": 1792444460684,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1026645.9804432675,
+            "range": "± 63969",
+            "unit": "lookups/sec",
+            "extra": "min of 330 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1237011.3805139116,
+            "range": "± 14095",
+            "unit": "lookups/sec",
+            "extra": "min of 461 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 227540.85313993483,
+            "range": "± 3141",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6223921.767420237,
+            "range": "± 185695",
+            "unit": "lookups/sec",
+            "extra": "min of 1146 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48125048.13217423,
+            "range": "± 2777181",
+            "unit": "lookups/sec",
+            "extra": "min of 8599 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 314165.627617202,
+            "range": "± 6285",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5903341.054716183,
+            "range": "± 317408",
+            "unit": "lookups/sec",
+            "extra": "min of 1261 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 34213767.62715625,
+            "range": "± 1806990",
+            "unit": "lookups/sec",
+            "extra": "min of 6347 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 315279.82219226717,
+            "range": "± 5916",
+            "unit": "lookups/sec",
+            "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
           }
         ]
       }
