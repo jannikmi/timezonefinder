@@ -53,7 +53,7 @@ repos:
     -   repo: https://github.com/myint/rstcheck
         rev: 'v6.3.0'
         hooks:
-            # Covers docs/ as well as README.rst and CHANGELOG.rst. Sphinx is installed into
+            # Covers docs/ as well as CHANGELOG.rst. Sphinx is installed into
             # the hook environment so that rstcheck recognises the directives it owns
             # (toctree, automodule, ...); without it every one of them reads as an unknown
             # directive and docs/ has to be excluded, which is how a note running into the
