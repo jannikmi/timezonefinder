@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792287013502,
+  "lastUpdate": 1792372383556,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14928,6 +14928,93 @@ window.BENCHMARK_DATA = {
             "range": "± 9581",
             "unit": "lookups/sec",
             "extra": "min of 135 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "816d0c904ad05f74fbdc06ff71e1d4f66d0165e2",
+          "message": "Sweep the grid tree configuration: a 0.75° root with one level of 4×4 blocks beats the shipped shape within the cap (#728)\n\n* Add a grid tree configuration sweep prototype\n\nprototypes/grid_tree_config_sweep.py searches the grid tree configurations\nwithin the 800 KB shortcut index cap: roots aligned with the 7.5-degree ocean\nmeridians, one to three levels with a block side each, refining every\nmulti-zone cell or selectively under byte budgets by cost-complexity pruning.\n\nExact counts on any machine (reads, polygon tests and ray-cast vertices per\nquery, from each point's containing polygons found once) prune the 165\nconfigurations to a Pareto frontier. Paired timing against the shipped cells\nscreens it, three replicate processes and an incumbent ladder that keeps the\nsmaller index when speed is level decide it, and a second machine re-times\nthe winner on freshly drawn points and gates it on clang, numba and pure\nPython. The decision rule is fixed in the module docstring before any\ndeciding run; stages hand each other JSON and refuse other data.\n\nlatlng_index_bench.py exports the control, environment, gate and paired\ntiming it shares with the sweep, and passes a seed to every comparison.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Grid tree sweep: deciding run on Intel(R) Xeon(R) Processor\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XzdHkQB1qxtgrzttFfHiJX\n\n* Grid tree sweep: confirming run on Intel(R) Xeon(R) Processor @ 2.10GHz\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01HRMjxw2niDYRURPd2Ky6QC\n\n* Record why selective grid tree refinement does not beat uniform refinement\n\nAdd prototypes/grid_tree_selective_refinement.py. Its patterns command\nre-reads the sweep's committed deciding run: the finest cell width sets\nthe polygon work, scalar time follows polygon work, batch time follows\ndepth, and the cap picks the shape. Its counts command builds the\none-level selective trees the sweep never tried. It chooses cells by the\nsweep's stop-index rule or by expected work measured on a uniform\ntraining sample, and adds an encoding the shipped reader reads\nunchanged. Its time command gates the best tree and times it head to\nhead against the best uniformly refined tree. The output is committed\nunder measurements/.\n\nCounting vertices in the expected work gives the best counts under the\ncap, but the tree is no faster per scalar call and slower per random\nbatch. Record that refusal, and what would reopen it, in the\naligned-index decisions.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XzdHkQB1qxtgrzttFfHiJX\n\n* Fold the selective refinement study into the grid tree sweep\n\nprototypes/grid_tree_config_sweep.py gains two exploratory parts that feed\nnone of its deciding stages. `selective counts` builds the one-level trees\nrefined selectively that the pre-registered space leaves out, selecting by\nselect_refinement or by expected work from a uniform training sample;\n`selective time` gates the best of them in two encodings and times each\nagainst the deciding run's winner through run_pairs, from its own manifest\nof saved trees, so counts.json's selection is never touched. `patterns`\nre-reads a run, with its screen-based fit labelled as biased towards the\nsurvivors. `report --run` prints a committed run and every margin the\nFINDINGS quote.\n\nThe deciding path is unchanged from the code decide and confirm ran: every\nchange to the sweep is an addition, apart from the FINDINGS placeholder.\nFINDINGS now records the deciding run - outcome B, a 0.75-degree root with\none level of 4x4 blocks - and the study's findings follow as a section\nmarked exploratory and not decision evidence.\n\nprototypes/grid_tree_selective_refinement.py and its README row are gone;\nthe sweep's row and the aligned-index decisions point at the sweep's\nselective stage. The committed study results stay as evidence.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Record the grid tree sweep's verdict in the aligned-index decisions\n\nWithin the 800 KB cap the configuration to ship is a 0.75-degree root with\none level of 4x4 blocks: faster than a control of the shipped cells in all\nfour cells on two x86-64 machines, and readable by the shipped reader once\nthe root columns change. The table still prices the index families at the\n0.9375-degree root, and no longer marks that shape as the chosen one.\n\nThe three-levels-of-2x2 refusal now rests on the cap and the screen: the\n0.9375-degree root reaching 0.117 degrees needs an int32 middle level and\nis over the cap even if it fit int16, which the old 84 KB comparison\ncounted doubled.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Trim the sweep to the evidence its findings need\n\nAt the maintainer's request, the pull request keeps only what reproduces\nthe deciding run:\n\n- The committed counts file keeps its summary and the timed configurations.\n  `counts` regenerates every other row exactly, on any machine, and\n  `report --run` never read them.\n- The exploratory selective-refinement stage, `patterns`, their FINDINGS\n  section and their two result files are removed. The refusal stays in the\n  aligned-index decisions with the measurement that refused it, and a\n  re-proposal rebuilds the study.\n\nThe deciding path is unchanged; `report --run` still prints every figure the\nFINDINGS quote. The sweep guidance gains the rule that keeps a sweep's pull\nrequest to the evidence nobody can re-derive.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Keep the sweep's qualitative findings, not its measurements\n\nAt the maintainer's request, the pull request commits no measurement files\nand quotes no exact figures, including timings no machine reproduces\nidentically. The four stage reports are removed, and with them\n`report --run` and its margin printing, so the sweep's code is again exactly\nthe code that decided. FINDINGS and the aligned-index decisions state which\nconfiguration wins, against what, on which hardware class, and why: under\nfull refinement the finest cell width sets the polygon work, batch time\nfollows depth, and a 0.75-degree root with one level of 4x4 blocks reaches\nthe finest cells the cap allows in a single level.\n\nThe sweep guidance's rule now says a sweep's pull request commits its code\nand qualitative findings, never its measurements.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Add IDX-8: refine selectively under the cap with a compiled batch lookup\n\nAt the maintainer's request, the reopen condition of the selective-refinement\nrefusal becomes a register item. Deeper and selective grid trees test fewer\npolygons within the cap but lose per batch, because the NumPy batch descent\npays a fixed set of array passes per level; a compiled descent removes that\npenalty. The first slice is a prototype measurement in the sweep, and\nshipping a compiled descent in the C extension is left to a maintainer\ndecision, as GH-364's refusal of a wider native surface requires.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T03:12:16+02:00",
+          "tree_id": "012577b4ce83dafd066886a03a37825a2ff14d3d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/816d0c904ad05f74fbdc06ff71e1d4f66d0165e2"
+        },
+        "date": 1792372381823,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 769670.0732262708,
+            "range": "± 98951",
+            "unit": "lookups/sec",
+            "extra": "min of 248 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 979307.6216748378,
+            "range": "± 73709",
+            "unit": "lookups/sec",
+            "extra": "min of 344 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 175499.63341637753,
+            "range": "± 3152",
+            "unit": "lookups/sec",
+            "extra": "min of 65 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4056847.796810094,
+            "range": "± 229017",
+            "unit": "lookups/sec",
+            "extra": "min of 918 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33262373.602308802,
+            "range": "± 5557424",
+            "unit": "lookups/sec",
+            "extra": "min of 7403 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 240801.87409368678,
+            "range": "± 23805",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 3845473.493156426,
+            "range": "± 774375",
+            "unit": "lookups/sec",
+            "extra": "min of 995 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23901716.144072395,
+            "range": "± 2127005",
+            "unit": "lookups/sec",
+            "extra": "min of 5489 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 238761.63318308644,
+            "range": "± 3462",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
           }
         ]
       }
