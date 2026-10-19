@@ -83,7 +83,7 @@ and the expensive instrument is spent only where the cheap exact one leaves a qu
   strata, and no evaluation point is ever seen by the builder.
 * **counts** (any machine; exact). Every configuration is built from candidate sets
   computed once per cell width by the converter's own rule
-  (``scripts.grid_cells.owned_pairs``), lists in the converter's legacy order as the
+  (``scripts.grid_cells.owned_pairs``), lists in the converter's zone precedence order as the
   control's are, and counted on the committed random and on-land fixtures: reads,
   candidates, polygon tests and vertices of the polygons actually ray-cast per query.
   Configurations over the cap, or testing more than ``SELECTIVITY_FLOOR`` times the
@@ -102,7 +102,7 @@ and the expensive instrument is spent only where the cheap exact one leaves a qu
   other on fresh points drawn by the fixture samplers under a new seed, and the winner
   gated on numba and on the pure-Python fallback.
 
-The control is the shipped cells with the converter's legacy order, as in
+The control is the shipped cells with the converter's zone precedence order, as in
 ``prototypes/latlng_index_bench.py``, because no candidate carries the converter's work
 optimizer; the follow-up that ships a winner measures it against the shipped index.
 
@@ -154,17 +154,18 @@ from prototypes.latlng_index_bench import (
     OrderingInput,
     border_probes,
     build_control,
+    converter_order,
     edge_probes,
     entries_file_bytes,
     environment,
     finder_on,
     gate_passed,
     gate_row,
-    legacy_order,
     malacca_offered,
     malacca_polygons,
     narrow,
     no_blocks,
+    ordering_input,
     polygons_of,
     shipped_file_size_model,
     time_pair,
@@ -324,7 +325,7 @@ def enumerate_specs(finest_columns: int) -> list[TreeSpec]:
 
 
 class ListCatalog:
-    """Each distinct candidate set once: its legacy-ordered list, stop index, land flag."""
+    """Each distinct candidate set once: its precedence-ordered list, stop index, land flag."""
 
     def __init__(self, data: OrderingInput, ocean_zone: np.ndarray):
         self.data = data
@@ -347,7 +348,7 @@ class ListCatalog:
         found = self._ordered.get(set_id)
         if found is None:
             found = np.asarray(
-                legacy_order(self.data, self.sets[set_id]), dtype=PAYLOAD_DTYPE
+                converter_order(self.data, self.sets[set_id]), dtype=PAYLOAD_DTYPE
             )
             self._ordered[set_id] = found
         return found
@@ -1294,13 +1295,11 @@ def counts_stage(args) -> None:
     workdir: Path = args.workdir
     workdir.mkdir(parents=True, exist_ok=True)
     reference = finder_on("clang")
-    data = OrderingInput(
-        reference.boundaries, reference.zone_ids, reference.zone_names.names
-    )
     ocean = np.array(
         [bool(re.match(OCEAN_TIMEZONE_PREFIX, n)) for n in reference.zone_names.names]
     )
     polygons = polygons_of(reference)
+    data = ordering_input(reference, polygons)
     lists = ListCatalog(data, ocean)
     catalog = CellCatalog(polygons, lists)
     oracle = PointOracle(
@@ -1312,7 +1311,7 @@ def counts_stage(args) -> None:
     control_path = workdir / "control.bin"
     control = build_control(shipped, data, reference.zone_ids, control_path)
     # the shipped work optimizer orders each cell's list by cost, which deduplicates
-    # lists differently from the legacy order every candidate here uses
+    # lists differently from the precedence order every candidate here uses
     list_ratio = entries_file_bytes(shipped) / entries_file_bytes(control)
     control_counts = oracle.counts(tree_of_shipped(control))
     print(f"control counted, {time.perf_counter() - started:.0f} s", flush=True)

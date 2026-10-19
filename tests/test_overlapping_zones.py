@@ -15,6 +15,8 @@ to one answer. Two seams therefore need pinning, and they fail in opposite direc
   ``certain_timezone_at`` uses, and the two must agree point for point.
 """
 
+import functools
+
 import pytest
 import shapely
 
@@ -123,6 +125,7 @@ def test_the_documented_overlaps_are_reported(
     assert tf.timezones_at(lng=lng, lat=lat) == expected
 
 
+@functools.cache
 def zone_area(tf: TimezoneFinder, name: str) -> float:
     """A zone's spherical area, from the packaged rings, holes cut out."""
     zone_id = tf.timezone_names.index(name)
@@ -152,6 +155,30 @@ def test_an_overlap_is_answered_by_the_smaller_zone(
     lng, lat = coords
     smaller = min(expected, key=lambda name: (zone_area(tf, name), name))
     assert tf.timezone_at(lng=lng, lat=lat) == smaller
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "fixture_name", [ON_LAND_POINTS_FIXTURE, AMBIGUOUS_SHORTCUT_POINTS_FIXTURE]
+)
+def test_every_overlap_point_is_answered_by_the_smaller_zone(
+    tf: TimezoneFinder, fixture_name: str
+):
+    """The same rule over every committed point that lies in two zones.
+
+    The documented overlaps are one point each; these are spread over every overlap the
+    fixtures reach and over the cells they fall in, so a precedence that held at those
+    points and not elsewhere in a region - a per-cell rule, say - fails here.
+    """
+    overlap_points = 0
+    for lng, lat in load_benchmark_points(fixture_name):
+        zones = tf.timezones_at(lng=lng, lat=lat)
+        if len(zones) < 2:
+            continue
+        overlap_points += 1
+        smaller = min(zones, key=lambda name: (zone_area(tf, name), name))
+        assert zones[0] == smaller, f"({lng}, {lat}) in {zones}"
+    assert overlap_points, "the fixture no longer reaches any overlap"
 
 
 @pytest.mark.unit

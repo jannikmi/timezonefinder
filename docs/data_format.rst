@@ -661,7 +661,7 @@ No query points are sampled: the piecewise cost proxy is integrated analytically
 against spherical surface area over clipped polygon geometry. The module gives
 the formulas, search algorithm, cost coefficients and geometric approximations.
 Final zones are enumerated; greedy candidates and adjacent exchanges improve on
-the legacy incumbent. This is a heuristic for general point-dependent costs,
+the zone precedence order as the incumbent. This is a heuristic for general point-dependent costs,
 with an exact ratio-order special case for constant costs and disjoint polygons.
 There is no candidate-count cutoff. Geometry safety gates preserve zone
 precedence where necessary while allowing within-zone polygon optimization.

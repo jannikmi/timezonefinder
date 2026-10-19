@@ -54,8 +54,9 @@ def zone_areas(data: TimezoneData) -> np.ndarray:
 
     The overlap precedence key. Summed over the zone's polygons with their holes cut
     out, from the stored rings as they are: :func:`spherical_area` integrates the ring
-    coordinates, so a ring that is not a valid planar polygon still gets the area its
-    vertices enclose, never the bounding box the candidate rule falls back to.
+    coordinates, so a ring that is not a valid planar polygon gets the area of its ring
+    integral - for a self-intersecting ring, the difference of its lobes - and never the
+    bounding box the candidate rule falls back to.
     """
     areas = np.zeros(data.nr_of_zones, dtype=np.float64)
     for boundary_id, zone_id in enumerate(data.poly_zone_ids):

@@ -119,6 +119,7 @@ from scripts.assert_acceleration_path import (
     interpreted_path_name,
 )
 from scripts.benchmark_utils import cpu_info
+from scripts.shortcut_ordering import spherical_area
 from scripts.shortcuts import optimise_shortcut_ordering
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -195,16 +196,32 @@ DEGREE = SCALE
 
 @dataclass(frozen=True)
 class OrderingInput:
-    """The three fields of the converter's ``TimezoneData`` that the legacy order reads."""
+    """What the converter's zone precedence reads: three ``TimezoneData`` fields and the
+    spherical area of every zone, which ``scripts.shortcuts.zone_areas`` computes there."""
 
     boundaries: object
     poly_zone_ids: np.ndarray
     all_tz_names: list[str]
+    zone_area: np.ndarray
 
 
-def legacy_order(data: OrderingInput, polygon_ids: Sequence[int]) -> list[int]:
+def ordering_input(finder: TimezoneFinder, polygons: np.ndarray) -> OrderingInput:
+    """The precedence input from the finder's arrays and :func:`polygons_of` geometry."""
+    areas = np.bincount(
+        finder.zone_ids,
+        weights=[spherical_area(g) for g in polygons],
+        minlength=len(finder.zone_names.names),
+    )
+    return OrderingInput(
+        finder.boundaries, finder.zone_ids, finder.zone_names.names, areas
+    )
+
+
+def converter_order(data: OrderingInput, polygon_ids: Sequence[int]) -> list[int]:
     """The converter's order for one candidate set, from a fixed input order."""
-    return optimise_shortcut_ordering(data, sorted(int(p) for p in polygon_ids))
+    return optimise_shortcut_ordering(
+        data, sorted(int(p) for p in polygon_ids), data.zone_area
+    )
 
 
 class EntryPacker:
@@ -216,7 +233,9 @@ class EntryPacker:
         self.payloads: list[np.ndarray] = []
 
     def list_value(self, polygon_ids: Sequence[int]) -> int:
-        ordered = np.asarray(legacy_order(self.data, polygon_ids), dtype=PAYLOAD_DTYPE)
+        ordered = np.asarray(
+            converter_order(self.data, polygon_ids), dtype=PAYLOAD_DTYPE
+        )
         key = ordered.tobytes()
         found = self.entry_of.get(key)
         if found is None:
@@ -1001,14 +1020,14 @@ def shipped_file_size_model(shipped: ShortcutIndex) -> int:
 def build_control(
     shipped: ShortcutIndex, data: OrderingInput, zone_ids: np.ndarray, path: Path
 ) -> ShortcutIndex:
-    """The shipped cells with every list in the converter's legacy order, via ``path``.
+    """The shipped cells with every list in the converter's zone precedence order, via ``path``.
 
     The shipped index also carries the converter's work optimizer, which no candidate
     does, so candidates are priced against this rather than against the shipped file.
     Written and read back through the real shortcut file functions.
     """
     mapping = {
-        cell: value if isinstance(value, int) else legacy_order(data, value)
+        cell: value if isinstance(value, int) else converter_order(data, value)
         for cell, value in shipped.items()
     }
     write_shortcuts_binary(build_shortcut_index(mapping, zone_ids), path)
@@ -1273,10 +1292,8 @@ def main() -> None:
     rng = np.random.default_rng(2026)
     paths = ("clang", interpreted_path_name())
     reference = finder_on("clang")
-    data = OrderingInput(
-        reference.boundaries, reference.zone_ids, reference.zone_names.names
-    )
     polygons = polygons_of(reference)
+    data = ordering_input(reference, polygons)
     fixtures = {label: load_benchmark_points(f) for label, f in STRATA.items()}
 
     shipped = reference.shortcuts
