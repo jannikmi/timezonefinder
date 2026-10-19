@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792410500402,
+  "lastUpdate": 1792440638812,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15102,6 +15102,93 @@ window.BENCHMARK_DATA = {
             "range": "± 14589",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c43fd6868364d519ebf5552b22210325836d5b23",
+          "message": "Ship the 0.75° grid tree root: 480 root columns, one level of 4×4 blocks (#729)\n\n* Ship the 0.75-degree grid tree root\n\nThe shortcut index uses 480 root columns (0.75-degree cells) with one level\nof 4x4 blocks (0.1875 degrees), the configuration\nprototypes/grid_tree_config_sweep.py chose within the 800 KB cap; the\nmaintainer asked for this follow-up. The shipped reader reads it unchanged,\nso the constant and the regenerated shortcuts.bin are the whole format\nchange, riding the unreleased timezonefinder-data 4.2026.4.\n\nRegenerating from the verified 2026d archive moved only shortcuts.bin.\nAgainst the 0.9375-degree tree, TimezoneFinder answers are unchanged on two\nmillion uniform points and every benchmark fixture, and on two of the\n4,113,237 distinct boundary vertices, both inside no polygon;\nTimezoneFinderL moves cell by cell. FIXTURE_VERSION is 5, since the\nunique/ambiguous strata are a classification by the index.\n\nThe docs, the decision record, IDX-8 and the constraints describe the\nshipped tree; both prototypes take the shipped shape from the constants;\nand the unreleased changelog fragment states the final cells, size and\nanswer changes against 9.0.0.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Record the data build run holding the 0.75-degree index\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Install the benchmark pages rendered for the 0.75-degree index\n\nRendered by benchmark.yml run 39186659596 on 5c295fd9, every report group,\nand installed through scripts.benchmark_report_artifact with its\nexpected-commit check. The data report it carries matches the converter's.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T20:09:48Z",
+          "tree_id": "21fe9f3980ea03521afd1529f81dcc9817d156aa",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c43fd6868364d519ebf5552b22210325836d5b23"
+        },
+        "date": 1792440636742,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 795718.9049764158,
+            "range": "± 62118",
+            "unit": "lookups/sec",
+            "extra": "min of 271 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 985747.6659450518,
+            "range": "± 33597",
+            "unit": "lookups/sec",
+            "extra": "min of 358 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 169827.17299977972,
+            "range": "± 4181",
+            "unit": "lookups/sec",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4428478.304013396,
+            "range": "± 132162",
+            "unit": "lookups/sec",
+            "extra": "min of 972 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 32585177.65317383,
+            "range": "± 3251797",
+            "unit": "lookups/sec",
+            "extra": "min of 5766 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 239427.27463575496,
+            "range": "± 5535",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4189590.7105006306,
+            "range": "± 137990",
+            "unit": "lookups/sec",
+            "extra": "min of 902 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23525426.281579904,
+            "range": "± 2127798",
+            "unit": "lookups/sec",
+            "extra": "min of 4628 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 228129.1656386365,
+            "range": "± 4650",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2324 GHz"
           }
         ]
       }
