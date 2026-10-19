@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
+import shapely
 
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
@@ -23,7 +24,7 @@ from scripts.configs import (
     ShortcutMapping,
 )
 from scripts.grid_cells import grouped, owned_pairs, planar_polygons
-from scripts.shortcut_ordering import ShortcutOrderer
+from scripts.shortcut_ordering import ShortcutOrderer, spherical_area
 from scripts.timezone_data import TimezoneData
 from scripts.utils import time_execution
 from timezonefinder.shortcut_index import (
@@ -48,17 +49,41 @@ except NameError:  # pragma: no cover - used only during profiling
 
 
 @profile
-def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[int]:
-    """Legacy zone precedence, retained where geometry restricts reordering.
+def zone_areas(data: TimezoneData) -> np.ndarray:
+    """Spherical area of every zone, in steradians, indexed by zone id.
+
+    The overlap precedence key. Summed over the zone's polygons with their holes cut
+    out, from the stored rings as they are: :func:`spherical_area` integrates the ring
+    coordinates, so a ring that is not a valid planar polygon still gets the area its
+    vertices enclose, never the bounding box the candidate rule falls back to.
+    """
+    areas = np.zeros(data.nr_of_zones, dtype=np.float64)
+    for boundary_id, zone_id in enumerate(data.poly_zone_ids):
+        outer = data.boundaries.coords_of(boundary_id).T.astype(np.float64)
+        holes = [
+            hole.T.astype(np.float64) for hole in data.holes.holes_of_poly(boundary_id)
+        ]
+        areas[int(zone_id)] += spherical_area(shapely.Polygon(outer, holes))
+    return areas
+
+
+def optimise_shortcut_ordering(
+    data: TimezoneData, poly_ids: list[int], zone_area: np.ndarray
+) -> list[int]:
+    """Zone precedence, retained where geometry restricts reordering.
 
     The work optimizer runs after candidate compilation, against the packed
-    geometry the runtime will use. This order preserves the old zone precedence
-    wherever that optimizer cannot establish safe coverage and disjointness.
+    geometry the runtime will use. This order is kept wherever that optimizer
+    cannot establish safe coverage and disjointness, so where two zones overlap it
+    *is* the answer: the zone with the smaller spherical area comes first. Of two
+    overlapping zones that is the one the shared area is the larger share of - the
+    enclave - and because it compares one scalar per zone, every cell ranks a pair
+    the same way, whatever the index's cells are.
 
     ``poly_ids`` arrive in set iteration order, so every key is a total order:
-    equal zone vertex totals fall back to the timezone identifier, which does
-    not depend on how the data is laid out or indexed, and equal polygon vertex
-    counts fall back to the polygon id, which never changes a zone answer.
+    equal zone areas fall back to the timezone identifier, which does not depend
+    on how the data is laid out or indexed. Within a zone, polygons go fewest
+    vertices first, then by polygon id, which never changes a zone answer.
     """
     if len(poly_ids) <= 1:
         return poly_ids
@@ -67,16 +92,13 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     zone_ids = data.poly_zone_ids
 
     zone_buckets = defaultdict(list)
-    zone_sizes: defaultdict[int, int] = defaultdict(int)
-
     for poly_id in poly_ids:
-        zone_id = int(zone_ids[poly_id])
-        zone_buckets[zone_id].append(poly_id)
-        zone_sizes[zone_id] += int(nr_vertices[poly_id])
+        zone_buckets[int(zone_ids[poly_id])].append(poly_id)
 
     tz_names = data.all_tz_names
     zone_ids_sorted = sorted(
-        zone_buckets, key=lambda zone_id: (zone_sizes[zone_id], tz_names[zone_id])
+        zone_buckets,
+        key=lambda zone_id: (float(zone_area[zone_id]), tz_names[zone_id]),
     )
     poly_ids_sorted: list[int] = []
 
@@ -125,12 +147,13 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
     several zones can own is the only thing that refines, and nothing else in the tree
     depends on the data.
 
-    The candidate lists carry the legacy zone ordering here;
+    The candidate lists carry the zone precedence order here;
     :func:`compile_shortcuts` then re-orders them against the packed geometry.
     """
     print("\n\ncomputing the timezone polygon index ('shortcuts')...")
     polygons = planar_polygons(data)
     poly_zone_ids = data.poly_zone_ids
+    zone_area = zone_areas(data)
 
     mapping: ShortcutMapping = {}
     refine: list[int] = []
@@ -160,7 +183,9 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
         if single >= 0:
             mapping[cell_id] = single
             continue
-        ordered = optimise_shortcut_ordering(data, sorted(int(p) for p in polys))
+        ordered = optimise_shortcut_ordering(
+            data, sorted(int(p) for p in polys), zone_area
+        )
         check_shortcut_sorting(ordered, poly_zone_ids)
         mapping[cell_id] = np.asarray(ordered, dtype=np.int64)
         ambiguous += 1

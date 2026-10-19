@@ -16,7 +16,9 @@ to one answer. Two seams therefore need pinning, and they fail in opposite direc
 """
 
 import pytest
+import shapely
 
+from scripts.shortcut_ordering import spherical_area
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -45,13 +47,13 @@ FIXTURES = [
 # than to relax the assertion. Keeping them explicit is what makes such a move visible.
 DOCUMENTED_OVERLAPS = [
     ((90.72353647972255, 41.594051370907486), ["Asia/Urumqi", "Asia/Shanghai"]),
-    ((28.154147689103695, 9.938006916873361), ["Africa/Khartoum", "Africa/Juba"]),
-    ((35.15351018550692, 31.81505481089291), ["Asia/Jerusalem", "Asia/Hebron"]),
+    ((28.154147689103695, 9.938006916873361), ["Africa/Juba", "Africa/Khartoum"]),
+    ((35.15351018550692, 31.81505481089291), ["Asia/Hebron", "Asia/Jerusalem"]),
     ((40.352666891144224, 43.20807558055672), ["Asia/Tbilisi", "Europe/Moscow"]),
     ((-131.52704835958153, 54.63833689596523), ["America/Sitka", "America/Vancouver"]),
     (
         (-73.2873055661675, -49.685353605083144),
-        ["America/Punta_Arenas", "America/Argentina/Rio_Gallegos"],
+        ["America/Argentina/Rio_Gallegos", "America/Punta_Arenas"],
     ),
 ]
 
@@ -119,6 +121,37 @@ def test_the_documented_overlaps_are_reported(
     """
     lng, lat = coords
     assert tf.timezones_at(lng=lng, lat=lat) == expected
+
+
+def zone_area(tf: TimezoneFinder, name: str) -> float:
+    """A zone's spherical area, from the packaged rings, holes cut out."""
+    zone_id = tf.timezone_names.index(name)
+    return sum(
+        spherical_area(
+            shapely.Polygon(
+                tf.coords_of(boundary_id).T.astype(float),
+                [h.T.astype(float) for h in tf._holes_of_poly(boundary_id)],
+            )
+        )
+        for boundary_id in tf._iter_boundary_ids_of_zone(zone_id)
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("coords, expected", DOCUMENTED_OVERLAPS)
+def test_an_overlap_is_answered_by_the_smaller_zone(
+    tf: TimezoneFinder, coords: tuple[float, float], expected: list[str]
+):
+    """The precedence rule, checked against the geometry rather than the index.
+
+    Where two zones overlap, the converter orders the smaller spherical zone area first,
+    so the enclave wins in every cell. The expected winner is derived here from the
+    packaged rings alone, so an index that ranked the pair per cell - by vertex count,
+    as data compiled before the rule did - fails, whatever its cells are.
+    """
+    lng, lat = coords
+    smaller = min(expected, key=lambda name: (zone_area(tf, name), name))
+    assert tf.timezone_at(lng=lng, lat=lat) == smaller
 
 
 @pytest.mark.unit

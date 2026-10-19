@@ -110,13 +110,12 @@ channels** (all of them, and not only the first, are what the warning above is a
 2. **Polygon precedence.** A point inside overlapping polygons is resolved by which candidate the
    lookup tests first. That is a convention rather than a geometric fact. A point exactly on a border two polygons share is not exposed to it: the point-in-polygon test gives such a point to a single polygon, whatever order the candidates are tested in.
    A cell with an overlap is one the reordering gate below
-   refuses, so the converter keeps its inherited zone precedence - but that precedence orders zones
-   by their total vertex count in the cell, so a dataset that adds, drops or reshapes a polygon can
-   reorder them and decide such a point differently. Zones with equal totals are ordered by their
-   timezone identifier, so compiling the same dataset twice always yields the same order. Data
-   compiled before that rule left such ties to chance, so the first release built with it can
-   change answers even where no boundary moved: such a point here, and - because the tie can
-   decide which zone a cell tests last - every ``TimezoneFinderL`` answer in a few cells.
+   refuses, so the converter keeps its zone precedence there: **the zone with the smaller spherical
+   area comes first**, so of two overlapping zones the enclave wins, in every cell. The rule is a
+   property of the zones, not of the index or of vertex counts, so it moves an overlap answer only
+   when a dataset changes which zone is the smaller one. Zones with exactly equal areas are ordered by
+   their timezone identifier, so compiling the same dataset twice always yields the same order.
+   ``timezones_at()`` returns every zone at such a point, for callers who need both.
 3. **Shortcut composition and ordering.** The shortcut index is regenerated for every dataset.
    Which cells exist, which candidates a cell holds and in which order they are tested are all
    outputs of that run - and the rules that run follows are code, so a code-side optimization
@@ -236,12 +235,12 @@ therefore ``TimezoneFinderL``'s answer, cell by cell. Both have happened in a mi
 
 **Replacing the cells is the one channel the guarantee above does not cover, and it is worth being
 precise about why.** That guarantee is about what the *optimizer* may reorder within a given set of
-cells. The order it starts from - the legacy one it keeps wherever the gate refuses - ranks a cell's
-zones by how many vertices each has *inside that cell*, so it is a function of the cell. Make the
-cells smaller and a zone that dominated the larger cell may not dominate the smaller one, and the
-order flips without the optimizer touching it. Where some candidate contains the point and only one zone
-does, that changes nothing, because the answer is then the geometry's. It can change the answer in
-exactly the two places where it is the order that decides:
+cells. The order it starts from - the zone precedence it keeps wherever the gate refuses - ranks
+zones by spherical area, which is a function of the zone, but *which* zones a cell holds is a
+function of the cell. Make the cells smaller and a cell may lose the zone that used to be last, and
+its fallback changes without the optimizer touching it. Where some candidate contains the point and
+only one zone does, that changes nothing, because the answer is then the geometry's. Of the two
+places where it is the order that decides, only the first is exposed to the cells:
 
 * **A point inside no candidate at all** - in the packaged data, slivers between neighbouring
   boundaries, almost all of them on the 7.5 degree meridians where the ocean zones meet. There
@@ -249,7 +248,9 @@ exactly the two places where it is the order that decides:
   different answer. This was never guaranteed, and is the subject of the note on the method.
 * **A point inside two zones' polygons** - the dataset's genuine overlaps. There the first
   containing candidate wins, so the zone order decides which, and both answers are equally
-  truthful about the geometry.
+  truthful about the geometry. Both zones are candidates of every cell holding the point, and
+  precedence ranks them by area rather than by anything in the cell, so a change of cells does not
+  reach this case.
 
 How much this amounts to in practice was measured when the cells changed, over every stored
 boundary vertex - the densest probe of these two cases there is, since a vertex is where slivers

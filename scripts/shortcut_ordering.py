@@ -42,12 +42,12 @@ integrals over clipped geometry. The approximations are these, explicitly:
 5. Search is a heuristic, with no candidate-count cutoff. Enumerate each entire
    final zone L (untested), greedily choose remaining polygons by
        mu(H_i intersect R(S)) / d(S,i),
-   then improve by adjacent exchanges. Also refine the legacy-derived order for
+   then improve by adjacent exchanges. Also refine the precedence-derived order for
    each L. Exchanging adjacent a,b changes cost by
        d(S,b)+d(S union {b},a)-d(S,a)-d(S union {a},b).
    The later suffix is unchanged because its surviving region depends only on
    the tested SET. A relative 1e-12 improvement threshold avoids numerical tie
-   churn. The legacy order is always an incumbent: modeled expected work never
+   churn. The precedence order is always an incumbent: modeled expected work never
    increases. Greedy construction examines O(n^2) choices per final zone; local
    search stops at an adjacent local optimum, with no claim of a polynomial
    worst-case iteration bound. There is no exponential subset enumeration.
@@ -61,7 +61,7 @@ integrals over clipped geometry. The approximations are these, explicitly:
    allowing final-zone changes or interleaving. It encloses the cell exactly
    rather than conservatively, and the clip is what keeps it admissible at the
    edges of the domain: see `cell_envelope`.
-   Otherwise preserve legacy zone priority and final zone, optimizing only
+   Otherwise preserve zone precedence (smaller spherical zone area first) and final zone, optimizing only
    within tested zone blocks. Block survivors depend on the zone's hit union,
    so this preserves zone answers even where the proxy geometry is inaccurate.
    Invalid source geometry is repaired ONLY for the objective by GEOS make_valid;
@@ -373,7 +373,7 @@ class ShortcutOrderer:
 
         Free reordering is sound exactly where the candidates cover the cell with
         no cross-zone area overlap: every point then has one owner whatever order
-        it is found in. Where that cannot be shown the legacy zone precedence is
+        it is found in. Where that cannot be shown the zone precedence is
         preserved and only within-zone blocks are optimized.
         """
         envelope = cell_envelope(cell)

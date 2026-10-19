@@ -663,7 +663,7 @@ the formulas, search algorithm, cost coefficients and geometric approximations.
 Final zones are enumerated; greedy candidates and adjacent exchanges improve on
 the legacy incumbent. This is a heuristic for general point-dependent costs,
 with an exact ratio-order special case for constant costs and disjoint polygons.
-There is no candidate-count cutoff. Geometry safety gates preserve legacy zone
+There is no candidate-count cutoff. Geometry safety gates preserve zone
 precedence where necessary while allowing within-zone polygon optimization.
 This changes no candidate membership or binary layout. It does change the
 fallback heuristic used by ``TimezoneFinderL``.
@@ -672,9 +672,13 @@ A cell is now its own rectangle, so the gate's envelope is exact rather than a
 circumscribed spherical cap, and no cell has to be refused for sitting at a pole or at
 the antimeridian the way a cap-derived envelope did.
 
-Resolving overlapping-zone precedence and replacing covered ambiguous cells by
-direct answers are separate conversion decisions. This ordering pass preserves
-legacy overlap precedence; it does not infer a new precedence rule from cost.
+Overlapping-zone precedence is a conversion rule of its own: where two zones'
+polygons overlap, the zone with the smaller spherical area comes first, so the
+answer in an overlap is the enclave in every cell. It is computed once per zone
+from the geometry, with the timezone identifier breaking an exact tie, and is
+the order the ordering pass starts from and keeps wherever the gate refuses;
+the pass does not infer precedence from cost. Replacing covered ambiguous cells
+by direct answers is a separate conversion decision.
 A coverage pass can run first, leaving only its remaining ambiguous cells to
 order.
 
