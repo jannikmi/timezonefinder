@@ -10,12 +10,14 @@ Python 3.13.16, data 2026d, fixture set v4, master at 6b99331)
 flat structures lose on selectivity, and the equal-area band costs its own lookup.** All
 candidates answer through the real finder against a control of the shipped cells, on
 clang and numba; ranges span both, and a time is a candidate's change against the
-control.
+control. The control was the 0.9375-degree root the package then shipped;
+``grid_tree_config_sweep.py`` has since chosen a 0.75-degree root, which a re-run uses as
+its control and times as ``SHIPPED_TREE``.
 
 * **Grid tree** (0.9375-degree root refining where several zones meet): 0.048 / 0.115
   polygons tested per random / on-land query and ``TimezoneFinderL`` agreeing with the
   full lookup on 97.6 / 93.7 % of points, at 442-507 KB. One level of 4x4 blocks (507
-  KB, the shipped shape) times level with the control, which checks the sweep. Two
+  KB, the shape then shipped) times level with the control, which checks the sweep. Two
   levels of 2x2 reach the same cells 65 KB cheaper but descend once more: level per
   random scalar call, 3-4 % slower on land and 10-18 % slower per batch. Head to head,
   one level of 4x4 is 6-11 % faster per batch and -1 to +7 % per scalar call, mostly
@@ -70,8 +72,8 @@ so a candidate index answers nothing else a finder can be asked.
   baseline is a **control**: the shipped grid tree's candidate sets re-ordered by that
   policy and written and read back through the real shortcut file functions, because the
   shipped index also carries the converter's work optimizer, which the candidates do
-  not. The control and ``grid_tree_0_9375deg_4x4_1levels`` are the same cells, so their
-  counts must agree exactly; that is the sweep's own consistency check.
+  not. The control and the rebuild of the shipped shape, ``SHIPPED_TREE``, are the same
+  cells, so their counts must agree exactly; that is the sweep's own consistency check.
 * **Exact cells.** A cell is computed from the truncated integer coordinates the kernel
   reads and owns its east and north edges, the kernel's own convention; -180 reads as
   +180 and -90 as the point one unit north, as the shipped lookup reads them. A polygon is a
@@ -127,7 +129,12 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import COORD2INT_FACTOR, DEFAULT_DATA_DIR
+from timezonefinder.configs import (
+    COORD2INT_FACTOR,
+    DEFAULT_DATA_DIR,
+    SHORTCUT_BLOCK_SIDE,
+    SHORTCUT_ROOT_COLUMNS,
+)
 from timezonefinder.shortcut_index import (
     _HEADER_SIZE,
     ABSENT,
@@ -155,9 +162,18 @@ STRATA = {
 RANKING_STRATA = ("random", "on_land")
 # Pairs timed against each other rather than each against the control, for the
 # claims a recommendation makes between two candidates: (challenger, baseline).
+#: The shipped tree as (root columns, block side, levels below the root).
+SHIPPED_TREE = (SHORTCUT_ROOT_COLUMNS, SHORTCUT_BLOCK_SIDE, 1)
+
+
+def grid_tree_name(root_columns: int, k: int, levels: int) -> str:
+    root = f"{360 / root_columns:g}".replace(".", "_")
+    return f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
+
+
 HEAD_TO_HEAD = (
-    ("grid_tree_0_9375deg_4x4_1levels", "equal_area_0_375deg_aligned"),
-    ("grid_tree_0_9375deg_4x4_1levels", "grid_tree_0_9375deg_2x2_2levels"),
+    (grid_tree_name(*SHIPPED_TREE), "equal_area_0_375deg_aligned"),
+    (grid_tree_name(*SHIPPED_TREE), "grid_tree_0_9375deg_4x4_1levels"),
 )
 MALACCA_WITNESS = (100.3055, 3.4804)
 
@@ -1134,11 +1150,17 @@ EQUAL_AREA = (
     ("0.375", True),
     ("0.375", False),
 )
-GRID_TREES = (
-    # root columns (360 / root degrees), block side k, levels below the root. Only the
-    # two shapes the budget admits; grid_tree_config_sweep.py sweeps the configurations.
-    (384, 2, 2),
-    (384, 4, 1),
+GRID_TREES = tuple(
+    dict.fromkeys(
+        (
+            # root columns (360 / root degrees), block side k, levels below the root: the
+            # two 0.9375-degree shapes the budget admits and the shipped one;
+            # grid_tree_config_sweep.py sweeps the configurations
+            (384, 2, 2),
+            (384, 4, 1),
+            SHIPPED_TREE,
+        )
+    )
 )
 
 
@@ -1221,8 +1243,7 @@ def build_sweep(polygons, data, only: list[str] | None, outside: list[dict]) -> 
         if within_budget(control, outside):
             indexes.append(control)
     for root_columns, k, levels in GRID_TREES:
-        root = f"{360 / root_columns:g}".replace(".", "_")
-        name = f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
+        name = grid_tree_name(root_columns, k, levels)
         if not wanted(name):
             continue
         started = time.perf_counter()

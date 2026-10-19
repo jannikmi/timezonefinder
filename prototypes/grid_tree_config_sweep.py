@@ -5,10 +5,11 @@
 FINDINGS
 ========
 
-Decided and confirmed on two x86-64 Intel Xeon cloud VMs, Linux, clang, data 2026d.
+Decided and confirmed on two x86-64 Intel Xeon cloud VMs, Linux, clang, data 2026d, with
+the 0.9375-degree root the package then shipped as the control's cells.
 
 **Outcome (B): a 0.75-degree root with one level of 4x4 blocks (480 root columns)
-beats the shipped 0.9375-degree root within the cap, and the shipped reader reads it.**
+beats the 0.9375-degree root within the cap, and now ships.**
 
 * **Why it wins.** Under full refinement the finest cell width alone sets the polygon
   work; the root and the depth set only lookups and bytes. Scalar time follows the
@@ -17,11 +18,11 @@ beats the shipped 0.9375-degree root within the cap, and the shipped reader read
   single level, and a 0.75-degree root with 4x4 blocks is that tree: every one-level
   tree with finer cells is over the cap.
 * **decide** found it faster than the control in every cell - scalar and batch, random
-  and on land - and not slower on numba. On the ladder it displaced the shipped shape,
+  and on land - and not slower on numba. On the ladder it displaced the 0.9375-degree shape,
   and the runner-up, a 1.25-degree root with two levels, was faster than the control but
   lost to it head to head.
 * **confirm**, on a second machine with fresh points and seeds, found it faster than the
-  control and than the shipped shape in every cell, and it gates clean on clang, numba
+  control and than the 0.9375-degree shape in every cell, and it gates clean on clang, numba
   and pure Python.
 * **Deeper and selective trees** can test fewer polygons within the cap, but every one
   screened was slower than the control per random batch.
@@ -48,11 +49,11 @@ Fixed before any deciding run, so the run cannot choose its own criterion.
 * **Adopted** only if ``confirm`` reproduces it on a second machine, with fresh seeds
   and freshly drawn points: the winner not ``slower`` than the control in any cell, and
   every cell the winner won in ``decide`` not reversed.
-* **Outcomes.** (A) the shipped 0.9375-degree root with one level of 4x4 blocks wins: it
-  is the best configuration in the swept space by this rule. (B) the winner has one
-  level, refines every multi-zone cell and fits ``int16``: the shipped reader reads it,
-  so adopting it changes two constants in ``timezonefinder/configs.py`` and regenerates
-  the data. (C) anything else needs a reader and format change of its own.
+* **Outcomes.** (A) the shipped shape wins: it is the best configuration in the swept
+  space by this rule. (B) the winner has one level, refines every multi-zone cell and
+  fits ``int16``: the shipped reader reads it, so adopting it changes two constants in
+  ``timezonefinder/configs.py`` and regenerates the data. (C) anything else needs a
+  reader and format change of its own.
 
 Only numbers from ``decide`` and ``confirm`` are quoted: ``screen`` picked its survivors
 by them, so its margins are biased towards the survivors.
@@ -172,7 +173,12 @@ from scripts.assert_acceleration_path import interpreted_path_name
 from scripts.grid_cells import grouped, owned_pairs
 from tests.auxiliaries import get_rnd_query_pt_area_weighted, load_benchmark_points
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import DEFAULT_DATA_DIR, OCEAN_TIMEZONE_PREFIX
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    OCEAN_TIMEZONE_PREFIX,
+    SHORTCUT_BLOCK_SIDE,
+    SHORTCUT_ROOT_COLUMNS,
+)
 from timezonefinder.shortcut_index import (
     _HEADER_SIZE,
     ABSENT,
@@ -297,7 +303,9 @@ class TreeSpec:
         return cls(value["root_columns"], tuple(value["sides"]), value["budget"])
 
 
-SHIPPED = TreeSpec(384, (4,))
+#: The shape the package ships, whose cells the control is: the A/A pair and the ladder's
+#: incumbent follow the constants rather than any one release.
+SHIPPED = TreeSpec(SHORTCUT_ROOT_COLUMNS, (SHORTCUT_BLOCK_SIDE,))
 
 
 def enumerate_specs(finest_columns: int) -> list[TreeSpec]:

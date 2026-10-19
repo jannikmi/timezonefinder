@@ -523,11 +523,11 @@ The shortcut index is the backbone of the ``timezonefinder`` package and its per
 How it works:
 ~~~~~~~~~~~~~
 
-* The surface of the Earth is divided into a dense grid of square cells aligned with longitude and latitude: 384 columns by 192 rows, so 0.9375 degrees a side
+* The surface of the Earth is divided into a dense grid of square cells aligned with longitude and latitude: 480 columns by 240 rows, so 0.75 degrees a side
 * Each cell gets one of three answers:
 
    - **Unique zones**: when every polygon reaching the cell belongs to the same timezone, the zone ID is stored directly
-   - **Several zones**: the cell is *refined* into a 4 by 4 block of children, 0.234375 degrees a side, and each child is asked the same question
+   - **Several zones**: the cell is *refined* into a 4 by 4 block of children, 0.1875 degrees a side, and each child is asked the same question
    - **Several zones in a child too**: the child stores an array of polygon IDs to test
 
 * When looking up a timezone for a specific point, the library:
@@ -542,7 +542,7 @@ This provides several performance benefits:
 
 * **Reduced search space**: instead of checking all polygons (thousands), only a small subset needs to be evaluated — the large majority of random queries need no polygon test at all
 * **No search for the cell**: the cell is two integer divisions per level, so finding it touches no memory and needs no key array
-* **Memory efficiency**: two bytes per cell, and the finer cells exist only where zones meet, so the open ocean costs one entry per 0.9375 degrees rather than per 0.234375
+* **Memory efficiency**: two bytes per cell, and the finer cells exist only where zones meet, so the open ocean costs one entry per 0.75 degrees rather than per 0.1875
 * **Vectorised batches**: :meth:`~timezonefinder.TimezoneFinder.timezone_ids_at` resolves a whole batch's cells in a handful of NumPy operations, which is most of why a batch lookup is worth using
 
 Why these cells
@@ -555,7 +555,7 @@ Two properties of the cells carry the index's performance, and both are about th
 
 Alignment matters too: the ocean timezones meet on the 7.5 degree meridians, and a grid whose cell edges fall on them does not mix two ocean zones into one cell.
 
-The shape — how coarse the root grid is, how many levels it refines, and how large a block is — is a measured choice over the whole family of aligned indexes, each compiled from the packaged boundaries and answered through the real query path. Two refusals are worth knowing, because they are the obvious shapes to reach for: a flat grid of the finest cells, which spends two bytes on every cell of the open ocean, and a deeper tree, which is slightly faster again and costs more disk than the index it would replace. ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`` records the sweep and every refusal.
+The shape — how coarse the root grid is, how many levels it refines, and how large a block is — is a measured choice within the 800 KB index cap, each candidate compiled from the packaged boundaries and answered through the real query path. Under full refinement the finest cell width sets how many polygons a lookup tests, and every level costs a batch lookup one more pass, so the shipped tree reaches the finest cells the cap allows in a single level. Two refusals are worth knowing, because they are the obvious shapes to reach for: a flat grid of the finest cells, which spends two bytes on every cell of the open ocean, and a deeper or selectively refined tree, which tests fewer polygons and is slower per batch. ``contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`` records the sweep and every refusal.
 
 **The tightness rests on the kernel's edge convention**, which ``tests/test_point_in_polygon_boundary_convention.py`` pins on every kernel. A kernel change moving boundary points to the other polygon would make these cells misanswer one-unit strips along every aligned border while every sampled test still passed, so that test is what this layout is built on.
 
@@ -608,7 +608,7 @@ for another grid is refused rather than allowed to answer with another cell's ti
      - where the candidate loop may stop
 
 **The cell is the index, and it is arithmetic.** Each level is a whole number of
-coordinate units wide, because 0.9375 and 0.234375 degrees both divide the integer
+coordinate units wide, because 0.75 and 0.1875 degrees both divide the integer
 longitude span exactly. A cell owns ``(c * w, (c + 1) * w]`` of its axis - its north and
 east edges and not its south or west - so with ``x`` the point's scaled integer longitude
 and ``w`` the level's width:

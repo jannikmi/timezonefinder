@@ -13,7 +13,7 @@ belongs here is why it is shaped that way:
   the index of a block of :data:`BLOCK_SIDE` x :data:`BLOCK_SIDE` children instead, and
   the child is where its candidate list lives. A flat grid of the finest cells would
   spend two bytes on every cell of the open ocean; the tree spends them where zones
-  meet, which is how it reaches 0.234 degree cells in about half a megabyte.
+  meet, which is how it reaches 0.1875 degree cells in well under a megabyte.
   ``docs/data_report.rst`` carries what the shipped index weighs.
 * **The cell is arithmetic, not a search.** Each level is a whole number of coordinate
   units wide, so a level's cell is one floor division per axis of the truncated integer
@@ -113,7 +113,7 @@ X_SPAN: Final[int] = 2 * MAX_LNG_VAL_INT
 Y_SPAN: Final[int] = 2 * MAX_LAT_VAL_INT
 
 #: Width of one cell per level. Whole numbers of coordinate units, which is the property
-#: that makes a cell one floor division: 0.9375 and 0.234375 degrees both divide the
+#: that makes a cell one floor division: 0.75 and 0.1875 degrees both divide the
 #: integer span exactly.
 ROOT_WIDTH: Final[int] = X_SPAN // ROOT_COLUMNS
 CHILD_WIDTH: Final[int] = X_SPAN // CHILD_COLUMNS

@@ -95,7 +95,7 @@ difference is in what they do with that dataset's geometry.
      - Limited only by the source dataset
      - Reduced near borders, in proportion to the simplification (PyPI build; the ``+full`` build does not simplify)
    * - Spatial Index
-     - an aligned grid tree, 0.9375-degree cells refining to 0.234375; :doc:`data_report` lists the index size
+     - an aligned grid tree, 0.75-degree cells refining to 0.1875; :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
    * - Time to First Answer
      - Imports NumPy, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)

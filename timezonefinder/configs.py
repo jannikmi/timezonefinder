@@ -65,24 +65,26 @@ __all__ = [
 # SHORTCUT SETTINGS
 # The shape of the grid tree the shortcut index is built on: how many root cells span
 # the full longitude range, and how many child cells a root cell several zones can own
-# refines into per axis. 384 columns is 0.9375 degrees, and one level of 4x4 blocks
-# reaches 0.234375 degrees where zones meet. `timezonefinder/shortcut_index.py` derives
+# refines into per axis. 480 columns is 0.75 degrees, and one level of 4x4 blocks
+# reaches 0.1875 degrees where zones meet. `timezonefinder/shortcut_index.py` derives
 # the rows, the cell widths and the lookup's arithmetic from these two numbers.
 #
-# Measured rather than chosen, over the whole family: flat grids aligned and not, grid
-# trees of several depths and block sizes, linear quadtrees and a tile pyramid, each
-# answered through the real query path. **Refused, so do not re-propose without new
-# evidence:** a flat grid of the finest cells, which spends two bytes on every cell of
-# the open ocean; a deeper tree, which is slightly faster and costs more disk than the
-# index it replaces, against a "replace, never add" footprint bound; and a cell reached
-# by search rather than by arithmetic. The sizes the shipped index reaches are in
-# `docs/data_report.rst`; the runs, the exact figures and every refused variant are in
+# Measured rather than chosen, within the 800 KB index cap: every root aligned with the
+# 7.5-degree ocean meridians, one to three levels with a block side each, and selective
+# refinement, each answered through the real query path. Under full refinement the
+# finest cell width alone sets the polygon work, and every level costs the batch lookup
+# a pass, so the best tree reaches the finest cells the cap allows in one level - this
+# one. **Refused, so do not re-propose without new evidence:** a flat grid of the finest
+# cells, which spends two bytes on every cell of the open ocean; a deeper or selectively
+# refined tree, slower per batch within the cap; and a cell reached by search rather
+# than by arithmetic. The sizes the shipped index reaches are in `docs/data_report.rst`;
+# the verdicts and every refused variant are in
 # `contributing/improvements/decisions/longitude-latitude-aligned-index-decisions.md`;
-# `prototypes/latlng_index_bench.py` re-measures the family.
+# `prototypes/grid_tree_config_sweep.py` re-runs the search.
 #
 # Both numbers are stamped into the index file, because changing either changes what
 # every cell *means* without changing the layout a reader would notice.
-SHORTCUT_ROOT_COLUMNS: int = 384
+SHORTCUT_ROOT_COLUMNS: int = 480
 SHORTCUT_BLOCK_SIDE: int = 4
 
 # Pattern for identifying ocean timezones (fixed-offset zones for international waters)
