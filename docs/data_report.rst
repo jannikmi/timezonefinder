@@ -230,27 +230,27 @@ Shortcut Index Overview
    * - Shortcut Index Metric
      - Value
    * - Grid
-     - 384 root columns, 4x4 blocks
+     - 480 root columns, 4x4 blocks
    * - Total shortcut entries
-     - 231,798
+     - 319,965
    * - Zone entries (direct lookup)
-     - 180,328
+     - 254,046
    * - Polygon entries (require testing)
-     - 51,470
+     - 65,919
    * - Empty entries
      - 0
    * - Total polygon references
-     - 105,118
+     - 133,996
    * -
      -
    * - Root cells
-     - 73,728
+     - 115,200
    * - Root cells refined into blocks
-     - 10,538
+     - 13,651
    * - Cells in the tree
-     - 231,798
+     - 319,965
    * - Cells stored
-     - 231,798
+     - 319,965
    * - Cells missing
      - 0
    * - Coverage ratio
@@ -258,21 +258,21 @@ Shortcut Index Overview
    * -
      -
    * - Unique entry fraction
-     - 0.778
+     - 0.794
    * - Unique surface fraction
-     - 0.778
+     - 0.794
    * - Zone distribution efficiency
-     - 0.778
+     - 0.794
    * - Avg polygons per polygon entry
-     - 2.04
+     - 2.03
    * -
      -
    * - Zone storage (KB)
-     - 1584.9
+     - 2232.8
    * - Polygon storage (KB)
-     - 607.4
+     - 776.7
    * - Total estimated storage (KB)
-     - 2192.3
+     - 3009.5
    * - Storage compression ratio
      - 0.92x
 
@@ -296,46 +296,41 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 180328
-     - 77.8%
-     - 77.8%
-     - 22.2%
+     - 254046
+     - 79.4%
+     - 79.4%
+     - 20.6%
    * - 2
-     - 49597
-     - 21.4%
-     - 99.19%
-     - 0.81%
+     - 64047
+     - 20.02%
+     - 99.41%
+     - 0.59%
    * - 3
-     - 1768
-     - 0.76%
-     - 99.95%
-     - 0.05%
-   * - 4
-     - 71
+     - 1774
+     - 0.55%
+     - 99.97%
      - 0.03%
+   * - 4
+     - 65
+     - 0.02%
      - 99.99%
      - 0.01%
    * - 5
-     - 13
+     - 16
      - 0.01%
      - 99.99%
      - 0.01%
    * - 6
-     - 6
-     - 0.0%
-     - 99.99%
-     - 0.01%
-   * - 7
-     - 3
-     - 0.0%
-     - 99.99%
-     - 0.01%
-   * - 8
-     - 1
+     - 2
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 9
+   * - 7
+     - 2
+     - 0.0%
+     - 100.0%
+     - 0.0%
+   * - 8
      - 1
      - 0.0%
      - 100.0%
@@ -345,12 +340,17 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 11
-     - 2
+   * - 12
+     - 1
      - 0.0%
      - 100.0%
      - 0.0%
    * - 14
+     - 3
+     - 0.0%
+     - 100.0%
+     - 0.0%
+   * - 15
      - 1
      - 0.0%
      - 100.0%
@@ -360,22 +360,22 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 18
+   * - 17
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 24
+   * - 22
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 36
+   * - 27
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 47
+   * - 35
      - 1
      - 0.0%
      - 100.0%
@@ -392,28 +392,23 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 180328
-     - 77.8%
-     - 77.8%
-     - 22.2%
+     - 254046
+     - 79.4%
+     - 79.4%
+     - 20.6%
    * - 2
-     - 49920
-     - 21.54%
-     - 99.33%
-     - 0.67%
+     - 64322
+     - 20.1%
+     - 99.5%
+     - 0.5%
    * - 3
-     - 1506
-     - 0.65%
-     - 99.98%
-     - 0.02%
+     - 1557
+     - 0.49%
+     - 99.99%
+     - 0.01%
    * - 4
      - 40
-     - 0.02%
-     - 100.0%
-     - 0.0%
-   * - 5
-     - 4
-     - 0.0%
+     - 0.01%
      - 100.0%
      - 0.0%
 
@@ -432,13 +427,13 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 30.50
-     - 98.13%
+     - 97.59%
    * - hole polygon data
      - 0.09
      - 0.29%
    * - shortcut index
-     - 0.49
-     - 1.57%
+     - 0.66
+     - 2.12%
    * - Total
-     - 31.08
+     - 31.25
      - 100.00%
