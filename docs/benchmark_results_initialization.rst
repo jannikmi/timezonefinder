@@ -4,9 +4,9 @@ TimezoneFinder Initialization Performance Benchmark
 ===================================================
 
 
-**~9.41ms** to construct a ``TimezoneFinder`` in the default file-based mode, **~253µs** for ``TimezoneFinderL``. This is paid once per process - build one instance and reuse it rather than constructing per lookup.
+**~14.5ms** to construct a ``TimezoneFinder`` in the default file-based mode, **~378µs** for ``TimezoneFinderL``. This is paid once per process - build one instance and reuse it rather than constructing per lookup.
 
-*Measured on Linux x86_64, INTEL(R) XEON(R) PLATINUM 8573C @ 3.1028 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 2.4454 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
 Continuous integration tracks none of the rows on this page. This published table leads with ``Mean`` and belongs to the full on-demand suite, while the trend chart records the ``min`` estimator for the smaller ``benchmark_core`` subset.
 
@@ -56,7 +56,7 @@ Benchmark Input Provenance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-**Fixture Version**: 4
+**Fixture Version**: 5
 
 **Timezone Data Version**: 2026d
 
@@ -95,25 +95,25 @@ Initialization
      - Max
      - Rounds
    * - TimezoneFinder, file-based
-     - 9.41ms
-     - 9.38ms
-     - 217µs
-     - 9.14ms
-     - 10.0ms
+     - 14.5ms
+     - 14.5ms
+     - 201µs
+     - 14.3ms
+     - 15.3ms
      - 30
    * - TimezoneFinder, in-memory
-     - 6.91ms
-     - 6.66ms
-     - 952µs
-     - 6.41ms
-     - 11.8ms
+     - 6.82ms
+     - 6.67ms
+     - 809µs
+     - 6.39ms
+     - 11.0ms
      - 30
    * - TimezoneFinderL
-     - 253µs
-     - 236µs
-     - 41.8µs
-     - 221µs
-     - 410µs
+     - 378µs
+     - 375µs
+     - 22.3µs
+     - 355µs
+     - 450µs
      - 30
 
 
@@ -123,6 +123,6 @@ Performance Summary
 ~~~~~~~~~~~~~~~~~~~
 
 
-* TimezoneFinder: **in-memory** is 36% faster (1.36x) than **file-based** (6.91ms vs 9.41ms)
+* TimezoneFinder: **in-memory** is 113% faster (2.13x) than **file-based** (6.82ms vs 14.5ms)
 
-* Overall: fastest is **Initialization - TimezoneFinderL** (253µs), slowest is **Initialization - TimezoneFinder, file-based** (9.41ms) - 3613% faster (37.1x)
+* Overall: fastest is **Initialization - TimezoneFinderL** (378µs), slowest is **Initialization - TimezoneFinder, file-based** (14.5ms) - 3733% faster (38.3x)
