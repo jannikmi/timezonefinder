@@ -230,27 +230,27 @@ Shortcut Index Overview
    * - Shortcut Index Metric
      - Value
    * - Grid
-     - 384 root columns, 4x4 blocks
+     - 480 root columns, 4x4 blocks
    * - Total shortcut entries
-     - 231,228
+     - 319,275
    * - Zone entries (direct lookup)
-     - 179,920
+     - 253,548
    * - Polygon entries (require testing)
-     - 51,308
+     - 65,727
    * - Empty entries
      - 0
    * - Total polygon references
-     - 104,798
+     - 133,620
    * -
      -
    * - Root cells
-     - 73,728
+     - 115,200
    * - Root cells refined into blocks
-     - 10,500
+     - 13,605
    * - Cells in the tree
-     - 231,228
+     - 319,275
    * - Cells stored
-     - 231,228
+     - 319,275
    * - Cells missing
      - 0
    * - Coverage ratio
@@ -258,21 +258,21 @@ Shortcut Index Overview
    * -
      -
    * - Unique entry fraction
-     - 0.778
+     - 0.794
    * - Unique surface fraction
-     - 0.778
+     - 0.794
    * - Zone distribution efficiency
-     - 0.778
+     - 0.794
    * - Avg polygons per polygon entry
-     - 2.04
+     - 2.03
    * -
      -
    * - Zone storage (KB)
-     - 1581.3
+     - 2228.4
    * - Polygon storage (KB)
-     - 605.5
+     - 774.5
    * - Total estimated storage (KB)
-     - 2186.9
+     - 3002.9
    * - Storage compression ratio
      - 0.92x
 
@@ -296,46 +296,41 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 179920
-     - 77.81%
-     - 77.81%
-     - 22.19%
+     - 253548
+     - 79.41%
+     - 79.41%
+     - 20.59%
    * - 2
-     - 49432
-     - 21.38%
-     - 99.19%
-     - 0.81%
+     - 63848
+     - 20.0%
+     - 99.41%
+     - 0.59%
    * - 3
-     - 1771
-     - 0.77%
-     - 99.95%
-     - 0.05%
-   * - 4
-     - 70
+     - 1780
+     - 0.56%
+     - 99.97%
      - 0.03%
-     - 99.98%
+   * - 4
+     - 66
      - 0.02%
+     - 99.99%
+     - 0.01%
    * - 5
-     - 14
+     - 16
      - 0.01%
      - 99.99%
      - 0.01%
    * - 6
-     - 6
-     - 0.0%
-     - 99.99%
-     - 0.01%
-   * - 7
-     - 3
-     - 0.0%
-     - 99.99%
-     - 0.01%
-   * - 8
-     - 1
+     - 2
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 9
+   * - 7
+     - 2
+     - 0.0%
+     - 100.0%
+     - 0.0%
+   * - 8
      - 1
      - 0.0%
      - 100.0%
@@ -345,12 +340,17 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 11
-     - 2
+   * - 12
+     - 1
      - 0.0%
      - 100.0%
      - 0.0%
    * - 14
+     - 3
+     - 0.0%
+     - 100.0%
+     - 0.0%
+   * - 15
      - 1
      - 0.0%
      - 100.0%
@@ -360,22 +360,22 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 18
+   * - 17
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 24
+   * - 22
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 36
+   * - 27
      - 1
      - 0.0%
      - 100.0%
      - 0.0%
-   * - 47
+   * - 35
      - 1
      - 0.0%
      - 100.0%
@@ -392,28 +392,23 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 179920
-     - 77.81%
-     - 77.81%
-     - 22.19%
+     - 253548
+     - 79.41%
+     - 79.41%
+     - 20.59%
    * - 2
-     - 49758
-     - 21.52%
-     - 99.33%
-     - 0.67%
+     - 64127
+     - 20.09%
+     - 99.5%
+     - 0.5%
    * - 3
-     - 1506
-     - 0.65%
-     - 99.98%
-     - 0.02%
+     - 1560
+     - 0.49%
+     - 99.99%
+     - 0.01%
    * - 4
      - 40
-     - 0.02%
-     - 100.0%
-     - 0.0%
-   * - 5
-     - 4
-     - 0.0%
+     - 0.01%
      - 100.0%
      - 0.0%
 
@@ -432,13 +427,13 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 30.61
-     - 98.14%
+     - 97.60%
    * - hole polygon data
      - 0.09
      - 0.29%
    * - shortcut index
-     - 0.49
-     - 1.57%
+     - 0.66
+     - 2.11%
    * - Total
-     - 31.19
+     - 31.36
      - 100.00%

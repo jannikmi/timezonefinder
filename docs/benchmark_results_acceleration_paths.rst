@@ -8,7 +8,7 @@ Point-in-Polygon Acceleration Paths
 
 **Numba JIT and the C extension are indistinguishable** on ``TimezoneFinder.timezone_at()`` over uniformly random points (unresolved).
 
-**The C extension is 38.9x faster than pure Python** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
+**The C extension is 35.8x faster than pure Python** on ``TimezoneFinder.timezone_at()`` over uniformly random points.
 
 *Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 2.4454 GHz, Python 3.13.16, across 2 environments on one machine.*
 
@@ -53,19 +53,19 @@ Numba JIT against the C extension
      - Result
      - Rounds Numba JIT won
    * - small polygons
-     - 1.81ms
-     - 2.80ms
-     - The C extension is 1.55x faster
+     - 1.85ms
+     - 2.77ms
+     - The C extension is 1.50x faster
      - 0 of 61
    * - medium polygons
-     - 1.92ms
-     - 2.98ms
-     - The C extension is 1.55x faster
+     - 1.99ms
+     - 3.00ms
+     - The C extension is 1.51x faster
      - 0 of 61
    * - large polygons
-     - 3.03ms
-     - 4.91ms
-     - The C extension is 1.62x faster
+     - 3.09ms
+     - 4.89ms
+     - The C extension is 1.58x faster
      - 0 of 61
 
 
@@ -86,19 +86,19 @@ pure Python against the C extension
      - Result
      - Rounds pure Python won
    * - small polygons
-     - 1.80ms
-     - 7.89ms
-     - The C extension is 4.38x faster
+     - 1.83ms
+     - 4.34ms
+     - The C extension is 2.38x faster
      - 0 of 15
    * - medium polygons
-     - 1.97ms
-     - 113ms
-     - The C extension is 57.1x faster
+     - 2.05ms
+     - 146ms
+     - The C extension is 71.1x faster
      - 0 of 15
    * - large polygons
-     - 3.12ms
-     - 481ms
-     - The C extension is 154x faster
+     - 3.15ms
+     - 453ms
+     - The C extension is 144x faster
      - 0 of 15
 
 
@@ -127,18 +127,18 @@ Numba JIT against the C extension
      - Result
      - Rounds Numba JIT won
    * - random points
-     - 3.18ms
-     - 3.22ms
+     - 3.08ms
+     - 3.13ms
      - unresolved
-     - 2 of 61
+     - 3 of 61
    * - unique-shortcut points
-     - 2.67ms
      - 2.66ms
-     - no difference
-     - 34 of 61
+     - 2.65ms
+     - unresolved
+     - 49 of 61
    * - ambiguous-shortcut points
-     - 14.1ms
-     - 15.8ms
+     - 14.2ms
+     - 15.9ms
      - The C extension is 1.12x faster
      - 0 of 61
 
@@ -160,19 +160,19 @@ pure Python against the C extension
      - Result
      - Rounds pure Python won
    * - random points
-     - 3.18ms
-     - 124ms
-     - The C extension is 38.9x faster
+     - 3.11ms
+     - 111ms
+     - The C extension is 35.8x faster
      - 0 of 15
    * - unique-shortcut points
-     - 2.64ms
-     - 2.66ms
+     - 2.63ms
+     - 2.61ms
      - unresolved
-     - 4 of 15
+     - 13 of 15
    * - ambiguous-shortcut points
      - 14.4ms
-     - 3.55s
-     - The C extension is 248x faster
+     - 3.70s
+     - The C extension is 257x faster
      - 0 of 15
 
 
@@ -200,21 +200,21 @@ Resident memory
      - With Numba
      - Cost of the extra
    * - added by ``import timezonefinder``
-     - 4.61 MiB
      - 4.66 MiB
-     - +52.0 KiB
+     - 4.66 MiB
+     - -4.00 KiB
    * - added by ``TimezoneFinder()``
-     - 21.7 MiB
-     - 21.6 MiB
-     - -48.0 KiB
+     - 19.9 MiB
+     - 19.9 MiB
+     - +48.0 KiB
    * - added by the first query
-     - 2.06 MiB
-     - 2.06 MiB
+     - 128 KiB
+     - 128 KiB
      - 0 B
    * - **the whole process, once the first answer is out**
-     - 41.4 MiB
-     - 41.4 MiB
-     - -20.0 KiB
+     - 37.7 MiB
+     - 37.7 MiB
+     - +32.0 KiB
 
 
 Every row but the last is what that step added; the last is the whole process, which is the figure a container memory limit is set against. The difference is the Numba and ``llvmlite`` import plus the code it compiles, and it is paid per process - a worker pool pays it once per worker, and it does not shrink for ``TimezoneFinderL`` or for the memory-mapped default mode, because it is not boundary data (:doc:`benchmark_results_memory` measures that part).
@@ -235,21 +235,21 @@ Time to the first answer
      - With Numba
      - Cost of the extra
    * - ``import timezonefinder``
-     - 31.0ms
      - 30.8ms
-     - -276µs
+     - 31.1ms
+     - +236µs
    * - ``TimezoneFinder()``
-     - 118ms
-     - 115ms
-     - -2.60ms
+     - 116ms
+     - 117ms
+     - +661µs
    * - the first query
-     - 60.0µs
-     - 55.6µs
-     - -4.40µs
+     - 55.5µs
+     - 54.2µs
+     - -1.27µs
    * - **the whole way to the first answer**
-     - 149ms
-     - 146ms
-     - -2.88ms
+     - 147ms
+     - 148ms
+     - +895µs
 
 
 Where there is a compilation at all it lands in the construction row rather than in the query one: ``timezonefinder/utils_numba.py`` declares eager signatures, so the kernels are compiled when that module is first imported, which constructing a finder triggers on an installation without the C extension. Numba caches that output on disk beside the installed package, so the figures here are the steady state - the median over repetitions discards the one process that compiled - and the *first* process in a fresh environment pays more. Where the installed package directory is read-only or thrown away between runs, every process pays it. Later queries are what the tables above measure; this is what a process pays before the first of them, and a short-lived process or a cold-started function pays it per invocation.
@@ -279,20 +279,20 @@ The kernel a lookup reaches
      - Spread
      - Within 3 %
    * - small
-     - 1.81ms
-     - 1.80ms
-     - 0.4 %
+     - 1.85ms
+     - 1.83ms
+     - 1.4 %
      - yes
    * - medium
-     - 1.92ms
-     - 1.97ms
-     - 2.6 %
-     - yes
-   * - large
-     - 3.03ms
-     - 3.12ms
+     - 1.99ms
+     - 2.05ms
      - 3.0 %
      - **no**
+   * - large
+     - 3.09ms
+     - 3.15ms
+     - 1.9 %
+     - yes
 
 
 
@@ -312,19 +312,19 @@ What a caller actually pays
      - Spread
      - Within 3 %
    * - random
-     - 3.18ms
-     - 3.18ms
-     - 0.1 %
+     - 3.08ms
+     - 3.11ms
+     - 0.8 %
      - yes
    * - unique shortcut
-     - 2.67ms
-     - 2.64ms
-     - 1.0 %
+     - 2.66ms
+     - 2.63ms
+     - 1.3 %
      - yes
    * - ambiguous shortcut
-     - 14.1ms
+     - 14.2ms
      - 14.4ms
-     - 1.6 %
+     - 1.7 %
      - yes
 
 

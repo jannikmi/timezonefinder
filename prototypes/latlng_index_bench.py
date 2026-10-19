@@ -10,12 +10,14 @@ Python 3.13.16, data 2026d, fixture set v4, master at 6b99331)
 flat structures lose on selectivity, and the equal-area band costs its own lookup.** All
 candidates answer through the real finder against a control of the shipped cells, on
 clang and numba; ranges span both, and a time is a candidate's change against the
-control.
+control. The control was the 0.9375-degree root the package then shipped;
+``grid_tree_config_sweep.py`` has since chosen a 0.75-degree root, which a re-run uses as
+its control and times as ``SHIPPED_TREE``.
 
 * **Grid tree** (0.9375-degree root refining where several zones meet): 0.048 / 0.115
   polygons tested per random / on-land query and ``TimezoneFinderL`` agreeing with the
   full lookup on 97.6 / 93.7 % of points, at 442-507 KB. One level of 4x4 blocks (507
-  KB, the shipped shape) times level with the control, which checks the sweep. Two
+  KB, the shape then shipped) times level with the control, which checks the sweep. Two
   levels of 2x2 reach the same cells 65 KB cheaper but descend once more: level per
   random scalar call, 3-4 % slower on land and 10-18 % slower per batch. Head to head,
   one level of 4x4 is 6-11 % faster per batch and -1 to +7 % per scalar call, mostly
@@ -43,7 +45,7 @@ control.
 
 Shapes outside the budget are not built - above it they are refused by the cap, below it
 they give up selectivity the cap would pay for. Which grid tree configuration is best
-within it is a sweep of its own, not this comparison.
+within it is ``grid_tree_config_sweep.py``'s question, not this comparison.
 
 **Correctness.** All 11 candidates gave the control's answer for 30,000 fixture points,
 for points on and one unit either side of their own cell edges, and on the 7.5-degree
@@ -70,8 +72,8 @@ so a candidate index answers nothing else a finder can be asked.
   baseline is a **control**: the shipped grid tree's candidate sets re-ordered by that
   policy and written and read back through the real shortcut file functions, because the
   shipped index also carries the converter's work optimizer, which the candidates do
-  not. The control and ``grid_tree_0_9375deg_4x4_1levels`` are the same cells, so their
-  counts must agree exactly; that is the sweep's own consistency check.
+  not. The control and the rebuild of the shipped shape, ``SHIPPED_TREE``, are the same
+  cells, so their counts must agree exactly; that is the sweep's own consistency check.
 * **Exact cells.** A cell is computed from the truncated integer coordinates the kernel
   reads and owns its east and north edges, the kernel's own convention; -180 reads as
   +180 and -90 as the point one unit north, as the shipped lookup reads them. A polygon is a
@@ -127,7 +129,12 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder, utils
-from timezonefinder.configs import COORD2INT_FACTOR, DEFAULT_DATA_DIR
+from timezonefinder.configs import (
+    COORD2INT_FACTOR,
+    DEFAULT_DATA_DIR,
+    SHORTCUT_BLOCK_SIDE,
+    SHORTCUT_ROOT_COLUMNS,
+)
 from timezonefinder.shortcut_index import (
     _HEADER_SIZE,
     ABSENT,
@@ -155,9 +162,18 @@ STRATA = {
 RANKING_STRATA = ("random", "on_land")
 # Pairs timed against each other rather than each against the control, for the
 # claims a recommendation makes between two candidates: (challenger, baseline).
+#: The shipped tree as (root columns, block side, levels below the root).
+SHIPPED_TREE = (SHORTCUT_ROOT_COLUMNS, SHORTCUT_BLOCK_SIDE, 1)
+
+
+def grid_tree_name(root_columns: int, k: int, levels: int) -> str:
+    root = f"{360 / root_columns:g}".replace(".", "_")
+    return f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
+
+
 HEAD_TO_HEAD = (
-    ("grid_tree_0_9375deg_4x4_1levels", "equal_area_0_375deg_aligned"),
-    ("grid_tree_0_9375deg_4x4_1levels", "grid_tree_0_9375deg_2x2_2levels"),
+    (grid_tree_name(*SHIPPED_TREE), "equal_area_0_375deg_aligned"),
+    (grid_tree_name(*SHIPPED_TREE), "grid_tree_0_9375deg_4x4_1levels"),
 )
 MALACCA_WITNESS = (100.3055, 3.4804)
 
@@ -259,6 +275,18 @@ def no_blocks() -> np.ndarray:
     blocks = np.empty(0, dtype=TABLE_DTYPE)
     blocks.flags.writeable = False
     return blocks
+
+
+def narrow(values: np.ndarray) -> np.ndarray:
+    """A level's values in ``int16`` where they fit and ``int32`` where they do not.
+
+    The shipped writer refuses the widening (``build_shortcut_index``'s ``check_fits``),
+    so a level that needs it is a format change; its doubled bytes are what it costs.
+    """
+    dtype = np.int16 if values.min(initial=0) >= np.iinfo(np.int16).min else np.int32
+    array = values.astype(dtype)
+    array.flags.writeable = False
+    return array
 
 
 def table_value(values: np.ndarray) -> np.ndarray:
@@ -692,14 +720,6 @@ def build_grid_tree(
             gx = (gx[cells, None] * k + dx[None, :]).reshape(-1)
             gy = (gy[cells, None] * k + dy[None, :]).reshape(-1)
 
-    def narrow(values: np.ndarray) -> np.ndarray:
-        dtype = (
-            np.int16 if values.min(initial=0) >= np.iinfo(np.int16).min else np.int32
-        )
-        array = values.astype(dtype)
-        array.flags.writeable = False
-        return array
-
     bounds, payload, last = packer.arrays()
     cls = {1: GridTree1, 2: GridTree2}[levels]
     tree = cls(narrow(arrays[0]), no_blocks(), bounds[:-1], bounds[1:], last, payload)
@@ -936,6 +956,153 @@ def cpu_name() -> str:
     return str(cpu_info().get("brand_raw") or platform.processor() or "unknown")
 
 
+# --- the pieces prototypes/grid_tree_config_sweep.py shares ---------------------------
+
+
+def environment(paths: Sequence[str]) -> dict[str, object]:
+    """What a report's times are only meaningful beside: machine, versions, commit."""
+    return {
+        "python": platform.python_version(),
+        "machine": platform.machine(),
+        "system": platform.system(),
+        "cpu": cpu_name(),
+        "logical_cpus": os.cpu_count(),
+        "versions": {name: version(name) for name in ("numpy", "shapely", "numba")},
+        "paths": list(paths),
+        "commit": subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+        # the branch commit disappears in a squash merge; its master base does not
+        "base_commit": subprocess.run(
+            ["git", "merge-base", "HEAD", "origin/master"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()[:8],
+        "fixture": benchmark_fixture_provenance(),
+    }
+
+
+def shipped_file_size_model(shipped: ShortcutIndex) -> int:
+    """The shipped file's size from its arrays; raises unless it is the file's size."""
+    model = (
+        _HEADER_SIZE
+        + shipped.table.nbytes
+        + shipped.blocks.nbytes
+        + entries_file_bytes(shipped)
+    )
+    actual = get_shortcut_file_path(DEFAULT_DATA_DIR).stat().st_size
+    if model != actual:
+        raise AssertionError(f"file-size model {model} != shipped {actual}")
+    return model
+
+
+def build_control(
+    shipped: ShortcutIndex, data: OrderingInput, zone_ids: np.ndarray, path: Path
+) -> ShortcutIndex:
+    """The shipped cells with every list in the converter's legacy order, via ``path``.
+
+    The shipped index also carries the converter's work optimizer, which no candidate
+    does, so candidates are priced against this rather than against the shipped file.
+    Written and read back through the real shortcut file functions.
+    """
+    mapping = {
+        cell: value if isinstance(value, int) else legacy_order(data, value)
+        for cell, value in shipped.items()
+    }
+    write_shortcuts_binary(build_shortcut_index(mapping, zone_ids), path)
+    return read_shortcuts_binary(path)
+
+
+def malacca_polygons(reference: TimezoneFinder) -> set[int]:
+    """The boundary polygons the Strait of Malacca witness lies in."""
+    x = utils.coord2int(MALACCA_WITNESS[0])
+    y = utils.coord2int(MALACCA_WITNESS[1])
+    return {
+        b
+        for b in range(len(reference.boundaries))
+        if reference.inside_of_polygon(b, x, y)
+    }
+
+
+def malacca_offered(index, reference: TimezoneFinder, polygons: set[int]) -> bool:
+    """Whether ``index`` answers the witness with its zone or offers one of its polygons."""
+    entry = index.entry_at(*MALACCA_WITNESS)
+    if entry >= 0:
+        return entry in {int(reference.zone_ids[b]) for b in polygons}
+    offered = set(index.candidates_of(entry).tolist()) if entry < ABSENT else set()
+    return bool(offered & polygons)
+
+
+def gate_row(
+    index,
+    control_index: ShortcutIndex,
+    fixture_points: Sequence[tuple[float, float]],
+    own_probes: Sequence[tuple[float, float]],
+    shared_probes: Sequence[tuple[float, float]],
+    paths: Sequence[str],
+) -> dict[str, dict[str, dict[str, int]]]:
+    """:func:`gate` on the fixtures, ``index``'s own cell edges and the border lines."""
+    row = {}
+    for path in paths:
+        control = finder_on(path, control_index)
+        candidate = finder_on(path, index)
+        try:
+            row[path] = {
+                "fixtures": gate(control, candidate, fixture_points),
+                "own_cell_edges": gate(control, candidate, own_probes),
+                "border_lines": gate(control, candidate, shared_probes),
+            }
+        finally:
+            control.cleanup()
+            candidate.cleanup()
+    return row
+
+
+def gate_passed(row: dict[str, dict[str, dict[str, int]]]) -> bool:
+    return all(
+        checks[probe]["defect"] == checks[probe]["scalar_differs"] == 0
+        for checks in row.values()
+        for probe in checks
+    )
+
+
+def time_pair(
+    baseline: tuple[str, TimezoneFinder],
+    challenger: tuple[str, TimezoneFinder],
+    fixtures: dict[str, Sequence[tuple[float, float]]],
+    *,
+    points: int,
+    rounds: int,
+    seed: int,
+    strata: Sequence[str] = RANKING_STRATA,
+) -> dict[str, dict[str, dict[str, object]]]:
+    """One paired comparison per stratum and call shape: scalar, and 256-point batches."""
+    result = {}
+    for label in strata:
+        pool = fixtures[label][:points]
+        scalar = compare_candidates(
+            (baseline[0], scalar_call(baseline[1])),
+            (challenger[0], scalar_call(challenger[1])),
+            pool,
+            rounds=rounds,
+            batch_size=len(pool),
+            seed=seed,
+        )
+        batch_inputs = batches(pool)
+        batch = compare_candidates(
+            (baseline[0], batch_call(baseline[1])),
+            (challenger[0], batch_call(challenger[1])),
+            batch_inputs,
+            rounds=rounds,
+            batch_size=min(len(batch_inputs), 8),
+            seed=seed,
+        )
+        result[label] = {"scalar": comparison(scalar), "batch_256": comparison(batch)}
+    return result
+
+
 # --- the sweep ------------------------------------------------------------------------
 
 
@@ -983,11 +1150,17 @@ EQUAL_AREA = (
     ("0.375", True),
     ("0.375", False),
 )
-GRID_TREES = (
-    # root columns (360 / root degrees), block side k, levels below the root. Only the
-    # two shapes the budget admits; sweeping tree configurations is its own study.
-    (384, 2, 2),
-    (384, 4, 1),
+GRID_TREES = tuple(
+    dict.fromkeys(
+        (
+            # root columns (360 / root degrees), block side k, levels below the root: the
+            # two 0.9375-degree shapes the budget admits and the shipped one;
+            # grid_tree_config_sweep.py sweeps the configurations
+            (384, 2, 2),
+            (384, 4, 1),
+            SHIPPED_TREE,
+        )
+    )
 )
 
 
@@ -1070,8 +1243,7 @@ def build_sweep(polygons, data, only: list[str] | None, outside: list[dict]) -> 
         if within_budget(control, outside):
             indexes.append(control)
     for root_columns, k, levels in GRID_TREES:
-        root = f"{360 / root_columns:g}".replace(".", "_")
-        name = f"grid_tree_{root}deg_{k}x{k}_{levels}levels"
+        name = grid_tree_name(root_columns, k, levels)
         if not wanted(name):
             continue
         started = time.perf_counter()
@@ -1090,6 +1262,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--output", type=Path, help="the report, as JSON")
     parser.add_argument("--rounds", type=int, default=31)
+    parser.add_argument("--seed", type=int, default=0, help="the paired draws' seed")
     parser.add_argument("--points", type=int, default=2_000)
     parser.add_argument("--probes", type=int, default=6_000)
     parser.add_argument("--no-timing", action="store_true")
@@ -1107,27 +1280,10 @@ def main() -> None:
     fixtures = {label: load_benchmark_points(f) for label, f in STRATA.items()}
 
     shipped = reference.shortcuts
-    shipped_file = get_shortcut_file_path(DEFAULT_DATA_DIR)
-    model = (
-        _HEADER_SIZE
-        + shipped.table.nbytes
-        + shipped.blocks.nbytes
-        + entries_file_bytes(shipped)
-    )
-    if model != shipped_file.stat().st_size:
-        raise AssertionError(
-            f"file-size model {model} != shipped {shipped_file.stat().st_size}"
-        )
+    model = shipped_file_size_model(shipped)
     workdir = Path(tempfile.mkdtemp(prefix="latlng-index-"))
-    mapping = {
-        cell: value if isinstance(value, int) else legacy_order(data, value)
-        for cell, value in shipped.items()
-    }
     control_path = workdir / "shortcuts.bin"
-    write_shortcuts_binary(
-        build_shortcut_index(mapping, reference.zone_ids), control_path
-    )
-    control_index = read_shortcuts_binary(control_path)
+    control_index = build_control(shipped, data, reference.zone_ids, control_path)
 
     def shipped_row(index: ShortcutIndex, payload: int) -> dict:
         return {
@@ -1148,37 +1304,16 @@ def main() -> None:
         "created": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "command": "uv run python -m prototypes.latlng_index_bench "
         + " ".join(sys.argv[1:]),
-        "environment": {
-            "python": platform.python_version(),
-            "machine": platform.machine(),
-            "system": platform.system(),
-            "cpu": cpu_name(),
-            "logical_cpus": os.cpu_count(),
-            "versions": {name: version(name) for name in ("numpy", "shapely", "numba")},
-            "paths": list(paths),
-            "commit": subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-            ).stdout.strip(),
-            # the branch commit disappears in a squash merge; its master base does not
-            "base_commit": subprocess.run(
-                ["git", "merge-base", "HEAD", "origin/master"],
-                capture_output=True,
-                text=True,
-            ).stdout.strip()[:8],
-            "fixture": benchmark_fixture_provenance(),
-        },
+        "environment": environment(paths),
         "file_size_model": {"shipped_bytes": model, "reproduces_shipped_file": True},
         "shipped": shipped_row(shipped, model),
         "control": shipped_row(control_index, control_path.stat().st_size),
         "candidates": {},
     }
+    all_points = [p for points in fixtures.values() for p in points]
     control_finder = finder_on("clang", control_index)
     report["control"]["gate_against_shipped"] = gate(
-        reference,
-        control_finder,
-        [p for points in fixtures.values() for p in points],
+        reference, control_finder, all_points
     )
     control_finder.cleanup()
     print("shipped and control rows done", flush=True)
@@ -1187,13 +1322,7 @@ def main() -> None:
     report["outside_budget"] = []
     indexes = build_sweep(polygons, data, args.only, report["outside_budget"])
     shared_probes = border_probes(args.probes, rng)
-    malacca_x = utils.coord2int(MALACCA_WITNESS[0])
-    malacca_y = utils.coord2int(MALACCA_WITNESS[1])
-    malacca_polygons = {
-        b
-        for b in range(len(reference.boundaries))
-        if reference.inside_of_polygon(b, malacca_x, malacca_y)
-    }
+    witness = malacca_polygons(reference)
     for index in indexes:
         row: dict[str, object] = {
             "family": index.family,
@@ -1205,34 +1334,12 @@ def main() -> None:
                 label: work_counts(reference, index, points)
                 for label, points in fixtures.items()
             },
+            "malacca_witness_offered": malacca_offered(index, reference, witness),
         }
-        entry = index.entry_at(*MALACCA_WITNESS)
-        offered = set(index.candidates_of(entry).tolist()) if entry < ABSENT else set()
-        row["malacca_witness_offered"] = bool(
-            (
-                entry >= 0
-                and entry in {int(reference.zone_ids[b]) for b in malacca_polygons}
-            )
-            or offered & malacca_polygons
-        )
         own_probes = edge_probes(index, args.probes, rng)
-        row["gate"] = {}
-        for path in paths:
-            control = finder_on(path, control_index)
-            candidate = finder_on(path, index)
-            try:
-                row["gate"][path] = {
-                    "fixtures": gate(
-                        control,
-                        candidate,
-                        [p for points in fixtures.values() for p in points],
-                    ),
-                    "own_cell_edges": gate(control, candidate, own_probes),
-                    "border_lines": gate(control, candidate, shared_probes),
-                }
-            finally:
-                control.cleanup()
-                candidate.cleanup()
+        row["gate"] = gate_row(
+            index, control_index, all_points, own_probes, shared_probes, paths
+        )
         report["candidates"][index.name] = row
         print(f"priced {index.name}", flush=True)
 
@@ -1241,11 +1348,7 @@ def main() -> None:
             index
             for index in indexes
             if report["candidates"][index.name]["malacca_witness_offered"]
-            and all(
-                checks[probe]["defect"] == checks[probe]["scalar_differs"] == 0
-                for checks in report["candidates"][index.name]["gate"].values()
-                for probe in checks
-            )
+            and gate_passed(report["candidates"][index.name]["gate"])
         ]
         report["timing"] = {}
         for path in paths:
@@ -1256,28 +1359,14 @@ def main() -> None:
                 rows = {}
                 for name, index in [("shipped", None)] + [(i.name, i) for i in timed]:
                     finder = shipped_finder if index is None else finder_on(path, index)
-                    rows[name] = {}
-                    for label in RANKING_STRATA:
-                        points = fixtures[label][: args.points]
-                        scalar = compare_candidates(
-                            ("control", scalar_call(control)),
-                            (name, scalar_call(finder)),
-                            points,
-                            rounds=args.rounds,
-                            batch_size=len(points),
-                        )
-                        batch_inputs = batches(points)
-                        batch = compare_candidates(
-                            ("control", batch_call(control)),
-                            (name, batch_call(finder)),
-                            batch_inputs,
-                            rounds=args.rounds,
-                            batch_size=min(len(batch_inputs), 8),
-                        )
-                        rows[name][label] = {
-                            "scalar": comparison(scalar),
-                            "batch_256": comparison(batch),
-                        }
+                    rows[name] = time_pair(
+                        ("control", control),
+                        (name, finder),
+                        fixtures,
+                        points=args.points,
+                        rounds=args.rounds,
+                        seed=args.seed,
+                    )
                     if name != "shipped":
                         finder.cleanup()
                     print(f"  timed {name}", flush=True)
@@ -1294,29 +1383,14 @@ def main() -> None:
                     continue
                 a = finder_on(path, by_name[challenger])
                 base = finder_on(path, by_name[baseline])
-                result = {}
-                for label in RANKING_STRATA:
-                    points = fixtures[label][: args.points]
-                    scalar = compare_candidates(
-                        (baseline, scalar_call(base)),
-                        (challenger, scalar_call(a)),
-                        points,
-                        rounds=args.rounds,
-                        batch_size=len(points),
-                    )
-                    batch_inputs = batches(points)
-                    batch = compare_candidates(
-                        (baseline, batch_call(base)),
-                        (challenger, batch_call(a)),
-                        batch_inputs,
-                        rounds=args.rounds,
-                        batch_size=min(len(batch_inputs), 8),
-                    )
-                    result[label] = {
-                        "scalar": comparison(scalar),
-                        "batch_256": comparison(batch),
-                    }
-                pairs[f"{challenger} vs {baseline}"] = result
+                pairs[f"{challenger} vs {baseline}"] = time_pair(
+                    (baseline, base),
+                    (challenger, a),
+                    fixtures,
+                    points=args.points,
+                    rounds=args.rounds,
+                    seed=args.seed,
+                )
                 a.cleanup()
                 base.cleanup()
             report["head_to_head"][path] = pairs
