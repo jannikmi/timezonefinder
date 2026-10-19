@@ -6,6 +6,10 @@ The full dataset including ocean timezones may be treated as covering the globe 
 
 Users who want to avoid that fallback use `certain_timezone_at()`, which checks containment and can return `None`. Do not require the main lookup to adopt that contract. The full-coverage assumption is specific to the dataset with oceans; it is not evidence that an arbitrary custom or land-only dataset covers the globe.
 
+## Overlap precedence
+
+Where two zones' polygons overlap, the zone with the smaller spherical area takes precedence, in every cell: it is the enclave, since the shared area is the larger share of it. This replaces the legacy per-cell vertex-count key as the primary key of `optimise_shortcut_ordering`, which [PREC-1](../items/lookup-geometry-and-data-format/prec-1-order-overlapping-zones-by-containment-in-every-cell.md) implements. Applying it only in some cells is refused: PERF-7 measured one overlap answered two ways by cell. Until PREC-1 lands, the legacy key below defines the answer.
+
 ## Overlap ties
 
 When compared spherical zone areas are equal, use the timezone identifier string as the secondary key, in ascending lexicographic order. Use the identifier, not a numeric zone index or iteration order: both depend on how the data happens to be laid out. Equality means equality of the computed area values, with no near-equality tolerance. A polygon's area *clipped to a cell* is not a semantic precedence rule and must not become one. Holes remain excluded from their owning polygons.
@@ -16,7 +20,7 @@ When two zones have equal legacy per-cell vertex totals, the timezone identifier
 
 **Why a tie rule can move answers when the work optimizer cannot.** The optimizer's guarantee is relative: it reorders a cell only where `safe_to_reorder` certifies that its candidates are disjoint across zones and cover the cell's envelope, which leaves the full lookup's answers unchanged. Where the gate refuses, an overlap or gap may exist, so the legacy order *is* the definition of the answer there and the optimizer keeps it. A tie rule changes that definition rather than reordering against it. So it can move `timezone_at` only for a point in an overlap or a gap, and `TimezoneFinderL` for a whole cell, because that lookup answers the untested final zone — the optimizer never promised `TimezoneFinderL` anything either, and may pick any final zone where the gate passes.
 
-**Do not drop either secondary key as redundant:** a build that falls back to set order differs only in tied cells and still validates, so only the permutation test in `tests/test_shortcut_ordering.py` notices. **Refused:** replacing the primary key with spherical zone area, which would take part of PREC-1 ahead of its broader precedence decision; and determinizing only within a zone, which leaves cross-zone binaries unreproducible and so leaves two candidate indexes incomparable.
+**Do not drop either secondary key as redundant:** a build that falls back to set order differs only in tied cells and still validates, so only the permutation test in `tests/test_shortcut_ordering.py` notices. **Refused:** determinizing only within a zone, which leaves cross-zone binaries unreproducible and so leaves two candidate indexes incomparable.
 
 ## Precedence is independent of the index
 
