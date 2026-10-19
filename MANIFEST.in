@@ -1,4 +1,4 @@
-include README.rst
+include README.md
 include LICENSE
 include DATA_VERSION
 include DATA_SOURCE
