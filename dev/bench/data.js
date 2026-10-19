@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792444464918,
+  "lastUpdate": 1792449073910,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15276,6 +15276,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5916",
             "unit": "lookups/sec",
             "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6943 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c3aece9557905160d4ae8b6fc13ff8b886db6c1",
+          "message": "PREC-1: record the containment-everywhere overlap precedence decision (#734)\n\n* PREC-1: record containment-everywhere overlap precedence decision\n\nThe maintainer chose option (a): where two zones overlap, the zone with the\nsmaller spherical area takes precedence in every cell, replacing the legacy\nper-cell vertex-count key. PREC-1 returns to open and moves among the\neligible rows; the decision is added to the shortcut-ordering topic module\nand the item notes that its answer measurements predate the grid tree.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: changelog names the zones that flip against the last published release\n\nThe grid tree index has not shipped, so the baseline for what flips is the\nlast published timezonefinder-data (H3 index), not master.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: the data release note also names the precedence change and its flips\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T22:30:22Z",
+          "tree_id": "0428e8e81b7845edf0a2b91cf1efb8ca85986209",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3c3aece9557905160d4ae8b6fc13ff8b886db6c1"
+        },
+        "date": 1792449071624,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 793282.6097860162,
+            "range": "± 16877",
+            "unit": "lookups/sec",
+            "extra": "min of 253 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 972742.9639571729,
+            "range": "± 32124",
+            "unit": "lookups/sec",
+            "extra": "min of 335 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 157650.44834528628,
+            "range": "± 1668",
+            "unit": "lookups/sec",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4420499.0920234155,
+            "range": "± 170372",
+            "unit": "lookups/sec",
+            "extra": "min of 898 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33548490.99127667,
+            "range": "± 5006078",
+            "unit": "lookups/sec",
+            "extra": "min of 5134 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 217518.7324956192,
+            "range": "± 3529",
+            "unit": "lookups/sec",
+            "extra": "min of 74 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4195595.296227738,
+            "range": "± 147739",
+            "unit": "lookups/sec",
+            "extra": "min of 953 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24030374.393309444,
+            "range": "± 2036025",
+            "unit": "lookups/sec",
+            "extra": "min of 4521 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 217297.84737794526,
+            "range": "± 4805",
+            "unit": "lookups/sec",
+            "extra": "min of 76 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
           }
         ]
       }
