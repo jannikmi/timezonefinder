@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792440638812,
+  "lastUpdate": 1792440641022,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -28985,6 +28985,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c43fd6868364d519ebf5552b22210325836d5b23",
+          "message": "Ship the 0.75° grid tree root: 480 root columns, one level of 4×4 blocks (#729)\n\n* Ship the 0.75-degree grid tree root\n\nThe shortcut index uses 480 root columns (0.75-degree cells) with one level\nof 4x4 blocks (0.1875 degrees), the configuration\nprototypes/grid_tree_config_sweep.py chose within the 800 KB cap; the\nmaintainer asked for this follow-up. The shipped reader reads it unchanged,\nso the constant and the regenerated shortcuts.bin are the whole format\nchange, riding the unreleased timezonefinder-data 4.2026.4.\n\nRegenerating from the verified 2026d archive moved only shortcuts.bin.\nAgainst the 0.9375-degree tree, TimezoneFinder answers are unchanged on two\nmillion uniform points and every benchmark fixture, and on two of the\n4,113,237 distinct boundary vertices, both inside no polygon;\nTimezoneFinderL moves cell by cell. FIXTURE_VERSION is 5, since the\nunique/ambiguous strata are a classification by the index.\n\nThe docs, the decision record, IDX-8 and the constraints describe the\nshipped tree; both prototypes take the shipped shape from the constants;\nand the unreleased changelog fragment states the final cells, size and\nanswer changes against 9.0.0.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Record the data build run holding the 0.75-degree index\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Install the benchmark pages rendered for the 0.75-degree index\n\nRendered by benchmark.yml run 39186659596 on 5c295fd9, every report group,\nand installed through scripts.benchmark_report_artifact with its\nexpected-commit check. The data report it carries matches the converter's.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-19T20:09:48Z",
+          "tree_id": "21fe9f3980ea03521afd1529f81dcc9817d156aa",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c43fd6868364d519ebf5552b22210325836d5b23"
+        },
+        "date": 1792440640536,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6955270767211914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6957054138183594,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.956338882446289,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9570589065551758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.54281234741211,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.54362106323242,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2423 GHz"
           }
         ]
       }
