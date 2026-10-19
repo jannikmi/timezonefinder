@@ -18,8 +18,8 @@ How it works
 ------------
 
 A lookup scales the coordinates to 32-bit integers (x 10\ :sup:`7`, ~1.1 cm steps), finds the
-point's cell in an aligned grid tree - 384 x 192 cells of 0.9375 degrees, each refining into a 4 x 4
-block of 0.234375-degree cells where several zones meet - by one integer division per axis, and reads
+point's cell in an aligned grid tree - 480 x 240 cells of 0.75 degrees, each refining into a 4 x 4
+block of 0.1875-degree cells where several zones meet - by one integer division per axis, and reads
 a precomputed shortcut for that cell. Most cells are covered by a single timezone, so the answer is
 returned immediately with no geometry touched at all. Only an ambiguous cell falls through to the polygons it lists: bounding-box
 rejection first, then a ray-casting point-in-polygon test - holes before the outer ring, since holes

@@ -7,7 +7,7 @@ Constraints that shape design decisions:
 - Primary users are latency-sensitive services doing high-volume, possibly concurrent lookups (plus one-off CLI/script use)
 - Must run in **containerised deployments with constrained CPU/memory** — don't assume abundant RAM or many cores; the `in_memory=False` (memory-mapped) path must stay a viable low-memory option
 - Must degrade gracefully without Numba/C-extension — the pure-Python path stays correct, just slower
-- **The shortcut index binary is capped at 800 KB in total** (`shortcuts.bin`, header, table, blocks and candidate lists together; the shipped grid tree is ~513 KB). The index exists to spare the ~30 MB of unsimplified polygons work, and past that cap its storage overhead stops being small next to them, so an index design over it is refused however fast it measures, and a sweep compares only designs within it
+- **The shortcut index binary is capped at 800 KB in total** (`shortcuts.bin`, header, table, blocks and candidate lists together; the shipped grid tree is just under 700 KB). The index exists to spare the ~30 MB of unsimplified polygons work, and past that cap its storage overhead stops being small next to them, so an index design over it is refused however fast it measures, and a sweep compares only designs within it
 
 Non-goals: sub-centimeter precision (the ~1.1 cm coordinate scaling is a deliberate ceiling, not a bug), and general-purpose geometry — spatial code exists only in service of timezone lookup.
 

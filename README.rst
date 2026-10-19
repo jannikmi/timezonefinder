@@ -95,7 +95,7 @@ How it works
 ------------
 
 A lookup scales the coordinates to 32-bit integers (x 10^7, ~1.1 cm steps), finds the point's cell
-in an aligned grid tree - 0.9375-degree cells, refining to 0.234375 degrees where several zones meet
+in an aligned grid tree - 0.75-degree cells, refining to 0.1875 degrees where several zones meet
 - by one integer division per axis, and reads a precomputed shortcut for that cell. Most cells are
 covered by a single timezone, so the answer is returned immediately with no geometry touched at all.
 Only an ambiguous cell falls through to the polygons it lists: bounding-box rejection first, then a

@@ -164,7 +164,7 @@ jobs:
           done
 
       - name: "Build wheels"
-        uses: pypa/cibuildwheel@v4.3.0
+        uses: pypa/cibuildwheel@v4.3.1
         with:
           output-dir: dist
         env:

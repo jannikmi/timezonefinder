@@ -92,7 +92,7 @@ PIP_STRATA = ("small", "medium", "large")
 # NOTE: this deliberately lives here rather than in the generator - the
 # generator imports from this module, so the loader could not validate a
 # constant owned by the generator without an import cycle.
-FIXTURE_VERSION = 4
+FIXTURE_VERSION = 5
 
 
 # Command constants.
