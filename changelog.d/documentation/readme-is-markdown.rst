@@ -1,1 +1,1 @@
-The README is written in Markdown, one line per sentence, and that is what the PyPI project page now renders; its text, links and badges are unchanged, and the two badges that had none gained alt text.
+The README is written in Markdown, which is what the PyPI project page now renders; its text, links and badges are unchanged.
