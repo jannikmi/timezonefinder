@@ -5,7 +5,7 @@ description = "python package for finding the timezone of any point on earth (co
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
 license = {file="LICENSE"}
-readme = "README.rst"
+readme = "README.md"
 keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

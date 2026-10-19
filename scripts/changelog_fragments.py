@@ -15,8 +15,8 @@ into a newly generated, grouped unreleased section and deletes them; release
 curation then checks the end state without having to classify every bullet
 again. Between releases, ``CHANGELOG.rst`` contains released history only.
 
-``CHANGELOG.rst`` stays the published artifact - it is what ``README.rst``
-includes and what ships - so nothing downstream learns about fragments.
+``CHANGELOG.rst`` stays the published artifact - it is what the docs
+include and what ships - so nothing downstream learns about fragments.
 """
 
 import argparse

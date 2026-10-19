@@ -1,6 +1,6 @@
 """What the coordinate encoding actually resolves, against what the package claims.
 
-Every page that describes this library states a resolution - ``~1 cm`` in ``README.rst``,
+Every page that describes this library states a resolution - ``~1 cm`` in ``README.md``,
 ``docs/index.rst``, ``docs/alternatives.rst`` and ``docs/data_format.rst``, ``~1.1 cm`` in
 ``docs/architecture.rst`` and ``CLAUDE.md``. None of them is generated, so all of them go
 stale silently if the scaling ever changes.
