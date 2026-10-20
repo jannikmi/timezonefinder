@@ -72,6 +72,21 @@ def test_spherical_area_rectangles_holes_and_latitude_distortion():
     )
 
 
+@pytest.mark.parametrize("clockwise", [False, True])
+def test_spherical_area_is_exact_along_a_slanted_edge_in_either_winding(clockwise):
+    # the triangle (0, 0), (L, 0), (0, H) has one edge slanted in the lng/lat plane,
+    # along which the ring integral of sin(lat) dlng is L * (1 - cos H) / H exactly;
+    # a rectangle never exercises that term, and a high H makes any approximation show
+    lng, lat = 10, 80
+    ring = np.array([(0, 0), (lng, 0), (0, lat)], dtype=np.float64)
+    if clockwise:
+        ring = ring[::-1]
+    triangle = Polygon(ring * COORD2INT_FACTOR)
+    height = np.radians(lat)
+    expected = np.radians(lng) * (1 - np.cos(height)) / height
+    assert spherical_area(triangle) == pytest.approx(expected, rel=1e-9)
+
+
 CELL_PROBES = [
     (0.0, 0.0),
     (0.0, 60.0),
