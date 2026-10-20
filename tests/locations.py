@@ -54,7 +54,7 @@ TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
     (65.2, 179.9999, "lng 180", "Asia/Anadyr"),
     (65.2, -179.9999, "lng -180", "Asia/Anadyr"),
     # test cases for hole handling:
-    (41.0702284, 45.0036352, "Aserbaid. Enklave", "Asia/Yerevan"),
+    (41.0702284, 45.0036352, "Aserbaid. Enklave", "Asia/Baku"),
     (39.8417402, 70.6020068, "Tajikistani Enklave", "Asia/Dushanbe"),
     (47.7024174, 8.6848462, "Busingen Ger", "Europe/Busingen"),
     (46.2085101, 6.1246227, "Genf", "Europe/Zurich"),
