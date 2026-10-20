@@ -1,1 +1,0 @@
-The `package comparison <https://timezonefinder.readthedocs.io/en/latest/alternatives.html>`__ treats ``tzfpy``'s experimental full-precision variant as a genuine alternative, states which remaining distribution and API differences distinguish ``timezonefinder``, and limits its benchmark conclusions to the simplified PyPI build it actually measured.
