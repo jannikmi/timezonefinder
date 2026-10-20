@@ -42,12 +42,12 @@ integrals over clipped geometry. The approximations are these, explicitly:
 5. Search is a heuristic, with no candidate-count cutoff. Enumerate each entire
    final zone L (untested), greedily choose remaining polygons by
        mu(H_i intersect R(S)) / d(S,i),
-   then improve by adjacent exchanges. Also refine the legacy-derived order for
+   then improve by adjacent exchanges. Also refine the precedence-derived order for
    each L. Exchanging adjacent a,b changes cost by
        d(S,b)+d(S union {b},a)-d(S,a)-d(S union {a},b).
    The later suffix is unchanged because its surviving region depends only on
    the tested SET. A relative 1e-12 improvement threshold avoids numerical tie
-   churn. The legacy order is always an incumbent: modeled expected work never
+   churn. The precedence order is always an incumbent: modeled expected work never
    increases. Greedy construction examines O(n^2) choices per final zone; local
    search stops at an adjacent local optimum, with no claim of a polynomial
    worst-case iteration bound. There is no exponential subset enumeration.
@@ -61,7 +61,7 @@ integrals over clipped geometry. The approximations are these, explicitly:
    allowing final-zone changes or interleaving. It encloses the cell exactly
    rather than conservatively, and the clip is what keeps it admissible at the
    edges of the domain: see `cell_envelope`.
-   Otherwise preserve legacy zone priority and final zone, optimizing only
+   Otherwise preserve zone precedence (smaller spherical zone area first) and final zone, optimizing only
    within tested zone blocks. Block survivors depend on the zone's hit union,
    so this preserves zone answers even where the proxy geometry is inaccurate.
    Invalid source geometry is repaired ONLY for the objective by GEOS make_valid;
@@ -124,7 +124,42 @@ DEFAULT_COST_COEFFICIENTS = CostCoefficients()
 
 
 def spherical_area(geometry: BaseGeometry) -> float:
-    """Steradians for piecewise-linear rings in runtime integer coordinates."""
+    """Area on the unit sphere, in steradians, of a geometry in runtime integer coordinates.
+
+    **What is measured.** Each ring edge is a straight line in the longitude/latitude
+    plane - the edge the point-in-polygon kernel tests, not a great circle - so the
+    region is planar in ``(lambda, phi)`` and its area is the integral of
+    ``cos(phi) dphi dlambda`` over it. By Green's theorem that is the ring integral of
+    ``sin(phi) dlambda``, which along one straight edge has the closed form::
+
+        dlambda * (cos(phi1) - cos(phi2)) / dphi
+            = dlambda * sin((phi1 + phi2) / 2) * sin(dphi / 2) / (dphi / 2)
+
+    ``np.sinc(dphi / (2 * pi))`` is the last factor and tends to 1 on an east-west
+    edge, so there is no division by zero. The result is exact for the ring as stored
+    rather than an approximation that needs subdividing, at any latitude: an edge along
+    the -90 or +90 parallel, which is how a ring around a pole is stored, is an ordinary
+    edge, and the whole coordinate plane measures exactly ``4 * pi``.
+
+    **Orientation and parts.** A ring's area is taken as an absolute value, so either
+    winding direction gives the same result. A polygon is its exterior minus its
+    interiors, clamped at zero; a multi-part geometry or collection is the sum of its
+    parts; lines and points have zero area.
+
+    **Limits.** The absolute value assumes a simple ring: for a self-intersecting one it
+    gives the difference of its lobes rather than their sum. An interior is assumed to lie
+    inside its exterior, as in a valid polygon. The sphere is a unit sphere, not an
+    ellipsoid: callers compare or normalise areas, which that leaves unchanged to well
+    within what any of them resolves.
+
+    Two callers rely on it: the ordering cost model weights each candidate test by the
+    area it still has to cover, and ``scripts.shortcuts.zone_areas`` ranks zones by it for
+    overlap precedence. ``tests/test_shortcut_ordering.py`` pins it against closed-form
+    areas, holes and latitude distortion.
+
+    :param geometry: a shapely geometry in the stored integer coordinates
+    :return: the area in steradians; multiply by the square of a radius for a surface
+    """
     if geometry.is_empty:
         return 0.0
     if geometry.geom_type == "Polygon":
@@ -135,8 +170,9 @@ def spherical_area(geometry: BaseGeometry) -> float:
             mean_sin = np.sin((lat[:-1] + lat[1:]) / 2) * np.sinc(
                 np.diff(lat) / (2 * np.pi)
             )
-            # A closed planar ring has sum(dlambda)=0. Subtracting a reference
-            # density reduces cancellation for small regions at high latitude.
+            # A closed ring has sum(dlambda) = 0, so subtracting a constant from every
+            # edge's sin term changes nothing exactly; using the first vertex's
+            # reduces cancellation for small regions at high latitude.
             return abs(
                 float(np.sum(np.diff(coords[:, 0]) * (mean_sin - np.sin(lat[0]))))
             )
@@ -373,7 +409,7 @@ class ShortcutOrderer:
 
         Free reordering is sound exactly where the candidates cover the cell with
         no cross-zone area overlap: every point then has one owner whatever order
-        it is found in. Where that cannot be shown the legacy zone precedence is
+        it is found in. Where that cannot be shown the zone precedence is
         preserved and only within-zone blocks are optimized.
         """
         envelope = cell_envelope(cell)

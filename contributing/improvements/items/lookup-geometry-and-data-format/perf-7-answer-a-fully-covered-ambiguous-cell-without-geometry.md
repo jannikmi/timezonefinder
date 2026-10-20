@@ -2,7 +2,7 @@
 
 ## Related memory
 
-- [PREC-1](prec-1-order-overlapping-zones-by-containment-in-every-cell.md) — where the containment precedence rule this item introduced now lives, applied through the candidate ordering in every cell instead of only in covered ones.
+- [Overlap precedence](../../decisions/shortcut-ordering-and-fallback-semantics.md#overlap-precedence) — where the containment precedence rule this item introduced now lives, applied through the candidate ordering in every cell instead of only in covered ones.
 - [GEOM-3](geom-3-conservatively-repair-shortcut-candidate-generation.md) — the full-cell coverage proof an unconditional answer needs, which is the opposite of the no-omission proof GEOM-3 carries.
 - Closed PR #652 — the converter half, implemented and measured: a whole-cell coverage test, a zone-precedence pass, and two full 2026c compiles diffed against each other.
 
@@ -23,7 +23,7 @@ Store an ambiguous shortcut cell that one boundary polygon covers entirely as a 
 | `Asia/Tbilisi` / `Europe/Moscow` | Tbilisi | Tbilisi |
 | `America/Sitka` / `America/Vancouver` | — | Sitka |
 
-Where the ordering already picked the enclave the conversion moved nothing; where it did not, it split Abyei by H3 cell. That is the "deciding per cell" outcome the precedence decision refused, and an answer depending on the index, which the [geometry decisions](../../decisions/geometry-data-format-and-validation-decisions.md) forbid. The two fixture answers the item reported as moving were this split. **Precedence, if wanted, belongs in the ordering of every cell** — PREC-1.
+Where the ordering already picked the enclave the conversion moved nothing; where it did not, it split Abyei by H3 cell. That is the "deciding per cell" outcome the precedence decision refused, and an answer depending on the index, which the [geometry decisions](../../decisions/geometry-data-format-and-validation-decisions.md) forbid. The two fixture answers the item reported as moving were this split. **Precedence, if wanted, belongs in the ordering of every cell** — which is where it now is.
 
 **What remains is a sub-noise speed-up.** With no answer changing where the rule is consistent, the item is performance alone. Of the committed fixtures, **0.23 % of random, 0.88 % of on-land and 2.76 % of ambiguous points** land in a converted cell, each skipping ~4 µs: ~0.6 %, ~1.9 % and ~2.1 % of a query. A paired, order-alternated A/B on the C-extension backend, 61 rounds × 2,500 points, resolved no difference on any stratum.
 
@@ -40,6 +40,6 @@ No polygon clipping is needed. Coverage is a whole-cell-inside-polygon test plus
 
 ## Reopen only if
 
-The index's cells are now exact planar rectangles — the grid tree shipped in format 4, so full coverage is an exact rectangle-in-polygon test and the first half of this condition is met — **and** PREC-1 has made precedence consistent in every cell, so that converting a covered cell changes no answer. The second half is what still holds this closed. It is then a pure performance item, priced on its own count and without the per-cell split that withdrew it.
+The index's cells are exact planar rectangles — the grid tree shipped in format 4, so full coverage is an exact rectangle-in-polygon test — **and** precedence is consistent in every cell, so that converting a covered cell changes no answer. **Both halves are now met**: the [overlap precedence](../../decisions/shortcut-ordering-and-fallback-semantics.md#overlap-precedence) ranks zones by spherical area in every cell. What still keeps this closed is its price, which was measured on H3 and is not evidence about the grid tree: a discovery pass may re-propose it as a pure performance item, priced on its own count over the grid tree and without the per-cell split that withdrew it.
 
 - **Status:** withdrawn — applying precedence only in covered cells splits an overlap region by H3 cell, and the remaining ~0.6–2.1 % gain does not pay for certified coverage and keeping `timezones_at`'s candidates.

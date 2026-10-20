@@ -946,7 +946,8 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         use after every earlier candidate failed its geometry check. Candidate order
         is optimized for full-lookup work, so the result is not an estimate of which
         zone covers this point or most of the cell. Cells retained by the converter's
-        geometry safety gates use the legacy total-vertex-count ordering.
+        geometry safety gates keep the zone precedence order, smaller spherical zone
+        area first, so their fallback is the largest zone among the cell's candidates.
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
