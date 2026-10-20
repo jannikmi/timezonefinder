@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792449075863,
+  "lastUpdate": 1792458698800,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15363,6 +15363,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4805",
             "unit": "lookups/sec",
             "extra": "min of 76 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2579 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51ee1ba638452a67bbd61f5075350591f1eb52df",
+          "message": "PREC-1: in an overlap, the smaller zone wins in every cell (#735)\n\n* PREC-1: in an overlap, the smaller zone wins in every cell\n\nThe converter's zone precedence, which the ordering optimizer keeps wherever\nit cannot certify a cell free of cross-zone overlap, now sorts zones by\nspherical area, smaller first, with the timezone identifier breaking an exact\ntie. It replaces the per-cell vertex-count key, so the answer in an overlap is\nthe enclave everywhere and no longer depends on the index's cells.\n\nCompiled from 2026d against the published 3.2026.4, eight overlaps change\nanswer as whole regions, and only shortcuts.bin moves. The documented\noverlap expectations, the data-update guard baseline, the usage page and\nresult_stability.rst follow.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: retire the item\n\nDeletes the item and its ranking row, and rewrites what cited it: the overlap\nprecedence decision now records the rule as implemented, with the superseded\nper-cell vertex-count key and the regions switching moved; PERF-7's reopen\ncondition is met on precedence and waits only on a grid-tree price; and the\ndecisions that described the vertex-count key as current say what holds now.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: port the index prototypes and settle the independent review\n\nThe two aligned-index prototypes called optimise_shortcut_ordering without\nthe zone areas and would have raised on their first ordering; their control\nnow uses the shipped precedence order. The pending tie-order fragment, a\nline of the data-format page and a prototype note stop describing the\nvertex-count key as current, the zone_areas docstring states what an invalid\nring gets, and a test now checks every overlap point of the on-land and\nambiguous fixtures against the smaller zone, not just one point per overlap.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: point CI at the dataset compiled with the precedence order\n\nRecords compile_data.yml run 39338553260 on this branch, whose\nartifact-data-wheel carries 2026d compiled with zone area precedence.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n* PREC-1: document spherical_area, now the precedence key\n\nStates what the function measures - the area of the region bounded by\nstraight lng/lat edges, the edges the kernel tests - the closed form each\nedge contributes and why it is exact, how orientation, holes and multi-part\ngeometries are handled, and its limits: simple rings, interiors inside their\nexterior, a unit sphere. A test pins the slanted-edge term the rectangle test\nnever reaches, in both winding directions.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0133VhFWyuvAhyVQhaoJhzuj\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-20T01:10:47Z",
+          "tree_id": "0b74b20584299393ac91adb48021a7370955d94d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/51ee1ba638452a67bbd61f5075350591f1eb52df"
+        },
+        "date": 1792458696501,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 992203.6605159233,
+            "range": "± 66044",
+            "unit": "lookups/sec",
+            "extra": "min of 313 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1190135.5850091653,
+            "range": "± 71236",
+            "unit": "lookups/sec",
+            "extra": "min of 428 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 209692.20874345247,
+            "range": "± 5127",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 5833625.014552707,
+            "range": "± 642715",
+            "unit": "lookups/sec",
+            "extra": "min of 1024 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 45206321.65217286,
+            "range": "± 6048243",
+            "unit": "lookups/sec",
+            "extra": "min of 6035 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 287503.080595407,
+            "range": "± 6590",
+            "unit": "lookups/sec",
+            "extra": "min of 89 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5517594.505345336,
+            "range": "± 402818",
+            "unit": "lookups/sec",
+            "extra": "min of 1132 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 32725939.8903336,
+            "range": "± 3236834",
+            "unit": "lookups/sec",
+            "extra": "min of 5313 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 286104.0739046748,
+            "range": "± 4846",
+            "unit": "lookups/sec",
+            "extra": "min of 89 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0103 GHz"
           }
         ]
       }
