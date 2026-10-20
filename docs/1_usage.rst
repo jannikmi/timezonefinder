@@ -336,7 +336,8 @@ timezones_at()
 --------------
 
 Some timezones in the dataset genuinely overlap, so a point can lie in more than one.
-``timezone_at()`` picks one of them and gives no sign that it had to choose;
+``timezone_at()`` picks one of them and gives no sign that it had to choose: the zone
+with the smaller area, which is the one enclaved in the other.
 ``timezones_at()`` returns every zone whose polygons contain the point:
 
 .. code-block:: python
@@ -369,11 +370,14 @@ In the shipped data they are:
 
 * ``Asia/Urumqi`` inside ``Asia/Shanghai`` - by far the most common case, and a second
   local time in real use across Xinjiang.
-* Disputed or dual-administered areas: ``Africa/Khartoum``/``Africa/Juba`` (Abyei),
+* Disputed or dual-administered areas: ``Africa/Juba``/``Africa/Khartoum`` (Abyei and Kafia Kingi),
   ``Asia/Tbilisi``/``Europe/Moscow`` (Abkhazia and South Ossetia),
-  ``Asia/Jerusalem``/``Asia/Hebron``, and a few maritime borders such as
+  ``Asia/Hebron``/``Asia/Jerusalem``, and a few maritime borders such as
   ``America/Sitka``/``America/Vancouver`` and
-  ``America/Punta_Arenas``/``America/Argentina/Rio_Gallegos``.
+  ``America/Argentina/Rio_Gallegos``/``America/Punta_Arenas``.
+
+In each pair the zone named first is the smaller one, and so the one ``timezone_at()``
+answers.
 
 Roughly 1 % of points on land fall in two zones.
 

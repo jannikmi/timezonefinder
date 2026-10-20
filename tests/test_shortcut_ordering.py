@@ -25,7 +25,11 @@ from scripts.shortcut_ordering import (
     cell_region,
     spherical_area,
 )
-from scripts.shortcuts import check_shortcut_sorting, optimise_shortcut_ordering
+from scripts.shortcuts import (
+    check_shortcut_sorting,
+    optimise_shortcut_ordering,
+    zone_areas,
+)
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
@@ -66,6 +70,21 @@ def test_spherical_area_rectangles_holes_and_latitude_distortion():
     assert spherical_area(low.union(high)) == pytest.approx(
         spherical_area(low) + spherical_area(high)
     )
+
+
+@pytest.mark.parametrize("clockwise", [False, True])
+def test_spherical_area_is_exact_along_a_slanted_edge_in_either_winding(clockwise):
+    # the triangle (0, 0), (L, 0), (0, H) has one edge slanted in the lng/lat plane,
+    # along which the ring integral of sin(lat) dlng is L * (1 - cos H) / H exactly;
+    # a rectangle never exercises that term, and a high H makes any approximation show
+    lng, lat = 10, 80
+    ring = np.array([(0, 0), (lng, 0), (0, lat)], dtype=np.float64)
+    if clockwise:
+        ring = ring[::-1]
+    triangle = Polygon(ring * COORD2INT_FACTOR)
+    height = np.radians(lat)
+    expected = np.radians(lng) * (1 - np.cos(height)) / height
+    assert spherical_area(triangle) == pytest.approx(expected, rel=1e-9)
 
 
 CELL_PROBES = [
@@ -342,16 +361,45 @@ def test_hole_union_gate_skips_all_individual_hole_costs():
     )
 
 
-def test_legacy_ordering_breaks_every_tie_independently_of_input_order():
-    # zone 0 "Etc/UTC" and zone 1 "Antarctica/Rothera" tie on a vertex total of 5,
-    # and their numeric ids sort opposite to their names; zone 2 is larger. Within
-    # zone 2, polygons 3, 4 and 5 all tie on 3 vertices.
+def test_zone_precedence_is_smaller_area_first_and_breaks_every_tie_independently_of_input_order():
+    # zone 2 has by far the most vertices and the smallest area, so it goes first:
+    # vertex counts no longer rank zones. Zones 0 "Etc/UTC" and 1 "Antarctica/Rothera"
+    # tie on area, and their numeric ids sort opposite to their names. Within zone 2,
+    # polygons 4 and 5 tie on 3 vertices and polygon 3 has 30.
     data = SimpleNamespace(
-        boundaries=SimpleNamespace(nr_vertices=np.array([5, 3, 2, 3, 3, 3])),
+        boundaries=SimpleNamespace(nr_vertices=np.array([5, 3, 2, 30, 3, 3])),
         poly_zone_ids=np.array([0, 1, 1, 2, 2, 2]),
         all_tz_names=["Etc/UTC", "Antarctica/Rothera", "Etc/GMT+1"],
     )
-    # an equal total sorts by identifier, never by zone id; equal polygons by id
-    expected = [2, 1, 0, 3, 4, 5]
+    zone_area = np.array([1.0, 1.0, 0.5])
+    # an equal area sorts by identifier, never by zone id; equal polygons by id
+    expected = [4, 5, 3, 2, 1, 0]
     for poly_ids in itertools.permutations(range(6)):
-        assert optimise_shortcut_ordering(data, list(poly_ids)) == expected
+        assert optimise_shortcut_ordering(data, list(poly_ids), zone_area) == expected
+
+
+def test_zone_areas_sum_a_zones_polygons_and_cut_out_their_holes():
+    # zone 0: a 10 x 10 degree square holding the enclave below as a hole-free overlap,
+    # plus a second, detached 1 x 1 square. zone 1: the 2 x 2 enclave, minus a hole.
+    def ring(x0, y0, x1, y1):
+        return (
+            np.array([[x0, x1, x1, x0], [y0, y0, y1, y1]], dtype=np.float64)
+            * COORD2INT_FACTOR
+        ).astype(np.int64)
+
+    rings = [ring(0, 0, 10, 10), ring(20, 0, 21, 1), ring(4, 4, 6, 6)]
+    holes = {2: [ring(4.5, 4.5, 5, 5)]}
+    data = SimpleNamespace(
+        nr_of_zones=2,
+        poly_zone_ids=np.array([0, 0, 1]),
+        boundaries=SimpleNamespace(coords_of=lambda i: rings[i]),
+        holes=SimpleNamespace(holes_of_poly=lambda i: iter(holes.get(i, []))),
+    )
+
+    def area(x0, y0, x1, y1):
+        return spherical_area(box(*(ring(x0, y0, x1, y1)[:, [0, 2]].T.ravel())))
+
+    areas = zone_areas(data)
+    assert areas[0] == pytest.approx(area(0, 0, 10, 10) + area(20, 0, 21, 1))
+    assert areas[1] == pytest.approx(area(4, 4, 6, 6) - area(4.5, 4.5, 5, 5))
+    assert areas[1] < areas[0]

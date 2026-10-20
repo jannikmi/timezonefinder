@@ -59,7 +59,8 @@ is not merely the wrong place to state the invariant - here it cannot state it e
 The size-derived rule proposed on issue #513 ("smaller zones take precedence") fails
 separately, on 20 of the 216 edges, and the ocean zones are the systematic half of it: an
 ``Etc/GMT±XX`` polygon covers a hemisphere and has a handful of vertices, so it is huge by
-area and first by the vertex-count key ``optimise_shortcut_ordering`` actually sorts on.
+area and was first by the per-cell vertex-count key ``optimise_shortcut_ordering`` sorted on
+when this ran.
 ``Etc/GMT-3`` has to precede ``Africa/Djibouti`` while being 583x its area. The composite
 case named on the issue is here too: ``Asia/Shanghai`` before ``Asia/Ho_Chi_Minh``, 36x.
 

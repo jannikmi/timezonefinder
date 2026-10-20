@@ -10,8 +10,6 @@ DOC-8 independent; cheaper after DOC-9
 
 GH-721 waits on a setuptools release that accepts a free-threaded limited-API tag
 
-PREC-1 waits on a decision; it changes only the zone order the ordering optimizer keeps in overlap cells
-
 independent: GH-524
 ```
 
