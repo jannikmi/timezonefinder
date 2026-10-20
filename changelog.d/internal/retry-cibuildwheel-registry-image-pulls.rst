@@ -1,1 +1,0 @@
-The Linux wheel job retries pulls of its pinned manylinux and musllinux build images before cibuildwheel starts, so transient container-registry failures do not invalidate an otherwise successful wheel build.
