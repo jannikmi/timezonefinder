@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "9.0.0"
+version = "9.1.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -47,7 +47,7 @@ dependencies = [
     # satisfying it while a format change becomes a resolver error instead of a
     # failure at the first lookup. tests/test_data_version.py holds the two numbers
     # to the constant.
-    "timezonefinder-data>=4.2026.4,<5",
+    "timezonefinder-data>=4.2026.5,<5",
 ]
 
 [project.urls]

@@ -1,1 +1,0 @@
-The automated data-release workflow now brings an update pull request onto current ``master`` itself when branch protection has left it behind, instead of waiting for someone to press "Update branch" on a finished release.
