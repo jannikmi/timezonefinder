@@ -5,7 +5,7 @@ One file per change, instead of every change editing the same section of `CHANGE
 Add exactly one file per atomic change under the section where the bullet will
 be published:
 
-- `changelog.d/breaking-changes/<slug>.rst` — incompatible public API or behavior
+- `changelog.d/breaking-changes/<slug>.rst` — incompatible public API or documented behavior; a dropped Python version or raised dependency minimum is `changed/`
 - `changelog.d/new-features/<slug>.rst` — new public API or behavior
 - `changelog.d/changed/<slug>.rst` — compatible changes to existing behavior, dependencies, packaging, or data formats
 - `changelog.d/bug-fixes/<slug>.rst` — corrections of previously wrong behavior
