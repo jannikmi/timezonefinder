@@ -17,9 +17,9 @@
     :alt: total PyPI downloads
     :target: https://pepy.tech/project/timezonefinder
 
-.. image:: https://img.shields.io/badge/used%20by-thousands%20of%20repositories-blue?logo=github
-    :alt: used by thousands of GitHub repositories
-    :target: https://github.com/jannikmi/timezonefinder/network/dependents
+.. image:: https://img.shields.io/pypi/dm/timezonefinder.svg
+    :alt: monthly PyPI downloads
+    :target: https://pypistats.org/packages/timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
     :alt: latest version on PyPI

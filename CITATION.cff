@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use timezonefinder in your work, please cite it as below."
+type: software
+title: timezonefinder
+abstract: "Offline timezone lookup for WGS84 coordinates, with no polygon simplification."
+authors:
+  - family-names: Michelfeit
+    given-names: Jannik
+repository-code: "https://github.com/jannikmi/timezonefinder"
+url: "https://timezonefinder.readthedocs.io/"
+license: MIT
+keywords:
+  - timezone
+  - geolocation
+  - coordinates
+  - offline
+  - python
