@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792620499219,
+  "lastUpdate": 1792620501519,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -30056,6 +30056,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2527 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "04992286f1f26424e6780ae97983f41b6bf8be1a",
+          "message": "Compare batch throughput against pytzwhere (#738)\n\n* Compare batch throughput against pytzwhere\n\nJay asked for the pytzwhere comparison to cover batch performance too.\nThe prototype now times the whole sample answered by a plain loop and by\ntimezone_names_at() in batches of 100, 1,000 and 10,000 points (pytzwhere\nhas no batch API, so its loop is the baseline), checks every batch against\nthe scalar answers, and re-records its FINDINGS from a fresh three-run\nmeasurement.\n\nTwo stale parts of the prototype are fixed on the way: the numba path is\nforced by hiding the C extension, since the extension now wins wherever it\nloaded, and the land subset is computed in its own process, because Linux\ncarries peak RSS across fork/exec and a driver that had loaded the package\nmade every worker's added-RSS row read 0.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01SXDZkgLTAq32KNimxPvK8r\n\n* Shorten the pytzwhere comparison in the docs\n\nJay asked for the comparison to stay short, since pytzwhere is unmaintained.\nThe bullets now state what a default install gains, and the two exceptions\n(disk size, the pure-Python fallback's throughput and why) follow them.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01SXDZkgLTAq32KNimxPvK8r\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T00:07:30+02:00",
+          "tree_id": "d1bb6788418307a275cc2b00c0dc650f774fb23a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/04992286f1f26424e6780ae97983f41b6bf8be1a"
+        },
+        "date": 1792620500872,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946620941162109,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948404312133789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9600496292114258,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9607725143432617,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.65624809265137,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65705680847168,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
           }
         ]
       }
