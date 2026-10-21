@@ -9,6 +9,9 @@ would quote:
 * startup time: import plus constructing the finder, in a fresh process
 * memory: peak resident set size of that process, and how much of it the package added
 * query latency: median, p99 and throughput, on a uniform global sample and on its on-land subset
+* batch throughput: the whole sample answered by ``timezone_names_at()`` in batches of several
+  sizes, against a plain loop of single-point calls - ``pytzwhere`` has no batch API, so a loop
+  is all a caller of it can write
 * coverage: share of points that get an answer at all (``pytzwhere`` has no ocean zones)
 * agreement on land where both answer, with the caveat that the datasets are a decade apart
 * installed data size on disk
@@ -18,56 +21,78 @@ Each package runs in its own subprocess, so neither one's imports or memory leak
 numbers. ``pytzwhere`` is unmaintained and breaks on NumPy >= 1.24 (ragged ``np.array``), so it is
 measured in an isolated ``uv`` environment pinned to Python 3.10, ``numpy<1.24`` and ``shapely<2``;
 the current-stack attempt is recorded as a result rather than hidden. This package runs in the
-interpreter executing this script, once per point-in-polygon path: ``numba`` when it is installed,
-``clang`` (the C extension, which is what a plain ``pip install`` gets) and ``python`` (the fallback
-where no extension is built). A path is forced by hiding ``numba`` and the extension from the
-import system, so its import cost leaves the numbers as it would from a real install. All paths
-must give identical answers, and the report counts any that do not.
+interpreter executing this script, once per point-in-polygon path: ``clang`` (the C extension,
+which is what a plain ``pip install`` gets and which wins wherever it loaded), ``numba`` (the
+fallback where the extension is missing and the ``numba`` extra is installed) and ``python`` (the
+fallback where neither is). A path is forced by hiding modules from the import system, so an
+import a real install would not make leaves the numbers too. All paths must give identical
+answers, and every batch must give the scalar method's answers; the report counts any that do not.
 
 Run with::
 
-    uv run python prototypes/pytzwhere_headline_comparison.py            # 5,000 points
-    uv run python prototypes/pytzwhere_headline_comparison.py -n 20000 --json out.json
+    uv run --group numba python prototypes/pytzwhere_headline_comparison.py   # 5,000 points
+    uv run --group numba python prototypes/pytzwhere_headline_comparison.py -n 20000 --json out.json
 
-Requires ``uv`` on PATH for the ``pytzwhere`` environment (downloaded on first run, then cached).
-Timings are per-call ``perf_counter_ns`` around the public single-point API, after one warm-up
-query; the cold first query is reported separately because it includes lazy loading (and JIT
-compilation when numba is installed).
+Without ``--group numba`` the numba path is skipped and reported as such. Requires ``uv`` on PATH
+for the ``pytzwhere`` environment (downloaded on first run, then cached). Latency is per-call
+``perf_counter_ns`` around the public single-point API, after one warm-up query; the cold first
+query is reported separately because it includes lazy loading. Throughput times the whole sample
+per round with no per-call timer and reports the median of ``--rounds``; the batch sizes default
+to 100, 1,000 and 10,000, the last inside the plateau ``docs/benchmark_results_batch_break_even.rst``
+measures, and a size above the land subset runs as one call over all of it.
 
-FINDINGS (2026-09-22, macOS arm64, 20,000 points, seed 42; timezonefinder-data 3.2026.4 on Python
-3.14, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23). Three consecutive runs; the table is the third,
-and every row but the p99s agreed within ~10 % across them. The p99 rows of the ``python`` and
-``clang`` paths were stable too, but the ``numba`` path put 111 us and 165 us p99s into the first
-run and 6-10 us into the other two (earlier single runs gave 10.5 us and 154.7 us on land), so its
-tail wants paired rounds before it is quoted. All three paths gave identical answers.
+FINDINGS (2026-10-21, Linux x86_64, 4-vCPU Intel Xeon @ 2.10GHz container, 20,000 points, seed
+42; timezonefinder-data 4.2026.5 on Python 3.13, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23).
+Three consecutive runs; the table is the third. A shared container is noisy: the medians and
+startup agreed within ~15 % across runs, the throughput rows within ~25 %, and the p99s of
+``tzwhere`` moved 2x (570-900 us global), so quote those as magnitudes. All three paths gave
+identical answers, and every batch the scalar method's.
 
     metric                         unit     tzwhere       tzf numba       tzf clang      tzf python
-    startup (import + init)           s        1.50     0.25 (6.1x)    0.07 (21.8x)    0.06 (23.6x)
-    first (cold) query               ms        5.42   0.02 (222.7x)   0.02 (239.5x)   0.02 (267.6x)
-    peak RSS of the process         MiB         694      137 (5.1x)      62 (11.2x)      60 (11.5x)
-    RSS added by import + init      MiB         597       92 (6.5x)      18 (32.6x)      17 (35.2x)
-    installed package/data size     MiB        22.9     32.1 (0.7x)     32.1 (0.7x)     32.1 (0.7x)
-    median latency (global)          us         7.5      1.0 (7.8x)      0.9 (8.2x)      1.0 (7.5x)
-    p99 latency (global)             us       272.8      7.9 (34.5x)     5.2 (52.4x)  1033.0 (0.3x)
-    median latency (land)            us        11.0     1.0 (11.5x)     0.9 (12.0x)     1.0 (10.6x)
-    p99 latency (land)               us       793.8      9.7 (81.8x)     6.7 (119.1x) 1474.3 (0.5x)
+    startup (import + init)           s        3.44     0.45 (7.7x)    0.17 (20.6x)    0.16 (20.9x)
+    first (cold) query               ms       11.41   0.07 (173.8x)   0.02 (549.9x)   0.02 (481.3x)
+    peak RSS of the process         MiB         480      180 (2.7x)       63 (7.6x)       61 (7.8x)
+    RSS added by import + init      MiB         439      139 (3.1x)      23 (18.9x)      19 (22.8x)
+    installed package/data size     MiB        22.9     32.3 (0.7x)     32.3 (0.7x)     32.3 (0.7x)
+    median latency (global)          us        13.7     0.9 (14.9x)     1.4 (10.1x)     1.1 (12.9x)
+    p99 latency (global)             us       899.9     9.6 (94.2x)    14.4 (62.5x)   1066.2 (0.8x)
+    median latency (land)            us        20.4     1.0 (20.8x)     1.5 (13.7x)     1.2 (16.5x)
+    p99 latency (land)               us      2668.8    12.1 (220.8x)  18.7 (142.7x)   1798.5 (1.5x)
     answered (global)                 %       28.9%          100.0%          100.0%          100.0%
-    answered (land)                   %       84.2%          100.0%          100.0%          100.0%
+    answered (land)                   %       84.4%          100.0%          100.0%          100.0%
     queries that raised                          48               0               0               0
 
-* numba is not needed for any headline, and costs memory. Its import is ~75 MiB of the ~90 MiB
-  the numba path adds; a default install (the C extension) adds under 20 MiB, ~30x less than
-  tzwhere, and starts ~20x faster, because it imports neither numba nor tzwhere's full geometry.
-* The median query is ~1 us on every path, 8-12x faster than tzwhere: a unique-zone lookup reads
-  no geometry, so the kernel does not show up in it.
-* The tail is where the kernel shows. The C extension's p99 is 5-7 us; the pure-Python fallback's
-  is 1-1.5 ms, *slower than tzwhere's* (whose ray cast is shapely's C code), so a platform without
-  a built extension loses the latency headline and keeps only memory, startup and coverage.
+    throughput, per point          unit     tzwhere       tzf numba       tzf clang      tzf python
+    loop (global)                    us       16.49     1.27 (13.0x)    1.27 (12.9x)   40.07 (0.4x)
+    batch of 100 (global)            us       16.49     0.73 (22.6x)    0.80 (20.7x)   39.70 (0.4x)
+    batch of 1,000 (global)          us       16.49     0.30 (54.5x)    0.31 (53.3x)   36.65 (0.4x)
+    batch of 10,000 (global)         us       16.49     0.23 (73.2x)    0.26 (63.1x)   40.62 (0.4x)
+    loop (land)                      us       25.77     1.47 (17.5x)    1.52 (16.9x)   96.99 (0.3x)
+    batch of 100 (land)              us       25.77     1.03 (24.9x)    0.92 (27.9x)   96.06 (0.3x)
+    batch of 1,000 (land)            us       25.77     0.54 (47.7x)    0.48 (54.2x)   91.05 (0.3x)
+    batch of 6,742 (land)            us       25.77     0.49 (52.3x)    0.43 (59.5x)   99.20 (0.3x)
+
+* Batching is where the gap is widest. ``tzwhere`` can only loop, at ~15-25 us a point; a batch of
+  10,000 on the default install answers in ~0.2-0.3 us a point, 50-75x more throughput over the
+  globe and 50-65x on land across the three runs, against 12-17x for a loop of scalar calls. A
+  batch of 100 still gives 20-28x; most of the batch gain is in hand by 1,000 points.
+* The pure-Python fallback is the exception, and throughput shows it more plainly than latency
+  did: its median is ~1 us like the other paths, but its mean is ~35-45 us a point over the globe
+  and ~80-100 us on land, 2-4x *less* throughput than ``tzwhere``, whose ray cast is shapely's C
+  code. Batching does not help it, because the polygon tests that dominate it run per point. Its
+  p99 was level with ``tzwhere``'s across runs (0.5-1.5x), so it loses the speed headlines and
+  keeps memory, startup and coverage.
+* numba carries no headline. It is only reached where the C extension is missing; there it
+  matches the extension's speed but its import adds ~115 MiB over the default install's ~20 MiB,
+  which is ~20x less than ``tzwhere``'s, and it starts 2-3x slower.
+* The median single query is ~1 us on every path, 10-20x faster than ``tzwhere``: a unique-zone
+  lookup reads no geometry, so the kernel does not show up in it. The C extension's p99 is ~10-20
+  us, ~50-200x below ``tzwhere``'s.
 * Coverage is the larger practical difference: tzwhere answers 29 % of the globe (no ocean zones),
   misses 16 % of land points, and raises ``KeyError`` for latitudes outside its shortcut table -
   48 of 20,000 points, all polar.
 * The one metric that regressed is on-disk size: this package ships more geometry (holes, ocean
-  zones, a current dataset) and it is still 1.4x the predecessor's.
+  zones, a current dataset) and it is 1.4x the predecessor's.
 * The predecessor no longer imports on a current stack (NumPy >= 1.24 rejects its ragged arrays).
 * 82 % same-zone agreement on land compares tz_world to a current release, so it measures a decade
   of border and zone-name changes as much as either implementation.
@@ -130,10 +155,11 @@ def _dir_size(path: Path) -> int:
 
 
 # the three point-in-polygon paths ``timezonefinder/utils.py`` picks between at import time, and
-# the modules to hide from the import system so that it picks the one asked for; hiding ``numba``
-# is exactly an install without the ``numba`` extra, so its import cost leaves the numbers too
+# the modules to hide from the import system so that it picks the one asked for. The C extension
+# wins wherever it loaded, so ``numba`` is reached only by hiding it; hiding ``numba`` is exactly
+# an install without the ``numba`` extra, so its import cost leaves the other numbers too
 TZF_PATHS = {
-    "numba": (),
+    "numba": ("timezonefinder.inside_polygon_ext",),
     "clang": ("numba",),
     "python": ("numba", "timezonefinder.inside_polygon_ext"),
 }
@@ -144,7 +170,7 @@ def _setup_tzwhere():
 
     finder = tzwhere.tzwhere()
     data_dir = Path(tzwhere.__file__).parent
-    return lambda lng, lat: finder.tzNameAt(lat, lng), data_dir
+    return lambda lng, lat: finder.tzNameAt(lat, lng), None, data_dir
 
 
 def _setup_timezonefinder():
@@ -152,8 +178,10 @@ def _setup_timezonefinder():
     from timezonefinder import TimezoneFinder
 
     finder = TimezoneFinder()
-    return lambda lng, lat: finder.timezone_at(lng=lng, lat=lat), Path(
-        timezonefinder_data.DATA_DIR
+    return (
+        lambda lng, lat: finder.timezone_at(lng=lng, lat=lat),
+        lambda lngs, lats: finder.timezone_names_at(lngs=lngs, lats=lats),
+        Path(timezonefinder_data.DATA_DIR),
     )
 
 
@@ -164,15 +192,78 @@ def _acceleration_path() -> str:
     return active_acceleration_path()
 
 
-def run_worker(variant: str, points_file: Path, out_file: Path) -> None:
+def _loop(query, points) -> list:
+    """One answer per point, the way a caller without a batch API has to get them."""
+    answers = []
+    for lng, lat in points:
+        try:
+            answers.append(query(lng, lat))
+        except Exception as exc:
+            answers.append({"crash": type(exc).__name__})
+    return answers
+
+
+def _time_batches(query, batch_query, points, batch_sizes, rounds) -> dict:
+    """Median per-point time of answering all ``points``, by a loop and in batches of each size.
+
+    The loop has no per-call timer around it, unlike the latency measurement above, so it is the
+    fair baseline for a batch: a timer read per call is ~5-10 % of a ~1 us query. A batch size
+    larger than ``points`` is answered as one call over all of them, and reported at the size it
+    actually ran at. The coordinate arrays are built before the clock starts, because a caller
+    holding a dataframe column already has them; the answers are names, which is what ``tzwhere``
+    returns. ``mismatches`` counts batch answers that differ from the scalar method's.
+    """
+    n = len(points)
+    reference = _loop(query, points)
+    loop_ns = []
+    for _ in range(rounds):
+        t0 = time.perf_counter_ns()
+        _loop(query, points)
+        loop_ns.append(time.perf_counter_ns() - t0)
+    result = {"loop_ns_per_point": statistics.median(loop_ns) / n, "batches": {}}
+    if batch_query is None or not n:
+        return result
+    import numpy as np
+
+    for size in batch_sizes:
+        size = min(size, n)
+        chunks = [
+            (
+                np.array([p[0] for p in points[i : i + size]], dtype=np.float64),
+                np.array([p[1] for p in points[i : i + size]], dtype=np.float64),
+            )
+            for i in range(0, n, size)
+        ]
+        answers = [a for lngs, lats in chunks for a in batch_query(lngs, lats)]
+        batch_ns = []
+        for _ in range(rounds):
+            t0 = time.perf_counter_ns()
+            for lngs, lats in chunks:
+                batch_query(lngs, lats)
+            batch_ns.append(time.perf_counter_ns() - t0)
+        result["batches"][str(size)] = {
+            "ns_per_point": statistics.median(batch_ns) / n,
+            "mismatches": sum(a != b for a, b in zip(answers, reference)),
+        }
+    return result
+
+
+def run_worker(
+    variant: str,
+    points_file: Path,
+    out_file: Path,
+    batch_sizes: list[int],
+    rounds: int,
+) -> None:
     """``variant`` is ``tzwhere`` or ``timezonefinder:<path>`` with a path from TZF_PATHS."""
     package, _, path = variant.partition(":")
     for module in TZF_PATHS.get(path, ()):
         sys.modules[module] = None  # makes ``import module`` raise ImportError
-    points = json.loads(points_file.read_text())
+    sample = json.loads(points_file.read_text())
+    points, land = sample["points"], sample["land"]
     rss_baseline = _maxrss_bytes()
     t0 = time.perf_counter()
-    query, data_dir = {
+    query, batch_query, data_dir = {
         "tzwhere": _setup_tzwhere,
         "timezonefinder": _setup_timezonefinder,
     }[package]()
@@ -196,6 +287,12 @@ def run_worker(variant: str, points_file: Path, out_file: Path) -> None:
         times_ns.append(time.perf_counter_ns() - t0)
         answers.append(answer)
 
+    land_points = [points[i] for i in land]
+    batch = {
+        scope: _time_batches(query, batch_query, sample_, batch_sizes, rounds)
+        for scope, sample_ in (("global", points), ("land", land_points))
+    }
+
     out_file.write_text(
         json.dumps(
             {
@@ -208,6 +305,7 @@ def run_worker(variant: str, points_file: Path, out_file: Path) -> None:
                 "data_size": _dir_size(data_dir),
                 "answers": answers,
                 "times_ns": times_ns,
+                "batch": batch,
             }
         )
     )
@@ -226,10 +324,40 @@ def uniform_sphere_points(n: int, seed: int) -> list[tuple[float, float]]:
     ]
 
 
-def spawn(prefix: list[str], variant: str, points_file: Path, tmp: Path) -> dict:
+def add_land_indices(points_file: Path) -> None:
+    """Add the points this package puts in a real zone; its ocean zones are all ``Etc/GMT*``.
+
+    Taken once up front so every worker times the same land subset; ``summarise`` re-derives the
+    same set from the measured answers. It runs in its own process because Linux carries the peak
+    RSS across ``fork`` and ``exec``: a driver that had loaded this package would raise every
+    worker's ``rss_baseline`` above what the package adds, and the added-RSS row would read 0.
+    """
+    from timezonefinder import TimezoneFinder
+
+    sample = json.loads(points_file.read_text())
+    points = sample["points"]
+    names = TimezoneFinder().timezone_names_at(
+        lngs=[p[0] for p in points], lats=[p[1] for p in points]
+    )
+    sample["land"] = [i for i, a in enumerate(names) if a and not a.startswith("Etc/")]
+    points_file.write_text(json.dumps(sample))
+
+
+def spawn(prefix: list[str], variant: str, points_file: Path, tmp: Path, args) -> dict:
     out = tmp / f"{variant.replace(':', '-')}.json"
     out.unlink(missing_ok=True)
-    cmd = [*prefix, __file__, "--worker", variant, str(points_file), str(out)]
+    cmd = [
+        *prefix,
+        __file__,
+        "--worker",
+        variant,
+        str(points_file),
+        str(out),
+        "--batch-sizes",
+        args.batch_sizes,
+        "--rounds",
+        str(args.rounds),
+    ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         lines = [ln for ln in proc.stderr.strip().splitlines() if ln.strip()]
@@ -285,6 +413,7 @@ def summarise(results: dict[str, dict]) -> dict:
             "crashes": sum(isinstance(a, dict) for a in r["answers"]),
             "latency_global": latency_stats(r["times_ns"]),
             "latency_land": latency_stats([r["times_ns"][i] for i in land]),
+            "batch": r["batch"],
         }
     return summary
 
@@ -316,6 +445,49 @@ COUNT_ROWS = [
     ("answered (land)", lambda v: f"{v['coverage_land']:.1%}"),
     ("queries that raised", lambda v: f"{v['crashes']:,}"),
 ]
+
+
+def print_batch_report(s: dict) -> None:
+    """Per-point time of answering the whole sample, by a loop and in batches.
+
+    ``tzwhere`` has no batch API, so its column repeats its loop in every batch row: a caller
+    with many points has nothing faster to reach for.
+    """
+    variants = s["variants"]
+    old = variants["tzwhere"]
+    names = list(variants)[1:]
+    print(
+        "\nthroughput over the whole sample, median of rounds; per-point time"
+        " (improvement over tzwhere's loop)\n"
+    )
+    headers = ["tzwhere"] + [f"tzf {name.partition(':')[2]}" for name in names]
+    print(f"{'metric':<30}{'unit':>5}" + "".join(f"{h:>18}" for h in headers))
+    mismatches = 0
+    for scope in ("global", "land"):
+        base_us = old["batch"][scope]["loop_ns_per_point"] / 1e3
+        sizes = list(variants[names[0]]["batch"][scope]["batches"])
+        rows = [("loop", lambda b: b["loop_ns_per_point"])] + [
+            (
+                f"batch of {int(size):,}",
+                lambda b, k=size: b["batches"][k]["ns_per_point"],
+            )
+            for size in sizes
+        ]
+        for label, get in rows:
+            cells = [f"{base_us:.2f}"]
+            for name in names:
+                us = get(variants[name]["batch"][scope]) / 1e3
+                cells.append(f"{us:.2f} ({base_us / us:,.1f}x)")
+            print(
+                f"{f'{label} ({scope})':<30}{'us':>5}"
+                + "".join(f"{c:>18}" for c in cells)
+            )
+        mismatches += sum(
+            b["mismatches"]
+            for name in names
+            for b in variants[name]["batch"][scope]["batches"].values()
+        )
+    print(f"batch answers differing from the scalar method's: {mismatches:,}")
 
 
 def print_report(s: dict, current_stack: dict | None) -> None:
@@ -368,10 +540,22 @@ def main() -> None:
         f" (default: all of {', '.join(TZF_PATHS)}; unavailable ones are skipped)",
     )
     parser.add_argument(
+        "--batch-sizes",
+        default="100,1000,10000",
+        help="timezone_names_at() batch sizes, comma-separated (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--rounds",
+        type=int,
+        default=5,
+        help="rounds of the throughput measurement; the median is reported (default: %(default)s)",
+    )
+    parser.add_argument(
         "--skip-current-stack",
         action="store_true",
         help="skip the unpinned tzwhere attempt",
     )
+    parser.add_argument("--land-indices", type=Path, help=argparse.SUPPRESS)
     parser.add_argument(
         "--worker",
         nargs=3,
@@ -379,8 +563,17 @@ def main() -> None:
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
+    if args.land_indices:
+        add_land_indices(args.land_indices)
+        return
     if args.worker:
-        run_worker(args.worker[0], Path(args.worker[1]), Path(args.worker[2]))
+        run_worker(
+            args.worker[0],
+            Path(args.worker[1]),
+            Path(args.worker[2]),
+            [int(b) for b in args.batch_sizes.split(",") if b],
+            args.rounds,
+        )
         return
     if shutil.which("uv") is None:
         sys.exit("uv is required to build the isolated pytzwhere environment")
@@ -393,20 +586,24 @@ def main() -> None:
         tmp = Path(tmp_name)
         points_file = tmp / "points.json"
         points_file.write_text(
-            json.dumps(uniform_sphere_points(args.points, args.seed))
+            json.dumps({"points": uniform_sphere_points(args.points, args.seed)})
+        )
+        subprocess.run(
+            [sys.executable, __file__, "--land-indices", str(points_file)], check=True
         )
         # build (or reuse) the cached legacy env outside the measured run
         subprocess.run([*LEGACY_ENV, "-c", "import tzwhere"], check=True)
         current_stack = None
         if not args.skip_current_stack:
-            current_stack = spawn(CURRENT_STACK_ENV, "tzwhere", points_file, tmp)
-            current_stack.pop("answers", None), current_stack.pop("times_ns", None)
-        results["tzwhere"] = spawn(LEGACY_ENV, "tzwhere", points_file, tmp)
+            current_stack = spawn(CURRENT_STACK_ENV, "tzwhere", points_file, tmp, args)
+            for key in ("answers", "times_ns", "batch"):
+                current_stack.pop(key, None)
+        results["tzwhere"] = spawn(LEGACY_ENV, "tzwhere", points_file, tmp, args)
         if "error" in results["tzwhere"]:
             sys.exit(f"tzwhere worker failed: {results['tzwhere']['error']}")
         for path in paths:
             variant = f"timezonefinder:{path}"
-            result = spawn([sys.executable], variant, points_file, tmp)
+            result = spawn([sys.executable], variant, points_file, tmp, args)
             if "error" in result:
                 skipped[variant] = result["error"]
             else:
@@ -421,6 +618,7 @@ def main() -> None:
     )
     summary["platform"] = f"{sys.platform} {os.uname().machine}"
     print_report(summary, current_stack)
+    print_batch_report(summary)
     if args.json:
         args.json.write_text(json.dumps(summary, indent=2) + "\n")
 

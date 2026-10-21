@@ -1,0 +1,1 @@
+The `comparison to pytzwhere <https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere>`__ now also compares batch throughput: one ``timezone_names_at()`` call over many points against the per-point loop that is the only option ``pytzwhere`` offers.
