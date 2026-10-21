@@ -13,6 +13,7 @@
 [![wheel](https://img.shields.io/pypi/wheel/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![total PyPI downloads](https://pepy.tech/badge/timezonefinder)](https://pepy.tech/project/timezonefinder)
+[![used by thousands of GitHub repositories](https://img.shields.io/badge/used%20by-thousands%20of%20repositories-blue?logo=github)](https://github.com/jannikmi/timezonefinder/network/dependents)
 [![latest version on PyPI](https://img.shields.io/pypi/v/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
 [![latest version on conda-forge](https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg)](https://anaconda.org/conda-forge/timezonefinder)
 [![supported python versions](https://img.shields.io/pypi/pyversions/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
