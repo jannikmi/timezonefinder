@@ -450,17 +450,17 @@ This project was originally derived from `pytzwhere <https://pypi.python.org/pyp
 outdated ``tz_world`` dataset. A 2026 reader is not choosing between the two, but the origin story
 explains the shape of everything above.
 
-When this package was forked, ``pytzwhere`` parsed a 76 MB CSV file - floating point coordinates stored as decimal strings - fully into memory on every startup, and computed its shortcuts from that data each time. With ``shapely`` and ``numpy`` active it used up to **450 MB of RAM** to answer a timezone lookup. That was the reason this package exists.
+When this package was forked, ``pytzwhere`` parsed a 76 MB CSV file fully into memory on every startup and rebuilt its shortcuts each time, using up to **450 MB of RAM** to answer a lookup. Its last release (3.0.3) ships precomputed shortcuts but still decodes every polygon at startup. Re-measured side by side by ``prototypes/pytzwhere_headline_comparison.py``, whose docstring records the run and its limits, a default install of this package (C extension):
 
-Its last release (3.0.3) swapped the CSV for gzipped GeoJSON and shipped its shortcuts precomputed, but still decodes every polygon into memory at startup. Re-measured side by side, ``prototypes/pytzwhere_headline_comparison.py`` found:
+- **adds over an order of magnitude less memory** and **starts an order of magnitude faster**, with no loading pause before the first query. The optional ``numba`` extra adds several times that memory, nearly all of it the ``numba`` import;
+- **answers a single query roughly an order of magnitude faster** at the median and faster still at the slowest;
+- **answers a batch tens of times faster** than ``pytzwhere`` can loop over the same points, since it has no batch API; a loop of this package's own single-point calls gains only the per-query factor above;
+- **answers every point**, where ``pytzwhere`` has no ocean zones, answers under a third of the globe, misses a sixth of land points and raises ``KeyError`` near the poles;
+- **runs on a current stack**, where ``pytzwhere`` fails on NumPy 1.24 or newer and has to be pinned to Python 3.10 with older ``numpy`` and ``shapely``.
 
-- **Memory:** importing and constructing ``pytzwhere`` adds several hundred MiB to the process. A default install of this package, which uses its C extension, adds a couple of dozen at most, over an order of magnitude less; with the optional ``numba`` installed it adds several times that, nearly all of it the ``numba`` import rather than data.
-- **Speed:** startup is an order of magnitude faster (several times with ``numba``), the first query needs no loading pause, and the median query is roughly an order of magnitude faster on every acceleration path. The slowest queries are faster still with the C extension or ``numba``. The pure-Python fallback, used only where no compiled extension is available, is the exception: its slowest queries are slower than ``pytzwhere``'s.
-- **Coverage:** ``pytzwhere`` has no ocean zones, so it answers under a third of the globe, misses a sixth of land points, and raises ``KeyError`` near the poles, where its shortcut table has no rows. This package answers every point.
-- **Compatibility:** ``pytzwhere`` no longer starts on NumPy 1.24 or newer, which rejects the ragged arrays it builds; the comparison has to pin Python 3.10 and older ``numpy`` and ``shapely`` to run it at all.
-- **Disk size is the one regression:** this package's installed data is somewhat larger, because it carries holes, ocean zones and a current dataset.
+Two things go the other way. The installed data is somewhat larger, because it carries holes, ocean zones and a current dataset. And the pure-Python fallback, used only where neither the C extension nor ``numba`` is available, answers a large set of points several times *more slowly* than ``pytzwhere``: its median query is as fast, but the queries that need polygon tests run them in interpreted Python, while ``pytzwhere`` hands them to shapely's compiled GEOS on edge-indexed polygons. Batching cannot help there, because those tests run per point.
 
-Where both answer on land, they name the same zone for about four points in five; that compares ``tz_world`` with a current release, so it measures a decade of border and zone-name changes as much as either implementation. The script's docstring records the measured run and its limits.
+Where both answer on land they agree for about four points in five, which measures a decade of border and zone-name changes between the datasets as much as either implementation.
 
 Against that, the design decisions below are all the same decision made repeatedly:
 
