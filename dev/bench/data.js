@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792491091061,
+  "lastUpdate": 1792620499219,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15711,6 +15711,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5997",
             "unit": "lookups/sec",
             "extra": "min of 76 round(s) on AMD EPYC 7763 64-Core Processor @ 2.8875 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "04992286f1f26424e6780ae97983f41b6bf8be1a",
+          "message": "Compare batch throughput against pytzwhere (#738)\n\n* Compare batch throughput against pytzwhere\n\nJay asked for the pytzwhere comparison to cover batch performance too.\nThe prototype now times the whole sample answered by a plain loop and by\ntimezone_names_at() in batches of 100, 1,000 and 10,000 points (pytzwhere\nhas no batch API, so its loop is the baseline), checks every batch against\nthe scalar answers, and re-records its FINDINGS from a fresh three-run\nmeasurement.\n\nTwo stale parts of the prototype are fixed on the way: the numba path is\nforced by hiding the C extension, since the extension now wins wherever it\nloaded, and the land subset is computed in its own process, because Linux\ncarries peak RSS across fork/exec and a driver that had loaded the package\nmade every worker's added-RSS row read 0.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01SXDZkgLTAq32KNimxPvK8r\n\n* Shorten the pytzwhere comparison in the docs\n\nJay asked for the comparison to stay short, since pytzwhere is unmaintained.\nThe bullets now state what a default install gains, and the two exceptions\n(disk size, the pure-Python fallback's throughput and why) follow them.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01SXDZkgLTAq32KNimxPvK8r\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T00:07:30+02:00",
+          "tree_id": "d1bb6788418307a275cc2b00c0dc650f774fb23a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/04992286f1f26424e6780ae97983f41b6bf8be1a"
+        },
+        "date": 1792620496571,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 800336.2692872485,
+            "range": "± 20957",
+            "unit": "lookups/sec",
+            "extra": "min of 258 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1018776.4576271411,
+            "range": "± 59140",
+            "unit": "lookups/sec",
+            "extra": "min of 353 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 168898.32017103338,
+            "range": "± 2099",
+            "unit": "lookups/sec",
+            "extra": "min of 64 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4371546.478317189,
+            "range": "± 179016",
+            "unit": "lookups/sec",
+            "extra": "min of 927 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 32687002.34002664,
+            "range": "± 3784255",
+            "unit": "lookups/sec",
+            "extra": "min of 5315 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 236244.1638243218,
+            "range": "± 21303",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4132149.4449130874,
+            "range": "± 495067",
+            "unit": "lookups/sec",
+            "extra": "min of 901 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23540932.974821277,
+            "range": "± 2083505",
+            "unit": "lookups/sec",
+            "extra": "min of 4803 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 225068.994900375,
+            "range": "± 4555",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
