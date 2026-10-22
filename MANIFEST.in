@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
+include CITATION.cff
 include DATA_VERSION
 include DATA_SOURCE
 include pyproject.toml

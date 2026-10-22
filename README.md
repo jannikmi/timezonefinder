@@ -4,7 +4,7 @@
   <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg" alt="Coordinate to IANA timezone lookup"></a>
 </p>
 
-**Offline timezone lookup for WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
+**Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
 
 <!-- The badges are duplicated in docs/badges.rst, which the docs include and which stays reStructuredText: an include does not render on PyPI, so sync the two by hand. -->
 
@@ -13,6 +13,7 @@
 [![wheel](https://img.shields.io/pypi/wheel/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![total PyPI downloads](https://pepy.tech/badge/timezonefinder)](https://pepy.tech/project/timezonefinder)
+[![monthly PyPI downloads](https://img.shields.io/pypi/dm/timezonefinder.svg)](https://pypistats.org/packages/timezonefinder)
 [![latest version on PyPI](https://img.shields.io/pypi/v/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
 [![latest version on conda-forge](https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg)](https://anaconda.org/conda-forge/timezonefinder)
 [![supported python versions](https://img.shields.io/pypi/pyversions/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
@@ -111,6 +112,18 @@ Which is fastest is measured, not assumed: see the [acceleration path comparison
 
 **Alternative:** Need maximum speed at the cost of accuracy?
 Check out [tzfpy](https://github.com/ringsaturn/tzfpy) - a fast and lightweight alternative based on Rust.
+
+
+## Used by
+
+`timezonefinder` is the most downloaded offline timezone lookup package for Python - see the [alternatives](https://timezonefinder.readthedocs.io/en/latest/alternatives.html) for how it compares.
+GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/dependents) lists thousands of repositories and hundreds of published packages that depend on it, among them:
+
+* industry: Google's [data-science-on-gcp](https://github.com/GoogleCloudPlatform/data-science-on-gcp), Posit's [Shiny for Python](https://github.com/posit-dev/py-shiny)
+* research and government: CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the National Laboratory of the Rockies' (formerly NREL) [HOPP](https://github.com/NatLabRockies/HOPP), the US EPA's [sensortoolkit](https://github.com/USEPA/sensortoolkit), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio), NASA JPL OPERA's [next_pass](https://github.com/OPERA-Cal-Val/next_pass)
+* open source: [LibrePhotos](https://github.com/LibrePhotos/librephotos), [RocketPy](https://github.com/RocketPy-Team/RocketPy), Bellingcat's [ShadowFinder](https://github.com/bellingcat/ShadowFinder), Catalyst Cooperative's [PUDL](https://github.com/catalyst-cooperative/pudl)
+
+To cite `timezonefinder`, use the "Cite this repository" button on GitHub, which reads [`CITATION.cff`](https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff).
 
 
 ## Contributing

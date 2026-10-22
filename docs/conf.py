@@ -40,8 +40,8 @@ print(timezonefinder)
 # -- Project information -----------------------------------------------------
 
 project = "timezonefinder"
-copyright = "2016, Jannik Michelfeit"
-author = "Jannik Michelfeit"
+copyright = "2016, Jannik Kissinger"
+author = "Jannik Kissinger"
 
 # The full version, including alpha/beta/rc tags.
 release = subprocess.getoutput("uv version --short")

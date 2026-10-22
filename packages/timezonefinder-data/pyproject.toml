@@ -6,7 +6,7 @@ name = "timezonefinder-data"
 # can read (`timezonefinder-data>=...,<N+1`) without also capping the data axis.
 # Written by update_data.sh; tests/test_data_version.py holds it to the derivation.
 version = "4.2026.5"
-description = "the packaged timezone boundary data for the timezonefinder package"
+description = "the packaged timezone boundary data for the timezonefinder Python package"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="ODbL-1.0" with setuptools>=71
 license = {file="DATA_LICENSE"}
