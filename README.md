@@ -4,7 +4,7 @@
   <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg" alt="Coordinate to IANA timezone lookup"></a>
 </p>
 
-**Offline timezone lookup for WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
+**Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
 
 <!-- The badges are duplicated in docs/badges.rst, which the docs include and which stays reStructuredText: an include does not render on PyPI, so sync the two by hand. -->
 

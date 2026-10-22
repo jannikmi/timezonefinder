@@ -9,7 +9,7 @@ timezonefinder
    :alt: Coordinate to IANA timezone lookup
    :align: center
 
-This is a python package providing offline timezone lookups for WGS84 coordinates.
+This is a Python package providing offline timezone lookups for WGS84 coordinates.
 In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
 It combines preprocessed polygon data, grid-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
 

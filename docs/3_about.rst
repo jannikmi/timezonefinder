@@ -2,7 +2,7 @@
 About
 =====
 
-``timezonefinder`` is a python package providing offline timezone lookups for WGS84 coordinates.
+``timezonefinder`` is a Python package providing offline timezone lookups for WGS84 coordinates.
 
 :doc:`architecture` walks through the lookup pipeline end to end, the three point-in-polygon backends and the trade-offs that were deliberately *not* taken.
 :doc:`data_format` documents the binary layouts it reads, and :doc:`alternatives` compares this package against the other options.
