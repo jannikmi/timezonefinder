@@ -87,8 +87,9 @@ def matrix_entries(build_workflow) -> list[dict]:
 def test_the_ci_matrix_covers_exactly_the_advertised_versions(
     classifier_minors, matrix_entries
 ):
+    # a set: one version may carry several entries, e.g. one job for its expensive env
     matrix_minors = sorted(
-        int(str(entry["python-version"]).split(".")[1]) for entry in matrix_entries
+        {int(str(entry["python-version"]).split(".")[1]) for entry in matrix_entries}
     )
     assert matrix_minors == classifier_minors, (
         "pyproject.toml classifiers and the build.yml test matrix disagree: a "
