@@ -2,7 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [TOOL-6](items/data-pipeline-and-developer-tooling/tool-6-the-ruff-version-is-pinned-below-0-16.md) | The ruff version is pinned below 0.16 | tooling | S | free — decided 2026-09-06; measured zero findings and zero reformats on 0.16.6, and a pass may now take dev-tool pins |
 | [DOC-8](items/data-pipeline-and-developer-tooling/doc-8-move-the-changelog-and-its-fragments-to-markdown.md) | Move `CHANGELOG.rst` and the `changelog.d/` fragments to Markdown | docs | M | free — decided 2026-09-05; narrow code coupling, but not while a release is in flight |
 | [DOC-10](items/data-pipeline-and-developer-tooling/doc-10-plan-the-mkdocs-migration-for-maintainer-review.md) | Plan the MkDocs migration for maintainer review | docs | M | free — produces a plan and a losslessness contract; DOC-9 cannot start without it |
 | [DOC-12](items/data-pipeline-and-developer-tooling/doc-12-strip-the-decision-log-from-the-decision-records.md) | Strip the decision log from the decision records | docs | S | free — five of the six decision files the index change did not touch carry a chronology that answers no question a reader of them has, and it hides the live content: one file's longest bullet was a closed episode around one transferable rule |
