@@ -1,13 +1,13 @@
 # Prepare and publish a code release
 
-This workflow has two mutually exclusive halves: **prepare** opens a release pull request; **tag** runs only after the maintainer merges it.
+This workflow has two mutually exclusive halves: **prepare** opens a release pull request; **tag** runs only after the maintainer merges it. That merge is the authorization to publish: `tag_code_release.yml` tags the merged commit once its `master` build is green.
 
 Read the [changelog policy](../development/changelog-and-release-note-policy.md) and [public compatibility contract](../project/public-api-and-compatibility-contract.md).
 
 ## Hard boundaries
 
 - Never merge or enable auto-merge on the release pull request.
-- Never push a tag without explicit authorization naming it in the same session. Both namespaces on this branch publish to PyPI, which never accepts a version twice: a bare `<version>` tag publishes `timezonefinder`, a `data-v<version>` tag publishes `timezonefinder-data`.
+- Never push a tag by hand without explicit authorization naming it in the same session, and never ask for the release pull request's merge before the release is ready to publish. Both namespaces on this branch publish to PyPI, which never accepts a version twice: a bare `<version>` tag publishes `timezonefinder`, a `data-v<version>` tag publishes `timezonefinder-data`.
 - Never force-push, delete a published tag, upload manually, regenerate data, fixtures, or bindings, or include unrelated files. The benchmark reports are the one exception, refreshed only through the step below and only in their own commit.
 - Stage explicit paths; the checkout may contain another contributor's work.
 
@@ -78,42 +78,21 @@ Run `make hook`, `make test`, and `make testint`. Confirm the diff against `orig
 
 The release freezes `docs/benchmark_results_*.rst` as the version's published performance. Only the artifact `benchmark.yml` renders on a named CI runner may be committed, and the stamp enforces it: `benchmark_report_artifact install` refuses a report measured for any other tree. **A pull request may publish its own render**, and one that changes what the pages measure should (dispatch `render_reports=true` against its head and install the result); the release is still the last word.
 
-Push the branch as soon as the version commit exists. `benchmark.yml` runs on every push to `release/**`, so the render this step consumes is already under way and nothing is dispatched by hand.
+Push the branch as soon as the version commit exists. On every push to `release/**`, `benchmark.yml` renders the pages for the pushed commit, and its `commit-reports` job installs that artifact in its own commit on the branch, pushed with the data-updater App token so the pull request's CI runs on the new head. The render skips a head commit that is itself such a pages commit, which is what stops it looping. Nothing is dispatched, downloaded or installed by hand.
 
-```bash
-release_sha=$(git rev-parse HEAD)
-release_branch=$(git branch --show-current)
-git push -u origin "$release_branch"
-```
+**Any further push to the release branch cancels the render for the earlier head.** `benchmark.yml`'s concurrency group is the workflow plus the ref with `cancel-in-progress: true`, and `commit-reports` refuses a branch that moved past the commit it rendered, so the new push renders and commits for itself. A cancelled run reads like a failure and is not one.
 
-Then check staleness rather than assuming it: the pages are stale if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`. A page a pull request already rendered is not stale for that, but read the CPU each page names: pages measured on two different runners are what this step replaces with one. If nothing is stale, skip the install and say so in the pull request body; the render still ran, because a push trigger cannot read that check.
+Two cases still install by hand: `gh workflow run benchmark.yml --ref "$release_branch" -f render_reports=true` for an artifact that expired while the release commit stood still, and a missing App secret, which `commit-reports` names. Install only the run whose head SHA is exactly the commit beneath the pages: `gh run download <run-id> --name benchmark-pages --dir tmp/benchmark-pages`, then `uv run python -m scripts.benchmark_report_artifact install --artifact-dir tmp/benchmark-pages --expected-commit <sha>`, and stage only the pages.
 
-`$release_sha` is what makes the install safe: the artifact carries that SHA and the installer refuses any other.
+Wait for the pages commit before opening the pull request. Its body names the workflow run and runner CPU, and states that CI's paired same-runner comparison, not these cross-runner pages, decides whether code moved performance.
 
-```bash
-gh run list --workflow benchmark.yml --commit "$release_sha" --event push
-gh run watch <run-id> --exit-status
-rm -rf tmp/benchmark-pages
-gh run download <run-id> --name benchmark-pages --dir tmp/benchmark-pages
-uv run python -m scripts.benchmark_report_artifact install \
-  --artifact-dir tmp/benchmark-pages --expected-commit "$release_sha"
-```
-
-Use the run whose head SHA is exactly `$release_sha`, never the newest run on the branch name. A failed job yields no report to commit.
-
-**Any further push to the release branch cancels this step's run.** `benchmark.yml`'s concurrency group is the workflow plus the ref with `cancel-in-progress: true`, and `gh run watch --exit-status` exits non-zero on a cancelled run, which reads like a failure and is not one. Recover by re-capturing `release_sha` from the new head and re-running the block; the push has already restarted the render. `gh workflow run benchmark.yml --ref "$release_branch" -f render_reports=true` covers the one case no push does: an artifact that expired while the release commit stood still.
-
-Commit the refreshed pages **in their own commit**, staging only `docs/benchmark_results_*.rst` and `docs/data_report.rst`, so the version commit stays exact and the measurement diff is reviewable alone. The pull request body names the workflow run and runner CPU, and states that CI's paired same-runner comparison, not these cross-runner pages, decides whether code moved performance.
-
-Push the remaining commits and open the release pull request. Its body names the old and new versions, the level, the bullet driving it and its rule, the level not taken and why, changelog edits, verification, whether the reports were refreshed or skipped as current, and that tagging happens separately. Stop.
+Push the remaining commits and open the release pull request. Its body names the old and new versions, the level, the bullet driving it and its rule, the level not taken and why, changelog edits, verification, the reports' run, and that merging publishes. Stop.
 
 ## Tag
 
-After the maintainer merges, fast-forward local `master` and verify its head is the release commit. Require the project version to equal the top dated changelog section, and verify the tag is absent locally and remotely.
+The maintainer merges; `tag_code_release.yml` does the rest. On a successful `master` push build it checks out the built commit, never `master`'s tip, and pushes the annotated `<version>` tag only when that commit moved the project version, the top changelog section is dated for it, every fragment was consumed and the tag is absent. Its failures appear in the Actions tab only, because a `workflow_run` belongs to no pull request.
 
-Wait for the `master` workflow run for that exact SHA to succeed: the tag workflow does not rerun the tox matrix and refuses publication without it.
-
-Ask explicitly for authorization to tag the named version on `master`, explaining that this publishes to PyPI irreversibly. On approval, run `make release`.
+Tag by hand only when that workflow could not: its App secrets absent, or its run failed after the merge. Ask explicitly for authorization to tag the named version, explaining that this publishes to PyPI irreversibly, then tag the release commit itself: `git tag -a <version> <sha> -m "Release <version>" && git push origin <version>`. `make release` tags `master`'s head, which is the wrong commit once anything else merged.
 
 **Then verify the upload, not the run.** A skipped job does not fail its run, so a green tag run is no evidence of publication: a `publish-pypi` job skipped at its `pypi` deployment environment leaves every gate green and nothing on PyPI. The release is done when the index serves the version and `publish-pypi` concluded `success`, not `skipped`:
 
