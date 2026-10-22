@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792638510087,
+  "lastUpdate": 1792638512380,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -31586,6 +31586,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdc9fb98449cf993294e987d7f090888fc0c5aab",
+          "message": "GH-721: ship abi3t wheels for free-threaded 3.15 and later (#748)\n\nsetup.py names two stable-ABI bases: abi3 on cp312 for GIL builds, and\nabi3t on cp315 for free-threaded ones, claimed only from 3.15 on\nsetuptools 84.2.0, below which setuptools raises on py_limited_api. The\nwheel build adds the cp315t identifiers on images dated after 3.15.0\nfinal. The free-threaded tests move to 3.15t, and the end-to-end job\ngains a cp315t leg, installs on each leg the wheel that interpreter's\ntag ranking prefers, and asserts a free-threaded interpreter keeps the\nGIL off. The version-support test holds both bases.\n\nGH-721 is deleted; its refused options move to the distribution\ndecisions.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T03:07:35Z",
+          "tree_id": "cc6a816d1b0ba59b02f9e80c274487fa1a771d8c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fdc9fb98449cf993294e987d7f090888fc0c5aab"
+        },
+        "date": 1792638511785,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946620941162109,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694793701171875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9597129821777344,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9604358673095703,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.65646553039551,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65723133087158,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2498 GHz"
           }
         ]
       }
