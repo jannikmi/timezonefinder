@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792630518157,
+  "lastUpdate": 1792631351804,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15972,6 +15972,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3508",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4f77cf074105930271e3b7f696ac0f04f021bef",
+          "message": "Bump pillow from 12.3.0 to 13.0.0 (#740)\n\nBumps [pillow](https://github.com/python-pillow/Pillow) from 12.3.0 to 13.0.0.\n- [Release notes](https://github.com/python-pillow/Pillow/releases)\n- [Changelog](https://github.com/python-pillow/Pillow/blob/main/CHANGES.rst)\n- [Commits](https://github.com/python-pillow/Pillow/compare/12.3.0...13.0.0)\n\n---\nupdated-dependencies:\n- dependency-name: pillow\n  dependency-version: 13.0.0\n  dependency-type: indirect\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-22T01:08:21Z",
+          "tree_id": "c031e905e2affc30856688eb7157789c13343fe5",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b4f77cf074105930271e3b7f696ac0f04f021bef"
+        },
+        "date": 1792631350078,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 785899.0842712353,
+            "range": "± 71131",
+            "unit": "lookups/sec",
+            "extra": "min of 249 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 966455.1160857903,
+            "range": "± 23943",
+            "unit": "lookups/sec",
+            "extra": "min of 328 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 172789.95086819993,
+            "range": "± 8227",
+            "unit": "lookups/sec",
+            "extra": "min of 65 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4865072.090684476,
+            "range": "± 666325",
+            "unit": "lookups/sec",
+            "extra": "min of 945 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 36537955.625454284,
+            "range": "± 2348210",
+            "unit": "lookups/sec",
+            "extra": "min of 6017 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 247743.64993381524,
+            "range": "± 3860",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4594980.076133986,
+            "range": "± 396642",
+            "unit": "lookups/sec",
+            "extra": "min of 990 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 26346018.061893757,
+            "range": "± 1573142",
+            "unit": "lookups/sec",
+            "extra": "min of 4288 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 244688.21045228848,
+            "range": "± 3141",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
