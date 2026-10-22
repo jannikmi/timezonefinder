@@ -18,7 +18,7 @@
 - `tests/test_data_wheel_handoff.py` guards the shared-wheel agreements.
 - The code-release job's `Create GitHub Release` step is the event the repository's Zenodo `release` webhook archives; Zenodo deposits the tag's source tree, not the attached wheels.
 - `CITATION.cff` validates against CFF 1.2.0 with `uvx cffconvert --validate -i CITATION.cff`, and carries no version or date that a release would have to bump.
-- The supported Python window was checked against the CPython release calendar, the drop dates in the comment above `requires-python`, and the locked dependencies' wheels; [PY-1](../../items/packaging-distribution-and-release/py-1-python-3-15-is-unclaimed-and-3-12-is-past-its-cited-drop-date.md) holds the result.
+- The supported Python window was checked against the CPython release calendar, the drop dates in the comment above `requires-python`, and the locked dependencies' wheels; [PY-1](../../items/packaging-distribution-and-release/py-1-retire-python-3-12-after-its-nep-29-drop-date.md) holds the next change to it.
 
 ## Known uncovered deltas
 

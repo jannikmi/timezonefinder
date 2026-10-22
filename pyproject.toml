@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     # "3 - Stable": tested multithreaded on a free-threaded build in CI
     # (tests/test_free_threading.py and the `free-threaded` tox env) and its one
     # thread-safety limit documented - `cleanup()` on a shared instance must wait for
@@ -25,11 +26,13 @@ classifiers = [
 ]
 # following the official NumPy support/deprecation schedule: NEP 29
 # (https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule), which is
-# now superseded by SPEC 0 (https://scientific-python.org/specs/spec-0000/). The two
-# agree on what is supported here - NEP 29 keeps a Python minor for 42 months, SPEC 0
-# for 36 - so the earlier of the two drop dates is the one that applies. 3.11 reached
-# it on 2026-04-24 (SPEC 0: 2025-10-24); 3.12 reaches it on 2026-10-02 (NEP 29:
-# 2027-04-02), which is the next version to drop and the reason this floor is 3.12.
+# now superseded by SPEC 0 (https://scientific-python.org/specs/spec-0000/). NEP 29
+# keeps a Python minor for 42 months and SPEC 0 for 36, and the later of the two drop
+# dates is the one that applies. The earlier one is refused: at 3.12's SPEC 0 date
+# (2026-10-02) 3.12 carried 40 % of this package's downloads and NumPy still
+# supported it, so dropping it then would have moved the largest share of installs
+# off updates ahead of NumPy itself. 3.12 reaches the NEP 29 date on 2027-04-02,
+# which makes it the next version to drop and the reason this floor is 3.12.
 # NOTE: When updating requires-python, also update the py_limited_api wheel config in setup.py
 # (tests/test_python_version_support.py fails if the two, or the classifiers above, drift apart)
 requires-python = ">=3.12,<4"

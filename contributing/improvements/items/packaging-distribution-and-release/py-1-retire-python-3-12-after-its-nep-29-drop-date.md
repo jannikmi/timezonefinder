@@ -1,0 +1,15 @@
+# PY-1 — retire Python 3.12 after its NEP 29 drop date
+
+- **Where:** `requires-python`, the per-minor classifiers and the schedule comment above them in `pyproject.toml`; `requires-python` in `packages/timezonefinder-data/pyproject.toml`; `envlist` and `[testenv:py312-min]` in `tox.ini`; the `test` matrix, `CIBW_BUILD_VERSIONS` and the end-to-end `uv-python-version` matrix in `.github/workflows/build.yml`; `py_limited_api` in `setup.py`; ruff `target-version` and mypy `python_version` in `pyproject.toml`; the abi3 tag `docs/architecture.rst` quotes. `tests/test_python_version_support.py` holds the first six to one another, so they move in one change.
+- **The rule is decided.** The schedule comment above `requires-python` states it: the later of the NEP 29 and SPEC 0 drop dates applies, and why the earlier one is refused. For 3.12 the later date is 2027-04-02.
+- **What the change carries:**
+  - `requires-python >=3.13` in both `pyproject.toml` files, and the 3.12 classifier removed.
+  - The abi3 base `cp313` in `setup.py` and `CIBW_BUILD_VERSIONS`, and the tag in `docs/architecture.rst`.
+  - The 3.12 `test`-matrix entry removed, with the environments riding on it (`docs`, `charts` and the minimum-dependency env) moved to the 3.13 entry. `py312-min` becomes `py313-min`, and its pinned NumPy must publish cp313 wheels.
+  - The `cp312` end-to-end leg removed, ruff `target-version = "py313"` and mypy `python_version = "3.13"`.
+  - The comment rewritten with 3.13's dates: SPEC 0 on 2027-10-07, NEP 29 on 2028-04-07.
+  - A fragment under `changed/`, per the [changelog policy](../../../development/changelog-and-release-note-policy.md).
+- **Interacts with [GH-721](gh-721-free-threaded-wheels.md):** whichever lands second reconciles the abi3 base with the `py_limited_api` value an `abi3t` build settles on.
+- **Size:** S.
+- **Status:** conditional — on 2027-04-02 passing. The window rule is decided, but an improvement pass may not change the supported Python versions, so the maintainer starts this one.
+- **Last touched:** 2026-10-22 — kept by the maintainer when 3.15 was added, so 3.12's retirement has an entry.
