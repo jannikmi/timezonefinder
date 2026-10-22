@@ -82,7 +82,12 @@ jobs:
           # free-threaded runs on a uv-fetched 3.14t (see tox.ini), so it needs no
           # entry of its own, and the matrix keeps one entry per advertised version
           - python-version: "3.14"
-            tox-env: "py314,py314-numba,py314-pytz,slow,free-threaded"
+            tox-env: "py314,py314-numba,py314-pytz,free-threaded"
+          # `slow` alone takes about as long as all the other 3.14 envs together, so it
+          # gets a runner of its own instead of being the critical path of that job.
+          # A second entry for an advertised version adds a job, not a version.
+          - python-version: "3.14"
+            tox-env: "slow"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     permissions:
