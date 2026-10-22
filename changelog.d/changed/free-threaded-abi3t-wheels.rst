@@ -1,0 +1,1 @@
+Free-threaded CPython 3.15 and later installs a prebuilt wheel with the C extension, built against the free-threaded stable ABI (``abi3t``), instead of compiling from the sdist; that wheel is also the one GIL builds of 3.15 and later install. Free-threaded 3.14 still builds from the sdist.

@@ -6,8 +6,8 @@ Six files declare the same fact and none of them can read the others:
     packages/timezonefinder-data/pyproject.toml   the same `requires-python`
     tox.ini          the `py{...}` factors of `envlist`
     build.yml        the `test` and `end-to-end-test` matrices, and
-                     `CIBW_BUILD_VERSIONS` (the abi3 base)
-    setup.py         `py_limited_api` (the same abi3 base)
+                     `CIBW_BUILD_VERSIONS` (the abi3 and abi3t bases)
+    setup.py         `_ABI3_BASE` and `_ABI3T_BASE` (the same two bases)
 
 Two "must match" comments already point at this - one above `requires-python`,
 one above the build matrix - and nothing enforced them. A one-sided edit fails
@@ -22,6 +22,7 @@ files that repeat a constant across the workflow boundary.
 
 import configparser
 import re
+import sys
 import tomllib
 
 import pytest
@@ -35,6 +36,13 @@ from tests.auxiliaries import PROJECT_ROOT
 TOX_INI = PROJECT_ROOT / "tox.ini"
 BUILD_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "build.yml"
 SETUP_PY = PROJECT_ROOT / "setup.py"
+
+
+def setup_constant(name: str) -> str:
+    """A `cpXY` constant `setup.py` assigns at module level."""
+    match = re.search(rf'^{name} = "(cp\d+)"$', SETUP_PY.read_text(), re.MULTILINE)
+    assert match, f"setup.py no longer assigns {name} - update this test"
+    return match.group(1)
 
 
 @pytest.fixture(scope="module")
@@ -175,34 +183,65 @@ def test_the_abi3_base_is_the_lowest_supported_version(
     an interpreter that is no longer supported.
     """
     expected = f"cp3{classifier_minors[0]}"
-    setup_base = re.search(r'"py_limited_api":\s*"(cp\d+)"', SETUP_PY.read_text())
-    assert setup_base, "setup.py no longer sets py_limited_api - update this test"
-    assert setup_base.group(1) == expected
-    assert build_workflow["env"]["CIBW_BUILD_VERSIONS"] == f"{expected}-*"
+    assert setup_constant("_ABI3_BASE") == expected
+    gil_identifiers = build_workflow["env"]["CIBW_BUILD_VERSIONS"].split()[0]
+    assert gil_identifiers == f"{expected}-*"
+
+
+@pytest.mark.unit
+def test_the_abi3t_base_is_the_lowest_supported_free_threaded_version(
+    classifier_minors, build_workflow
+):
+    """abi3t exists from 3.15, so its base is 3.15 until the floor passes it.
+
+    A free-threaded wheel is built on its base interpreter alone and serves every
+    later one, which is why `CIBW_BUILD_VERSIONS` names exactly that identifier.
+    """
+    expected = f"cp3{max(classifier_minors[0], 15)}"
+    assert setup_constant("_ABI3T_BASE") == expected
+    identifiers = build_workflow["env"]["CIBW_BUILD_VERSIONS"].split()
+    assert identifiers[1:] == [f"{expected}t-*"]
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("build_abi3", "gil_disabled", "claims_abi3"),
-    [(True, 0, True), (True, 1, False), (False, 0, False)],
-    ids=["gil-build", "free-threaded-build", "no-abi3-requested"],
+    ("build_abi3", "gil_disabled", "version", "setuptools_version", "limited_api"),
+    [
+        (True, 0, (3, 14), "84.0.0", "cp312"),
+        (True, 1, (3, 14), "84.2.1", None),
+        (True, 1, (3, 15), "84.1.0", None),
+        (True, 1, (3, 15), "84.2.0", "cp315"),
+        (False, 0, (3, 14), "84.2.1", None),
+        (False, 1, (3, 15), "84.2.1", None),
+    ],
+    ids=[
+        "gil-build",
+        "free-threaded-before-3.15",
+        "free-threaded-on-old-setuptools",
+        "free-threaded-abi3t",
+        "no-abi3-requested",
+        "no-abi3t-requested",
+    ],
 )
-def test_the_abi3_claim_is_gated_on_the_interpreter(
-    monkeypatch, build_abi3, gil_disabled, claims_abi3
+def test_the_stable_abi_claim_is_gated_on_the_interpreter(
+    monkeypatch, build_abi3, gil_disabled, version, setuptools_version, limited_api
 ):
-    """`BUILD_ABI3` alone must not decide the abi3 claim.
+    """`BUILD_ABI3` alone must not decide the stable-ABI claim.
 
-    The cibuildwheel override sets it for every identifier, and setuptools
-    refuses `py_limited_api` on any free-threaded interpreter, so an
-    environment-only guard turns the first free-threaded identifier into a failed
-    build. CI never runs a free-threaded build, so `setup.py` is executed here
-    with the interpreter's `Py_GIL_DISABLED` answer substituted.
+    The cibuildwheel override sets it for every identifier, and setuptools raises
+    on `py_limited_api` for a free-threaded build before 3.15 or before 84.2.0, so
+    an environment-only guard turns such an identifier into a failed build. CI
+    builds a free-threaded wheel only on its abi3t base, so `setup.py` is executed
+    here with the interpreter's version, its `Py_GIL_DISABLED` answer and the
+    setuptools version substituted.
     """
     import setuptools
     import sysconfig
 
     captured = {}
     monkeypatch.setattr(setuptools, "setup", lambda **kwargs: captured.update(kwargs))
+    monkeypatch.setattr(setuptools, "__version__", setuptools_version)
+    monkeypatch.setattr(sys, "version_info", (*version, 0, "final", 0))
     real_get_config_var = sysconfig.get_config_var
     monkeypatch.setattr(
         sysconfig,
@@ -218,7 +257,7 @@ def test_the_abi3_claim_is_gated_on_the_interpreter(
 
     exec(compile(SETUP_PY.read_text(), str(SETUP_PY), "exec"), {"__name__": "setup"})
 
-    assert ("py_limited_api" in captured["options"]["bdist_wheel"]) is claims_abi3
+    assert captured["options"]["bdist_wheel"].get("py_limited_api") == limited_api
 
 
 @pytest.mark.unit

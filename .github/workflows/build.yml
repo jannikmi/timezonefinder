@@ -44,8 +44,11 @@ on:
         type: string
 
 env:
-  # Use one base Python version with future-proof abi3 support
-  CIBW_BUILD_VERSIONS: "cp312-*"
+  # One identifier per stable ABI, each on its base interpreter: abi3 on the lowest
+  # supported GIL build, abi3t on the lowest free-threaded build that has it (3.15t).
+  # setup.py holds the same two bases; tests/test_python_version_support.py checks
+  # all three against the supported versions.
+  CIBW_BUILD_VERSIONS: "cp312-* cp315t-*"
 
 jobs:
   pre-commit-hooks:
@@ -79,17 +82,17 @@ jobs:
             tox-env: "py312,py312-numba,py312-pytz,docs,py312-min,charts"
           - python-version: "3.13"
             tox-env: "py313,py313-numba,py313-pytz"
-          # free-threaded runs on a uv-fetched 3.14t (see tox.ini), so it needs no
-          # entry of its own, and the matrix keeps one entry per advertised version
           - python-version: "3.14"
-            tox-env: "py314,py314-numba,py314-pytz,free-threaded"
+            tox-env: "py314,py314-numba,py314-pytz"
           # `slow` alone takes about as long as all the other 3.14 envs together, so it
           # gets a runner of its own instead of being the critical path of that job.
           # A second entry for an advertised version adds a job, not a version.
           - python-version: "3.14"
             tox-env: "slow"
+          # free-threaded runs on a uv-fetched 3.15t (see tox.ini), the interpreter
+          # the abi3t wheels are built on, so it needs no entry of its own
           - python-version: "3.15"
-            tox-env: "py315,py315-numba,py315-pytz"
+            tox-env: "py315,py315-numba,py315-pytz,free-threaded"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     permissions:
@@ -133,13 +136,13 @@ jobs:
           # manylinux2014 (glibc >= 2.17) + musllinux
           - os: ubuntu-latest
             cibw_arch: native
-            manylinux_image: quay.io/pypa/manylinux2014_x86_64:2026.04.25-0
+            manylinux_image: quay.io/pypa/manylinux2014_x86_64:2026.10.21-1
             manylinux_tag: manylinux2014
             cibw_skip: ""
           # manylinux_2_28 (glibc >= 2.28)
           - os: ubuntu-latest
             cibw_arch: native
-            manylinux_image: quay.io/pypa/manylinux_2_28_x86_64:2026.04.25-0
+            manylinux_image: quay.io/pypa/manylinux_2_28_x86_64:2026.10.21-1
             manylinux_tag: manylinux_2_28
             cibw_skip: "*-musllinux*"
       fail-fast: false
@@ -152,7 +155,7 @@ jobs:
         if: matrix.manylinux_tag == 'manylinux2014'
         env:
           MANYLINUX_IMAGE: ${{ matrix.manylinux_image }}
-          MUSLLINUX_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.04.25-0
+          MUSLLINUX_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.10.21-1
         run: |
           set -eu
           for image in "$MANYLINUX_IMAGE" "$MUSLLINUX_IMAGE"; do
@@ -181,7 +184,7 @@ jobs:
           # and its blob is cold enough in the registry to fail a pull on its own.
           # https://github.com/pypa/cibuildwheel/blob/v4.2.0/cibuildwheel/resources/pinned_docker_images.cfg
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
-          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.04.25-0
+          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.10.21-1
           CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_SKIP: ${{ matrix.cibw_skip }}
@@ -246,7 +249,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-            uv-python-version: ["cp312", "cp313", "cp314", "cp315"]
+            uv-python-version: ["cp312", "cp313", "cp314", "cp315", "cp315t"]
     steps:
       # `uses: ./...` resolves from the workspace, so the staging action has to be on
       # disk. Sparse and non-cone deliberately: the test below builds a throwaway
@@ -276,10 +279,28 @@ jobs:
             # both distributions from local artefacts, never the index: before the
             # first data release there is nothing to resolve there, and afterwards
             # resolving it would test a published dataset instead of this branch's
-            uv add ./dist/timezonefinder_data-*.whl ./dist/timezonefinder-*manylinux_2_28*whl
+            # dist/ holds an abi3 and an abi3t wheel per platform, and from 3.15 both
+            # fit a GIL build. Pick the one an installer would, by the interpreter's
+            # own tag ranking, so each leg tests what its users actually get.
+            wheel=$(uv run --no-project --python ${{ matrix.uv-python-version }} --with packaging python3 - ./dist/timezonefinder-*manylinux_2_28*.whl <<'EOF'
+            import sys
+            from packaging.tags import sys_tags
+            from packaging.utils import parse_wheel_filename
+            rank = {tag: i for i, tag in enumerate(sys_tags())}
+            def best(path):
+                tags = parse_wheel_filename(path.rsplit("/", 1)[-1])[3]
+                return min((rank[tag] for tag in tags if tag in rank), default=None)
+            print(min((best(p), p) for p in sys.argv[1:] if best(p) is not None)[1])
+            EOF
+            )
+            echo "installing $wheel"
+            uv add ./dist/timezonefinder_data-*.whl "$wheel"
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
             uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
+            # a free-threaded interpreter must still run without the GIL once the
+            # wheel's extension is loaded; a GIL build reports it enabled
+            uv run python3 -c 'import sys, timezonefinder.utils; assert getattr(sys, "_is_gil_enabled", lambda: True)() != ("t" in sys.abiflags)'
 
       # A wheel tagged manylinux_2_28 must actually be installable on it: the tag is a
       # claim pip believes, so a mis-tagged wheel is chosen and then fails at import.

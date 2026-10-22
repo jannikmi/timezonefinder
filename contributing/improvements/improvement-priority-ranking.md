@@ -2,7 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [GH-721](items/packaging-distribution-and-release/gh-721-free-threaded-wheels.md) | Free-threaded wheels | packaging | M | free — setuptools 84.2.0 accepts a free-threaded limited-API tag and 3.15 is in the supported window; first because it is the one eligible row a user installs — decided: 3.15t and later via `abi3t` (+3 artifacts, no growth); `cp314t` wheels only on demand voiced on issue #721 |
 | [DOC-8](items/data-pipeline-and-developer-tooling/doc-8-move-the-changelog-and-its-fragments-to-markdown.md) | Move `CHANGELOG.rst` and the `changelog.d/` fragments to Markdown | docs | M | free — decided 2026-09-05; narrow code coupling, but not while a release is in flight |
 | [DOC-10](items/data-pipeline-and-developer-tooling/doc-10-plan-the-mkdocs-migration-for-maintainer-review.md) | Plan the MkDocs migration for maintainer review | docs | M | free — produces a plan and a losslessness contract; DOC-9 cannot start without it |
 | [TOOL-9](items/data-pipeline-and-developer-tooling/tool-9-measure-pytest-xdist-on-the-ci-test-envs.md) | Measure pytest-xdist on the CI test envs | CI tooling | S | free — a measurement first; the tox matrix is every pull request's critical path and each env runs serially on a 4-vCPU runner, so this ranks above the readability items |
