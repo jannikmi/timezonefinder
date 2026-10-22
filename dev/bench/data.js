@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792629184796,
+  "lastUpdate": 1792629186380,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -30209,6 +30209,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2453 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62cd9da7b9a8da290dd9d6993d349f4dab04d44c",
+          "message": "Add a Used by section, a monthly downloads badge and CITATION.cff (#739)\n\n* Add a used-by badge linking the GitHub dependents page\n\nThe badge states a magnitude rather than a count, so it cannot go stale\nbetween updates, and links GitHub's dependency graph for the live number.\nREADME.md and docs/badges.rst carry the badge block twice by design, so\nboth get it.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Replace the used-by badge with a Used by section and a citation file\n\nGitHub offers no badge or API for its dependents count, so the\nself-made badge gives way to text: a Used by section in the README and\nthe About page naming dependents whose own manifests list the package,\nmagnitudes instead of counts, and the most-downloaded claim against the\nalternatives. A monthly downloads badge joins the badge block, and\nCITATION.cff gives the repository GitHub's citation button.\n\nThe claims can go stale without a commit here, so a recheck workflow,\nrouted for every code release, verifies each one first.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Condense the code-release workflow and route the adoption recheck from it\n\nThe workflow keeps every rule but says each once, which frees room for\nthe adoption-claims recheck to sit in Prepare itself rather than only in\nthe CONTRIBUTING.md route. The CITATION.cff author is Jannik Kissinger.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Name the author as Jannik Kissinger in the copyright notices\n\nThe copyright holder is unchanged; the notice follows the author's\ncurrent name and keeps the former one so older releases and citations\nstill connect.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Mention Python in the CITATION.cff abstract\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Say it is a Python package in every project description\n\nThe README tagline, both distributions' PyPI summaries and the docs\nintros now name Python, matching the CITATION.cff abstract.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Drop the changelog fragment for the author-name change\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T00:32:20Z",
+          "tree_id": "c2d080859f962f1b5abdc310d290b52b6e3d5609",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/62cd9da7b9a8da290dd9d6993d349f4dab04d44c"
+        },
+        "date": 1792629186133,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946620941162109,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948404312133789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9599838256835938,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9607048034667969,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.655826568603516,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65659236907959,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2471 GHz"
           }
         ]
       }
