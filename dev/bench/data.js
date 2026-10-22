@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792633249542,
+  "lastUpdate": 1792633252151,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -30821,6 +30821,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2924 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f94775312db094bd584ed9aa9dab9bc05377a82c",
+          "message": "TOOL-6: raise ruff to 0.17 (#745)\n\n* TOOL-6: raise ruff to 0.17\n\nRaise the dev group's ruff bound to <0.18 and the ruff-pre-commit rev to\nv0.17.1 together, with the lockfile lines that bump alone produces. Under\nthis repository's explicit rule selection ruff 0.17.1 reports no findings\nand reformats no files. The hook id moves from the legacy `ruff` alias to\n`ruff-check`, and the lint-configuration test anchors on the new id.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n* Retire TOOL-6 from the improvement register\n\nDelete the item and its ranking row. The ruff decision record now states\nthe dev-tool-pin exception and its refused alternatives in the present\ntense, and the improvement-pass boundary, the TOOL-5 entry and the\nsequencing rules point at that record instead of the retired id.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n* Retire TOOL-6: state the default-set price as what it refuses\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T01:39:50Z",
+          "tree_id": "53fe3fa4439c7be81dd17f2f01ef121c5eb50406",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f94775312db094bd584ed9aa9dab9bc05377a82c"
+        },
+        "date": 1792633251507,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946620941162109,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948404312133789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9598579406738281,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9605331420898438,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.655842781066895,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65665149688721,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2368 GHz"
           }
         ]
       }
