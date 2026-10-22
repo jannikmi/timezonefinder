@@ -38,6 +38,14 @@ These methods are reusable audits, not a schedule. Repeat one when its trigger i
 
 - Check every `GH-<n>` issue state and re-find the code anchor before selection.
 - An issue may close or unrelated work may invalidate only part of an item's premise.
+- A block on an upstream release clears without any signal in this repository: read the latest release of the project it names, and diff the gating function across its versions, before ranking around the block.
+
+## Supported-version window check
+
+- Compare the classifiers and `requires-python` with the CPython release calendar, `https://endoflife.date/api/python.json`, and with the drop dates in the comment above `requires-python`.
+- For a new minor, `uv sync --frozen --python 3.X` into a scratch `UV_PROJECT_ENVIRONMENT` shows which locked dependency has no wheel for it; then run the default selection there with that environment's `bin/` on `PATH`, which the CLI tests need.
+- Before proposing a drop, read the per-minor download share from `https://pypistats.org/api/packages/timezonefinder/python_minor` and the `requires-python` NumPy and SciPy declare.
+- Repeat when a CPython minor reaches final, or when a date in that comment passes.
 
 ## Shortcut coverage sweep
 
