@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792632215368,
+  "lastUpdate": 1792633249542,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16146,6 +16146,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4661",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f94775312db094bd584ed9aa9dab9bc05377a82c",
+          "message": "TOOL-6: raise ruff to 0.17 (#745)\n\n* TOOL-6: raise ruff to 0.17\n\nRaise the dev group's ruff bound to <0.18 and the ruff-pre-commit rev to\nv0.17.1 together, with the lockfile lines that bump alone produces. Under\nthis repository's explicit rule selection ruff 0.17.1 reports no findings\nand reformats no files. The hook id moves from the legacy `ruff` alias to\n`ruff-check`, and the lint-configuration test anchors on the new id.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n* Retire TOOL-6 from the improvement register\n\nDelete the item and its ranking row. The ruff decision record now states\nthe dev-tool-pin exception and its refused alternatives in the present\ntense, and the improvement-pass boundary, the TOOL-5 entry and the\nsequencing rules point at that record instead of the retired id.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n* Retire TOOL-6: state the default-set price as what it refuses\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014obXZufp7CC2C7Z7ZakKVg\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T01:39:50Z",
+          "tree_id": "53fe3fa4439c7be81dd17f2f01ef121c5eb50406",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f94775312db094bd584ed9aa9dab9bc05377a82c"
+        },
+        "date": 1792633246734,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 791902.8252872231,
+            "range": "± 198238",
+            "unit": "lookups/sec",
+            "extra": "min of 265 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 989521.7562177946,
+            "range": "± 20805",
+            "unit": "lookups/sec",
+            "extra": "min of 349 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 173985.23978818016,
+            "range": "± 1245",
+            "unit": "lookups/sec",
+            "extra": "min of 64 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4400695.6620118,
+            "range": "± 693599",
+            "unit": "lookups/sec",
+            "extra": "min of 1005 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33616157.26821589,
+            "range": "± 3267494",
+            "unit": "lookups/sec",
+            "extra": "min of 7057 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 240722.8309622099,
+            "range": "± 2247",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4188341.3330579754,
+            "range": "± 119589",
+            "unit": "lookups/sec",
+            "extra": "min of 1076 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24156223.12679544,
+            "range": "± 1924931",
+            "unit": "lookups/sec",
+            "extra": "min of 5426 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 239274.24484560275,
+            "range": "± 2650",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
