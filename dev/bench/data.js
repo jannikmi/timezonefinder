@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792620501519,
+  "lastUpdate": 1792629184796,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15798,6 +15798,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4555",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62cd9da7b9a8da290dd9d6993d349f4dab04d44c",
+          "message": "Add a Used by section, a monthly downloads badge and CITATION.cff (#739)\n\n* Add a used-by badge linking the GitHub dependents page\n\nThe badge states a magnitude rather than a count, so it cannot go stale\nbetween updates, and links GitHub's dependency graph for the live number.\nREADME.md and docs/badges.rst carry the badge block twice by design, so\nboth get it.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Replace the used-by badge with a Used by section and a citation file\n\nGitHub offers no badge or API for its dependents count, so the\nself-made badge gives way to text: a Used by section in the README and\nthe About page naming dependents whose own manifests list the package,\nmagnitudes instead of counts, and the most-downloaded claim against the\nalternatives. A monthly downloads badge joins the badge block, and\nCITATION.cff gives the repository GitHub's citation button.\n\nThe claims can go stale without a commit here, so a recheck workflow,\nrouted for every code release, verifies each one first.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Condense the code-release workflow and route the adoption recheck from it\n\nThe workflow keeps every rule but says each once, which frees room for\nthe adoption-claims recheck to sit in Prepare itself rather than only in\nthe CONTRIBUTING.md route. The CITATION.cff author is Jannik Kissinger.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Name the author as Jannik Kissinger in the copyright notices\n\nThe copyright holder is unchanged; the notice follows the author's\ncurrent name and keeps the former one so older releases and citations\nstill connect.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Mention Python in the CITATION.cff abstract\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Say it is a Python package in every project description\n\nThe README tagline, both distributions' PyPI summaries and the docs\nintros now name Python, matching the CITATION.cff abstract.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n* Drop the changelog fragment for the author-name change\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UHDtSZKitd81cDudSAxPGX\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T00:32:20Z",
+          "tree_id": "c2d080859f962f1b5abdc310d290b52b6e3d5609",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/62cd9da7b9a8da290dd9d6993d349f4dab04d44c"
+        },
+        "date": 1792629182934,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 820530.8637759697,
+            "range": "± 72005",
+            "unit": "lookups/sec",
+            "extra": "min of 282 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1007447.454563185,
+            "range": "± 101527",
+            "unit": "lookups/sec",
+            "extra": "min of 357 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 176201.7416907937,
+            "range": "± 3680",
+            "unit": "lookups/sec",
+            "extra": "min of 64 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4440371.143974041,
+            "range": "± 263732",
+            "unit": "lookups/sec",
+            "extra": "min of 1019 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33942027.017236896,
+            "range": "± 3012696",
+            "unit": "lookups/sec",
+            "extra": "min of 7727 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 241872.45659007755,
+            "range": "± 3335",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4262211.2351794,
+            "range": "± 381708",
+            "unit": "lookups/sec",
+            "extra": "min of 1153 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24347487.33816945,
+            "range": "± 1622097",
+            "unit": "lookups/sec",
+            "extra": "min of 5295 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 240093.50201335398,
+            "range": "± 2031",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7838 GHz"
           }
         ]
       }
