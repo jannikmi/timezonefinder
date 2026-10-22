@@ -6,6 +6,7 @@ abstract: "Python package for offline timezone lookup of WGS84 coordinates, with
 authors:
   - family-names: Kissinger
     given-names: Jannik
+    orcid: "https://orcid.org/0000-0002-1819-6975"
 repository-code: "https://github.com/jannikmi/timezonefinder"
 url: "https://timezonefinder.readthedocs.io/"
 license: MIT
