@@ -34,7 +34,7 @@ classifiers = [
 # no wheel, since the abi3 wheels serve every minor from their base up. 3.12 reaches
 # the NEP 29 date on 2027-04-02, which makes it the next version to drop and the
 # reason this floor is 3.12.
-# NOTE: When updating requires-python, also update the py_limited_api wheel config in setup.py
+# NOTE: When updating requires-python, also update `_ABI3_BASE` in setup.py
 # (tests/test_python_version_support.py fails if the two, or the classifiers above, drift apart)
 requires-python = ">=3.12,<4"
 dependencies = [

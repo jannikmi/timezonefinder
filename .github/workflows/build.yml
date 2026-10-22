@@ -273,16 +273,17 @@ jobs:
         uses: ./.github/actions/stage-artifacts
 
       - name: Run end-to-end test
+        # every uv call below on this leg's interpreter: `uv init --bare` pins none,
+        # and a discoverable GIL 3.15 would otherwise answer for the cp315t leg
+        env:
+          UV_PYTHON: ${{ matrix.uv-python-version }}
         run: |
             find .
-            uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
-            # both distributions from local artefacts, never the index: before the
-            # first data release there is nothing to resolve there, and afterwards
-            # resolving it would test a published dataset instead of this branch's
+            uv init --name e2e --bare
             # dist/ holds an abi3 and an abi3t wheel per platform, and from 3.15 both
             # fit a GIL build. Pick the one an installer would, by the interpreter's
             # own tag ranking, so each leg tests what its users actually get.
-            wheel=$(uv run --no-project --python ${{ matrix.uv-python-version }} --with packaging python3 - ./dist/timezonefinder-*manylinux_2_28*.whl <<'EOF'
+            wheel=$(uv run --no-project --with packaging python3 - ./dist/timezonefinder-*manylinux_2_28*.whl <<'EOF'
             import sys
             from packaging.tags import sys_tags
             from packaging.utils import parse_wheel_filename
@@ -294,13 +295,23 @@ jobs:
             EOF
             )
             echo "installing $wheel"
+            # both distributions from local artefacts, never the index: before the
+            # first data release there is nothing to resolve there, and afterwards
+            # resolving it would test a published dataset instead of this branch's
             uv add ./dist/timezonefinder_data-*.whl "$wheel"
             uv tree
-            uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
             uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
-            # a free-threaded interpreter must still run without the GIL once the
-            # wheel's extension is loaded; a GIL build reports it enabled
-            uv run python3 -c 'import sys, timezonefinder.utils; assert getattr(sys, "_is_gil_enabled", lambda: True)() != ("t" in sys.abiflags)'
+            # The lookup is also the GIL check: a lazily imported dependency without
+            # `Py_mod_gil` re-enables it only once a finder is built, so the check reads
+            # the GIL after a construction and a lookup. The leg must also be the build
+            # its name says, or a GIL interpreter would pass the check trivially.
+            FREE_THREADED_LEG=${{ endsWith(matrix.uv-python-version, 't') }} uv run python3 -c '
+            import os, sys
+            from timezonefinder import TimezoneFinder
+            assert ("t" in sys.abiflags) == (os.environ["FREE_THREADED_LEG"] == "true"), sys.abiflags
+            assert TimezoneFinder().timezone_at(lat=40.5, lng=11.7) == "Etc/GMT-1"
+            assert getattr(sys, "_is_gil_enabled", lambda: True)() != ("t" in sys.abiflags)
+            '
 
       # A wheel tagged manylinux_2_28 must actually be installable on it: the tag is a
       # claim pip believes, so a mis-tagged wheel is chosen and then fails at import.

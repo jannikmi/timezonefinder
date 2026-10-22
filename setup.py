@@ -2,6 +2,7 @@ import setuptools
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 import os
+import re
 import sys
 import sysconfig
 
@@ -16,11 +17,22 @@ import sysconfig
 _ABI3_BASE = "cp312"
 _ABI3T_BASE = "cp315"
 _free_threaded = sysconfig.get_config_var("Py_GIL_DISABLED")
-_setuptools_version = tuple(int(part) for part in setuptools.__version__.split(".")[:2])
-_stable_abi_buildable = not _free_threaded or (
-    sys.version_info >= (3, 15) and _setuptools_version >= (84, 2)
+
+
+def _setuptools_accepts_abi3t() -> bool:
+    # Lenient on purpose: setuptools reports `0.dev0+unknown` when it cannot read its
+    # own metadata, and a version this cannot read claims nothing rather than failing
+    # the build.
+    match = re.match(r"(\d+)\.(\d+)", setuptools.__version__)
+    if match is None:
+        return False
+    return (int(match[1]), int(match[2])) >= (84, 2)
+
+
+# evaluated left to right, so only a free-threaded BUILD_ABI3 build reads the version
+_abi3 = bool(os.getenv("BUILD_ABI3", "")) and (
+    not _free_threaded or (sys.version_info >= (3, 15) and _setuptools_accepts_abi3t())
 )
-_abi3 = bool(os.getenv("BUILD_ABI3", "")) and _stable_abi_buildable
 _limited_api = _ABI3T_BASE if _free_threaded else _ABI3_BASE
 print(
     "Using stable-ABI wheel suffix:", _limited_api if _abi3 else False, file=sys.stderr

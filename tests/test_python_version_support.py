@@ -111,10 +111,10 @@ def test_the_ci_matrix_covers_exactly_the_advertised_versions(
 def test_the_wheel_is_installed_on_exactly_the_advertised_versions(
     classifier_minors, build_workflow
 ):
-    """The end-to-end job is what proves the abi3 wheel loads on each version.
+    """The end-to-end job is what proves the built wheel loads on each version.
 
-    Free-threaded identifiers (a trailing ``t``) are a separate claim and are not
-    counted here.
+    Free-threaded identifiers (a trailing ``t``) are a separate claim, which
+    `test_the_free_threaded_claim_is_tested_on_its_abi3t_base` holds.
     """
     versions = build_workflow["jobs"]["end-to-end-test"]["strategy"]["matrix"][
         "uv-python-version"
@@ -124,6 +124,25 @@ def test_the_wheel_is_installed_on_exactly_the_advertised_versions(
         "pyproject.toml classifiers and the build.yml end-to-end matrix disagree: a "
         "version claimed but not in that matrix never installs the built wheel"
     )
+
+
+@pytest.mark.unit
+def test_the_free_threaded_claim_is_tested_on_its_abi3t_base(
+    classifier_minors, build_workflow, tox_config
+):
+    """The abi3t wheel is installed, and the suite run, on the interpreter it is built on.
+
+    That interpreter is the oldest the wheel serves. Dropping the free-threaded
+    end-to-end leg, or moving the free-threaded tox env to another interpreter, would
+    leave the wheel shipped for a free-threaded build CI never runs.
+    """
+    abi3t_minor = max(classifier_minors[0], 15)
+    versions = build_workflow["jobs"]["end-to-end-test"]["strategy"]["matrix"][
+        "uv-python-version"
+    ]
+    assert [v for v in versions if v.endswith("t")] == [f"cp3{abi3t_minor}t"]
+    setenv = tox_config["testenv:free-threaded"]["setenv"]
+    assert f"UV_PYTHON = 3.{abi3t_minor}t" in setenv.splitlines()
 
 
 @pytest.mark.unit
@@ -211,6 +230,9 @@ def test_the_abi3t_base_is_the_lowest_supported_free_threaded_version(
         (True, 1, (3, 14), "84.2.1", None),
         (True, 1, (3, 15), "84.1.0", None),
         (True, 1, (3, 15), "84.2.0", "cp315"),
+        (True, 1, (3, 16), "85.0.0rc1", "cp315"),
+        (True, 1, (3, 15), "0.dev0+unknown", None),
+        (True, 0, (3, 15), "0.dev0+unknown", "cp312"),
         (False, 0, (3, 14), "84.2.1", None),
         (False, 1, (3, 15), "84.2.1", None),
     ],
@@ -219,6 +241,9 @@ def test_the_abi3t_base_is_the_lowest_supported_free_threaded_version(
         "free-threaded-before-3.15",
         "free-threaded-on-old-setuptools",
         "free-threaded-abi3t",
+        "free-threaded-abi3t-later-minor",
+        "free-threaded-unreadable-setuptools",
+        "gil-build-unreadable-setuptools",
         "no-abi3-requested",
         "no-abi3t-requested",
     ],
@@ -233,7 +258,8 @@ def test_the_stable_abi_claim_is_gated_on_the_interpreter(
     an environment-only guard turns such an identifier into a failed build. CI
     builds a free-threaded wheel only on its abi3t base, so `setup.py` is executed
     here with the interpreter's version, its `Py_GIL_DISABLED` answer and the
-    setuptools version substituted.
+    setuptools version substituted. A setuptools version that cannot be read must
+    neither raise nor claim abi3t, since a strict `int()` parse raises on one.
     """
     import setuptools
     import sysconfig
