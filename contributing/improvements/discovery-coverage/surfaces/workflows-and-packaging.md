@@ -3,7 +3,7 @@
 ## Baseline
 
 - **Delta anchor:** `9ac82ea`.
-- **Coverage state:** complete baseline coverage through `c068642`, with one explicit unreviewed delta at the anchor.
+- **Coverage state:** complete baseline coverage through `c068642`; the unreviewed deltas are listed below.
 
 ## Covered subjects
 
@@ -16,10 +16,14 @@
 - Every `UNWANTED_DIST_PATTERNS` entry was matched against the working tree and compared with `MANIFEST.in` and the `check-manifest` ignore list.
 - `tests/test_python_version_support.py` guards workflow-version drift.
 - `tests/test_data_wheel_handoff.py` guards the shared-wheel agreements.
+- The `release` job's `Create GitHub Release` step in `build.yml` is the event the repository's Zenodo `release` webhook archives; Zenodo deposits the tag's source tree, not the attached wheels.
+- `CITATION.cff` validates against CFF 1.2.0 with `uvx cffconvert --validate -i CITATION.cff`, and carries no version or date that a release would have to bump.
+- The supported Python window was checked against the CPython release calendar, the drop dates in the comment above `requires-python`, and the locked dependencies' wheels; [PY-1](../../items/packaging-distribution-and-release/py-1-retire-python-3-12-after-its-nep-29-drop-date.md) holds the next change to it.
 
 ## Known uncovered deltas
 
 - `.github/workflows/compile_data.yml` arrived as the packaged-data producer for a hand-made branch and has not received an independent review since its author added it.
+- After `9ac82ea`, only `build.yml`'s `release` job, `CITATION.cff` and the version-window files above were read. Everything else `git diff --stat 9ac82ea..origin/master -- .github MANIFEST.in .pre-commit-config.yaml Makefile packages/timezonefinder-data/pyproject.toml pyproject.toml setup.py tox.ini scripts/changelog_fragments.py` lists is unread, including `build.yml`'s other jobs.
 
 ## Durable evidence
 
@@ -28,4 +32,4 @@
 
 ## Next useful gap
 
-- Read `.github/workflows/compile_data.yml` independently, then delta-review workflows, actions, and packaging rules changed after `9ac82ea`.
+- Read `.github/workflows/compile_data.yml` independently, then delta-review the unread files listed above from `9ac82ea`, starting with `release_data_update.yml` and `check_data_updates.yml`, since they open and auto-merge pull requests unattended.

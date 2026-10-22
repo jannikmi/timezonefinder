@@ -88,6 +88,8 @@ jobs:
           # A second entry for an advertised version adds a job, not a version.
           - python-version: "3.14"
             tox-env: "slow"
+          - python-version: "3.15"
+            tox-env: "py315,py315-numba,py315-pytz"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     permissions:
@@ -244,7 +246,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-            uv-python-version: ["cp312", "cp313", "cp314"]
+            uv-python-version: ["cp312", "cp313", "cp314", "cp315"]
     steps:
       # `uses: ./...` resolves from the workspace, so the staging action has to be on
       # disk. Sparse and non-cone deliberately: the test below builds a throwaway
