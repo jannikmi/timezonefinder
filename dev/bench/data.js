@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792634078948,
+  "lastUpdate": 1792635527966,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16320,6 +16320,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3606",
             "unit": "lookups/sec",
             "extra": "min of 108 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "744a49b6ea8007f9eb21370e1f76fda85446690b",
+          "message": "Bump virtualenv from 21.7.13 to 21.14.9 (#741)\n\nBumps [virtualenv](https://github.com/pypa/virtualenv) from 21.7.13 to 21.14.9.\n- [Release notes](https://github.com/pypa/virtualenv/releases)\n- [Changelog](https://github.com/pypa/virtualenv/blob/main/docs/changelog.rst)\n- [Commits](https://github.com/pypa/virtualenv/compare/21.7.13...21.14.9)\n\n---\nupdated-dependencies:\n- dependency-name: virtualenv\n  dependency-version: 21.14.9\n  dependency-type: indirect\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-22T02:18:06Z",
+          "tree_id": "0b32b2afef2a0d5bcca0f6ebe89243a8537220b2",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/744a49b6ea8007f9eb21370e1f76fda85446690b"
+        },
+        "date": 1792635526332,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1595737.2114543845,
+            "range": "± 49297",
+            "unit": "lookups/sec",
+            "extra": "min of 440 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1975908.1471233526,
+            "range": "± 45477",
+            "unit": "lookups/sec",
+            "extra": "min of 662 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 338205.43057831726,
+            "range": "± 5641",
+            "unit": "lookups/sec",
+            "extra": "min of 116 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8804459.987257821,
+            "range": "± 239701",
+            "unit": "lookups/sec",
+            "extra": "min of 1331 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 71097460.38489947,
+            "range": "± 4315778",
+            "unit": "lookups/sec",
+            "extra": "min of 10194 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 450740.87375921436,
+            "range": "± 11938",
+            "unit": "lookups/sec",
+            "extra": "min of 129 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8405452.112372238,
+            "range": "± 366078",
+            "unit": "lookups/sec",
+            "extra": "min of 1629 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 51268379.719139166,
+            "range": "± 18567930",
+            "unit": "lookups/sec",
+            "extra": "min of 7468 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 448225.39498055645,
+            "range": "± 10445",
+            "unit": "lookups/sec",
+            "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
           }
         ]
       }
