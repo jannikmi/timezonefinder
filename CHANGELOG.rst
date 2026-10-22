@@ -2,6 +2,27 @@
 Changelog
 =========
 
+9.2.0 (2026-10-22)
+------------------
+
+Changed:
+
+* On x86_64 Linux, free-threaded CPython 3.15 and later installs a prebuilt wheel with the C extension, built against the free-threaded stable ABI (``abi3t``), instead of compiling from the sdist, and GIL builds of 3.15 and later install that same wheel. It needs an installer that knows the ``abi3t`` tag, such as a current pip or uv; older installers, other platforms and free-threaded 3.14 build from the sdist as before.
+* Python 3.15 is supported and tested. Python 3.12 remains supported until its NEP 29 drop date, 2027-04-02.
+
+Documentation:
+
+* The `comparison to pytzwhere <https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere>`__ is shorter and now also compares batch throughput, one ``timezone_names_at()`` call against the per-point loop that is all ``pytzwhere`` offers, and says why the pure-Python fallback answers many points more slowly than ``pytzwhere``.
+* The README and the About page gain a *Used by* section naming well-known dependents, and the repository carries a ``CITATION.cff``, so GitHub offers a citation for it.
+
+Internal:
+
+* The ``pyXY-pytz`` tox envs run the test suite once, with ``pytz`` installed, rather than also repeating the plain ``pyXY`` run.
+* A push to a ``release/**`` branch now commits the benchmark pages rendered for it, and a merged release pull request is tagged by CI once its ``master`` build is green, so neither is installed or pushed by hand.
+* ruff is raised to 0.17, with the pre-commit hook at the same version; the explicitly selected rule set reports nothing new and nothing is reformatted.
+* CI runs the ``slow`` tox env in a 3.14 job of its own, in parallel with the rest of the matrix, instead of after the other 3.14 envs.
+
+
 9.1.0 (2026-10-20)
 ------------------
 

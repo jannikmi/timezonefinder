@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "9.1.0"
+version = "9.2.0"
 description = "Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
