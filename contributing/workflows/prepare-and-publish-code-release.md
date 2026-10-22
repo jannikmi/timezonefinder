@@ -70,7 +70,7 @@ Compute patch, minor, and major candidates with `uv version --bump <level> --dry
 
 Internal code and bundled formats are versioned together and are not major changes. A data-only boundary release is outside this workflow. If the invocation names a level, use it but state when the table requires a higher one.
 
-Create `release/<version>`, run `uv version --bump <level>`, and replace the generated heading with the version and shell-derived date. Recompute its RST underline; do not insert an empty pending section above it. Only `CHANGELOG.rst`, `pyproject.toml`, `uv.lock`, and the consumed fragment deletions belong in the version commit.
+Create `release/<version>`, run `uv version --bump <level>`, and replace the generated heading's text with the version and shell-derived date, keeping its `## `; do not insert an empty pending section above it. Only `CHANGELOG.md`, `pyproject.toml`, `uv.lock`, and the consumed fragment deletions belong in the version commit.
 
 Run `make hook`, `make test`, and `make testint`. Confirm the diff against `origin/master` contains exactly those files. Commit.
 

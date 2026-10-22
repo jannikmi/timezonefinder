@@ -55,6 +55,9 @@ print("release version:", release)
 extensions = [
     "sphinx.ext.autodoc",  # automatically document with docstring
     "sphinx.ext.viewcode",
+    # parses the one Markdown page, 6_changelog.md, which includes CHANGELOG.md:
+    # a reStructuredText include cannot read Markdown
+    "myst_parser",
     # 'sphinx.ext.intersphinx', # to auto  link to other online documentations
 ]
 
@@ -72,7 +75,7 @@ autodoc_default_options = {
 templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 # The master toctree document.
 master_doc = "index"

@@ -108,7 +108,7 @@ Which is fastest is measured, not assumed: see the [acceleration path comparison
 * [Testing philosophy](https://timezonefinder.readthedocs.io/en/latest/architecture.html#tests-that-protect-guarantees-not-behaviour) - the tests that exist because a rule needed a failure mode, plus the property-based suite and the version/backend matrix
 * [How it ships](https://timezonefinder.readthedocs.io/en/latest/architecture.html#how-it-ships) - abi3 wheels, three libc targets, and the checks that stop a broken wheel reaching PyPI
 * [Alternatives](https://timezonefinder.readthedocs.io/en/latest/alternatives.html) - the trade-offs against `tzfpy`, and when to choose it instead
-* [Changelog](https://github.com/jannikmi/timezonefinder/blob/master/CHANGELOG.rst)
+* [Changelog](https://github.com/jannikmi/timezonefinder/blob/master/CHANGELOG.md)
 
 **Alternative:** Need maximum speed at the cost of accuracy?
 Check out [tzfpy](https://github.com/ringsaturn/tzfpy) - a fast and lightweight alternative based on Rust.

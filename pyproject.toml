@@ -60,6 +60,7 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [dependency-groups]
 docs = [
+    "myst-parser>=4,<6",
     "sphinx>=8,<10",
     "sphinx-rtd-theme>=3,<4",
 ]
@@ -250,7 +251,7 @@ markers = [
 #   autoclass/autofunction - autodoc is not part of that shim
 #   include - rstcheck resolves it against the working directory rather than against the
 #     including file, and abandons the whole file with an AttributeError when it misses.
-#     Both include targets (docs/badges.rst, CHANGELOG.rst) are linted directly, so skipping
+#     The include target (docs/badges.rst) is linted directly, so skipping
 #     the directive covers the same content without the false negative.
 ignore_directives = ["autoclass", "autofunction", "include"]
 # INFO findings are Sphinx facts, not defects: hyperlink targets referenced from another page,

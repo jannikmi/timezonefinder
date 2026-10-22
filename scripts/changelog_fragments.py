@@ -13,9 +13,9 @@ section. The directory carries the placement, so no fragment has to say where
 it goes and no two fragments touch the same lines. ``--assemble`` folds them
 into a newly generated, grouped unreleased section and deletes them; release
 curation then checks the end state without having to classify every bullet
-again. Between releases, ``CHANGELOG.rst`` contains released history only.
+again. Between releases, ``CHANGELOG.md`` contains released history only.
 
-``CHANGELOG.rst`` stays the published artifact - it is what the docs
+``CHANGELOG.md`` stays the published artifact - it is what the docs
 include and what ships - so nothing downstream learns about fragments.
 """
 
@@ -28,7 +28,7 @@ from typing import Final, Iterable, Sequence
 
 REPO_ROOT: Final[Path] = Path(__file__).resolve().parent.parent
 FRAGMENT_ROOT: Final[Path] = REPO_ROOT / "changelog.d"
-CHANGELOG_PATH: Final[Path] = REPO_ROOT / "CHANGELOG.rst"
+CHANGELOG_PATH: Final[Path] = REPO_ROOT / "CHANGELOG.md"
 
 #: Directory names in rendered order. Each maps mechanically to one release-note
 #: section, so classification happens while the change is still being authored.
@@ -43,7 +43,7 @@ CATEGORIES: Final[tuple[str, ...]] = (
 CATEGORY_HEADINGS: Final[dict[str, str]] = {
     category: category.replace("-", " ").capitalize() + ":" for category in CATEGORIES
 }
-FRAGMENT_SUFFIX: Final[str] = ".rst"
+FRAGMENT_SUFFIX: Final[str] = ".md"
 #: Files allowed to sit at the fragment root without being fragments.
 ROOT_ALLOWLIST: Final[frozenset[str]] = frozenset({"README.md"})
 #: Kept in each category directory so an empty one survives a clone.
@@ -55,10 +55,9 @@ KEEP_FILE: Final[str] = ".gitkeep"
 SLUG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 UNRELEASED_HEADING: Final[str] = "X.X.X (unreleased)"
-UNRELEASED_HEADER: Final[tuple[str, str]] = (
-    UNRELEASED_HEADING,
-    "-" * len(UNRELEASED_HEADING),
-)
+#: Every version section, released or pending, opens with a level-two heading.
+SECTION_PREFIX: Final[str] = "## "
+UNRELEASED_HEADER: Final[str] = SECTION_PREFIX + UNRELEASED_HEADING
 
 
 def _display(path: Path) -> str:
@@ -141,7 +140,7 @@ def _reject_unclassified(root: Path) -> None:
 def _read_fragment(path: Path) -> str:
     if path.suffix != FRAGMENT_SUFFIX:
         raise FragmentError(
-            f"{_display(path)}: fragments are plain RST and must "
+            f"{_display(path)}: fragments are plain Markdown and must "
             f"end in {FRAGMENT_SUFFIX}"
         )
     if not SLUG_PATTERN.match(path.stem):
@@ -212,9 +211,7 @@ def assemble(changelog_text: str, fragments: Sequence[Fragment]) -> str:
     if bounds is None:
         insert_at = _published_section_start(lines)
         rebuilt = (
-            lines[:insert_at]
-            + [*UNRELEASED_HEADER, *_tidy(section)]
-            + lines[insert_at:]
+            lines[:insert_at] + [UNRELEASED_HEADER, *_tidy(section)] + lines[insert_at:]
         )
     else:
         start, end = bounds
@@ -263,16 +260,15 @@ def _append_to_category(
 def _unreleased_bounds(lines: Sequence[str]) -> tuple[int, int] | None:
     """Index range of a generated pending section's body, when present."""
     for index, line in enumerate(lines):
-        if line.strip() != UNRELEASED_HEADING:
+        if line.lstrip("# ").rstrip() != UNRELEASED_HEADING:
             continue
-        underline = index + 1
-        if underline >= len(lines) or not set(lines[underline]) == {"-"}:
+        if line.rstrip() != UNRELEASED_HEADER:
             raise FragmentError(
                 f"{CHANGELOG_PATH.name} has a malformed '{UNRELEASED_HEADING}' heading"
             )
-        start = underline + 1
-        for offset in range(start, len(lines) - 1):
-            if set(lines[offset + 1]) == {"-"} and lines[offset].strip():
+        start = index + 1
+        for offset in range(start, len(lines)):
+            if lines[offset].startswith(SECTION_PREFIX):
                 return start, offset
         return start, len(lines)
     return None
@@ -280,8 +276,8 @@ def _unreleased_bounds(lines: Sequence[str]) -> tuple[int, int] | None:
 
 def _published_section_start(lines: Sequence[str]) -> int:
     """The first dated release heading, or the end of a history-free changelog."""
-    for index in range(3, len(lines) - 1):
-        if lines[index].strip() and set(lines[index + 1]) == {"-"}:
+    for index, line in enumerate(lines):
+        if line.startswith(SECTION_PREFIX):
             return index
     return len(lines)
 
@@ -320,7 +316,7 @@ def _preview(fragments: Sequence[Fragment], changelog_text: str) -> str:
     if bounds is None:
         return ""
     start, end = bounds
-    heading = lines[start - 2 : start]
+    heading = lines[start - 1 : start]
     body = lines[start:end]
     while body and not body[-1].strip():
         body.pop()
@@ -345,7 +341,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--assemble",
         action="store_true",
-        help="fold the fragments into CHANGELOG.rst and delete them",
+        help="fold the fragments into CHANGELOG.md and delete them",
     )
     args = parser.parse_args(argv)
 

@@ -412,7 +412,7 @@ jobs:
       # first irreversible one. A change files its changelog bullet as a fragment
       # under changelog.d/ and the release consumes them (`make changelog-assemble`);
       # a fragment surviving to the tag is a change published with no entry in
-      # CHANGELOG.rst and none in the distribution either, since changelog.d/ is
+      # CHANGELOG.md and none in the distribution either, since changelog.d/ is
       # pruned from it. Nothing else would notice - the release simply reads as if
       # that change never happened.
       - name: Verify every changelog fragment was consumed

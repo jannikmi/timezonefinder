@@ -83,7 +83,7 @@ DATA_DISTRIBUTION_NAME = "timezonefinder-data"
 DATA_PACKAGE_ROOT = PROJECT_ROOT / "packages" / DATA_DISTRIBUTION_NAME
 DATA_PYPROJECT_FILE = DATA_PACKAGE_ROOT / "pyproject.toml"
 # Where a data release is recorded - this distribution's PyPI long description, and
-# the only place a data update writes release notes. The root CHANGELOG.rst describes
+# the only place a data update writes release notes. The root CHANGELOG.md describes
 # `timezonefinder`, so that the two release streams cannot block each other.
 DATA_RELEASES_FILE = DATA_PACKAGE_ROOT / "README.md"
 

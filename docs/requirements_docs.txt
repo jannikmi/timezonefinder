@@ -1,5 +1,6 @@
 cffi
 flatbuffers
+myst-parser
 # the minimal dependencies required to build the documentation
 # python3.6+
 numpy

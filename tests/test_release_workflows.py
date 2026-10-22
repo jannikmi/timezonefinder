@@ -109,7 +109,7 @@ RELEASE_GATE_CONSEQUENCE = {
     "changelog_fragments": (
         "a fragment surviving the tag is a change released with no entry anywhere: "
         "changelog.d/ is pruned from the distribution, so the bullet is absent from "
-        "CHANGELOG.rst and from the package, and the release reads as if that change "
+        "CHANGELOG.md and from the package, and the release reads as if that change "
         "never happened"
     ),
 }

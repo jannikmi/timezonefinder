@@ -54,7 +54,7 @@
 #                     whose GitHub assets exist but whose PyPI upload did not run
 #   rmtag      - remove the current version tag locally and remotely
 #   changelog  - preview the unreleased changelog section assembled from changelog.d/
-#   changelog-assemble - fold changelog.d/ into CHANGELOG.rst and consume the fragments
+#   changelog-assemble - fold changelog.d/ into CHANGELOG.md and consume the fragments
 #                        (release preparation only)
 #   docs       - build Sphinx HTML documentation from docs/
 
@@ -471,13 +471,13 @@ memory-noise:
 		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS) --metric=memory
 
 # A change files one fragment under changelog.d/ rather than editing
-# CHANGELOG.rst, so two concurrent pull requests never touch the same lines.
+# CHANGELOG.md, so two concurrent pull requests never touch the same lines.
 # This prints the pending section generated from those fragments;
 # tests/test_changelog_fragments.py runs the same validation.
 changelog:
 	@uv run python -m scripts.changelog_fragments
 
-# Release preparation only: this rewrites CHANGELOG.rst and *deletes* the
+# Release preparation only: this rewrites CHANGELOG.md and *deletes* the
 # fragments it consumed, which is why it is not what `changelog` runs. The
 # generated section is curated and dated afterwards.
 changelog-assemble:

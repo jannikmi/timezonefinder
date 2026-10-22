@@ -1,7 +1,7 @@
 """The release list of the ``timezonefinder-data`` distribution.
 
 A data release is recorded in that package's own README (``## Releases``) and nowhere
-else. The root ``CHANGELOG.rst`` describes ``timezonefinder`` and is not touched by a
+else. The root ``CHANGELOG.md`` describes ``timezonefinder`` and is not touched by a
 data update at all - which is the point of the split: the two release
 streams must not be able to block each other, and a dated ``timezonefinder`` section
 for a release that was never published is worse than no entry.

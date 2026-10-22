@@ -1,16 +1,16 @@
 # Changelog fragments
 
-One file per change, instead of every change editing the same section of `CHANGELOG.rst`. Concurrent pull requests then never contend on the changelog, because no two of them touch the same lines.
+One file per change, instead of every change editing the same section of `CHANGELOG.md`. Concurrent pull requests then never contend on the changelog, because no two of them touch the same lines.
 
 Add exactly one file per atomic change under the section where the bullet will
 be published:
 
-- `changelog.d/breaking-changes/<slug>.rst` — incompatible public API or documented behavior; a dropped Python version or raised dependency minimum is `changed/`
-- `changelog.d/new-features/<slug>.rst` — new public API or behavior
-- `changelog.d/changed/<slug>.rst` — compatible changes to existing behavior, dependencies, packaging, or data formats
-- `changelog.d/bug-fixes/<slug>.rst` — corrections of previously wrong behavior
-- `changelog.d/documentation/<slug>.rst` — user-facing documentation changes
-- `changelog.d/internal/<slug>.rst` — dev tooling, refactors, CI, or test infrastructure
+- `changelog.d/breaking-changes/<slug>.md` — incompatible public API or documented behavior; a dropped Python version or raised dependency minimum is `changed/`
+- `changelog.d/new-features/<slug>.md` — new public API or behavior
+- `changelog.d/changed/<slug>.md` — compatible changes to existing behavior, dependencies, packaging, or data formats
+- `changelog.d/bug-fixes/<slug>.md` — corrections of previously wrong behavior
+- `changelog.d/documentation/<slug>.md` — user-facing documentation changes
+- `changelog.d/internal/<slug>.md` — dev tooling, refactors, CI, or test infrastructure
 
 The directory decides the placement, so the text never says where it goes. `<slug>` is kebab-case — lowercase letters, digits and single hyphens, enforced rather than merely asked for — and describes the change, not the branch or the issue; the same slug may not appear in more than one section. Two names differing only in case would be two fragments on Linux and one file on macOS or Windows, which is how a bullet disappears on someone else's checkout.
 
@@ -20,6 +20,6 @@ A fragment holds the bullet text only, on one line, without the leading `* `. On
 uv run python -m scripts.changelog_fragments
 ```
 
-prints the pending release section as it will read once assembled. The section is generated from fragments and is not kept as an empty placeholder in `CHANGELOG.rst` between releases. `--check` validates without printing; the test suite runs the same validation, so a malformed fragment fails CI rather than a release.
+prints the pending release section as it will read once assembled. The section is generated from fragments and is not kept as an empty placeholder in `CHANGELOG.md` between releases. `--check` validates without printing; the test suite runs the same validation, so a malformed fragment fails CI rather than a release.
 
-The [changelog policy](../contributing/development/changelog-and-release-note-policy.md) still decides *what* earns a bullet — including the exemptions, which create no fragment at all. The release consumes every fragment with `--assemble`; the resulting section is already grouped, so release curation checks wording, atomicity, duplicates, and omissions rather than classifying bullets. `CHANGELOG.rst` remains the published artifact. A fragment left behind cannot be published: `make release` and the release job both run `--check --require-consumed` before anything irreversible happens.
+The [changelog policy](../contributing/development/changelog-and-release-note-policy.md) still decides *what* earns a bullet — including the exemptions, which create no fragment at all. The release consumes every fragment with `--assemble`; the resulting section is already grouped, so release curation checks wording, atomicity, duplicates, and omissions rather than classifying bullets. `CHANGELOG.md` remains the published artifact. A fragment left behind cannot be published: `make release` and the release job both run `--check --require-consumed` before anything irreversible happens.

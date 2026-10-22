@@ -1,12 +1,13 @@
 """The fragment layer must never lose a bullet or reorder a released one.
 
 ``scripts/changelog_fragments.py`` sits between every non-exempt change and the
-published ``CHANGELOG.rst``. A fragment it silently skips is a change that
+published ``CHANGELOG.md``. A fragment it silently skips is a change that
 reaches a release with no entry, and an assembly that rewrites text below the
 unreleased heading is a released version being edited after the fact - neither
 announces itself in a diff anybody reads.
 """
 
+import re
 import textwrap
 
 import pytest
@@ -24,14 +25,11 @@ from scripts.changelog_fragments import (
 
 FROZEN_CHANGELOG = textwrap.dedent(
     """\
-    =========
-    Changelog
-    =========
+    # Changelog
 
 
 
-    X.X.X (unreleased)
-    ------------------
+    ## X.X.X (unreleased)
 
     Changed:
 
@@ -42,8 +40,7 @@ FROZEN_CHANGELOG = textwrap.dedent(
     * an internal bullet curated before the fragments arrived
 
 
-    9.0.0 (2026-09-02)
-    ------------------
+    ## 9.0.0 (2026-09-02)
 
     * the released text, which nothing here may touch
     """
@@ -51,18 +48,14 @@ FROZEN_CHANGELOG = textwrap.dedent(
 
 EMPTY_UNRELEASED = textwrap.dedent(
     """\
-    =========
-    Changelog
-    =========
+    # Changelog
 
 
 
-    X.X.X (unreleased)
-    ------------------
+    ## X.X.X (unreleased)
 
 
-    9.0.0 (2026-09-02)
-    ------------------
+    ## 9.0.0 (2026-09-02)
 
     * the released text, which nothing here may touch
     """
@@ -70,12 +63,9 @@ EMPTY_UNRELEASED = textwrap.dedent(
 
 RELEASED_ONLY = textwrap.dedent(
     """\
-    =========
-    Changelog
-    =========
+    # Changelog
 
-    9.0.0 (2026-09-02)
-    ------------------
+    ## 9.0.0 (2026-09-02)
 
     * the released text, which nothing here may touch
     """
@@ -94,7 +84,7 @@ def fragment_dir(tmp_path):
 
 
 def write(root, category, name, text):
-    path = root / category / f"{name}.rst"
+    path = root / category / f"{name}.md"
     path.write_text(text, encoding="utf-8")
     return path
 
@@ -175,14 +165,16 @@ class TestLoading:
             "a-perfectly-fine-slug-2"
         ]
 
-    def test_a_fragment_that_is_not_rst_is_refused(self, fragment_dir):
-        (fragment_dir / "changed" / "notes.md").write_text("a change", encoding="utf-8")
+    def test_a_fragment_that_is_not_markdown_is_refused(self, fragment_dir):
+        (fragment_dir / "changed" / "notes.rst").write_text(
+            "a change", encoding="utf-8"
+        )
 
-        with pytest.raises(FragmentError, match="must end in .rst"):
+        with pytest.raises(FragmentError, match="must end in .md"):
             load_fragments(fragment_dir)
 
     def test_an_unclassified_fragment_is_refused(self, fragment_dir):
-        (fragment_dir / "loose.rst").write_text("a change", encoding="utf-8")
+        (fragment_dir / "loose.md").write_text("a change", encoding="utf-8")
 
         with pytest.raises(FragmentError, match="unclassified fragment"):
             load_fragments(fragment_dir)
@@ -263,9 +255,7 @@ class TestAssembly:
 
         assembled = assemble(RELEASED_ONLY, load_fragments(fragment_dir))
 
-        assert assembled.startswith(
-            "=========\nChangelog\n=========\n\nX.X.X (unreleased)"
-        )
+        assert assembled.startswith("# Changelog\n\n## X.X.X (unreleased)")
         assert "New features:\n\n* a user-visible change" in assembled
         assert assembled.index("X.X.X (unreleased)") < assembled.index("9.0.0")
 
@@ -275,19 +265,19 @@ class TestAssembly:
     def test_a_malformed_existing_pending_heading_is_refused(self, fragment_dir):
         write(fragment_dir, "changed", "visible", "a user-visible change")
         malformed = RELEASED_ONLY.replace(
-            "9.0.0 (2026-09-02)\n------------------",
-            "X.X.X (unreleased)\nnot-an-underline",
+            "## 9.0.0 (2026-09-02)",
+            "### X.X.X (unreleased)",
         )
 
         with pytest.raises(FragmentError, match="malformed 'X.X.X \\(unreleased\\)'"):
             assemble(malformed, load_fragments(fragment_dir))
 
-    def test_the_result_is_valid_rst_the_next_assembly_can_read(self, fragment_dir):
+    def test_the_result_is_valid_input_to_the_next_assembly(self, fragment_dir):
         """Assembly is repeatable: its own output is a legal input."""
         write(fragment_dir, "changed", "first", "the first change")
         once = assemble(EMPTY_UNRELEASED, load_fragments(fragment_dir))
 
-        (fragment_dir / "changed" / "first.rst").unlink()
+        (fragment_dir / "changed" / "first.md").unlink()
         write(fragment_dir, "changed", "second", "the second change")
         twice = assemble(once, load_fragments(fragment_dir))
 
@@ -338,7 +328,7 @@ class TestPreview:
     def test_the_preview_stops_at_the_unreleased_section(self):
         preview = _preview([], FROZEN_CHANGELOG)
 
-        assert preview.startswith("X.X.X (unreleased)\n------------------")
+        assert preview.startswith("## X.X.X (unreleased)\n")
         assert "9.0.0" not in preview
         assert "the released text" not in preview
 
@@ -349,7 +339,7 @@ class TestPreview:
 
         preview = _preview(load_fragments(fragment_dir), RELEASED_ONLY)
 
-        assert preview.startswith("X.X.X (unreleased)\n------------------")
+        assert preview.startswith("## X.X.X (unreleased)\n")
         assert "Changed:\n\n* a newly filed change" in preview
         assert "9.0.0" not in preview
 
@@ -359,8 +349,8 @@ class TestPreview:
 
 def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():
     fragments = [
-        Fragment("changed", FRAGMENT_ROOT / "changed" / "a.rst", "a change"),
-        Fragment("internal", FRAGMENT_ROOT / "internal" / "b.rst", "another change"),
+        Fragment("changed", FRAGMENT_ROOT / "changed" / "a.md", "a change"),
+        Fragment("internal", FRAGMENT_ROOT / "internal" / "b.md", "another change"),
     ]
 
     assert render_bullets(fragments, "changed") == ["* a change"]
@@ -370,9 +360,36 @@ def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():
 def test_the_committed_fragments_are_sound():
     """The gate this repository runs: every filed fragment must assemble."""
     fragments = load_fragments()
-    changelog = (FRAGMENT_ROOT.parent / "CHANGELOG.rst").read_text(encoding="utf-8")
+    changelog = (FRAGMENT_ROOT.parent / "CHANGELOG.md").read_text(encoding="utf-8")
 
     assembled = assemble(changelog, fragments)
-    assert assembled.startswith("=========\nChangelog\n=========")
+    assert assembled.startswith("# Changelog\n")
     for fragment in fragments:
         assert f"* {fragment.text}" in assembled
+
+
+def test_every_level_two_heading_in_the_committed_changelog_is_a_version():
+    """Assembly finds a section's end at the next ``## `` line.
+
+    A level-two heading that is not a version would therefore end the pending
+    section early, or be taken for the newest release, so the generated section
+    would land inside a released one.
+    """
+    changelog = (FRAGMENT_ROOT.parent / "CHANGELOG.md").read_text(encoding="utf-8")
+    headings = [line for line in changelog.splitlines() if line.startswith("## ")]
+
+    assert headings
+    for heading in headings:
+        assert re.fullmatch(r"## \d+\.\d+\.\d+ \(\d{4}-\d{2}-\d{2}\)", heading), heading
+
+
+def test_a_prose_mention_of_the_pending_heading_is_not_a_heading(fragment_dir):
+    write(fragment_dir, "changed", "visible", "a user-visible change")
+    mentioned = RELEASED_ONLY.replace(
+        "* the released text",
+        "* renamed X.X.X (unreleased) to the version - the released text",
+    )
+
+    assembled = assemble(mentioned, load_fragments(fragment_dir))
+
+    assert assembled.index("## X.X.X (unreleased)") < assembled.index("## 9.0.0")
