@@ -1,10 +1,12 @@
 """Assert every file that names a supported Python version agrees with the rest.
 
-Five files declare the same fact and none of them can read the others:
+Six files declare the same fact and none of them can read the others:
 
     pyproject.toml   `requires-python`, and one classifier per minor version
+    packages/timezonefinder-data/pyproject.toml   the same `requires-python`
     tox.ini          the `py{...}` factors of `envlist`
-    build.yml        the `test` matrix, and `CIBW_BUILD_VERSIONS` (the abi3 base)
+    build.yml        the `test` and `end-to-end-test` matrices, and
+                     `CIBW_BUILD_VERSIONS` (the abi3 base)
     setup.py         `py_limited_api` (the same abi3 base)
 
 Two "must match" comments already point at this - one above `requires-python`,
@@ -27,7 +29,7 @@ import yaml
 from packaging.requirements import Requirement
 from packaging.version import Version
 
-from scripts.configs import PYPROJECT_FILE
+from scripts.configs import DATA_PYPROJECT_FILE, PYPROJECT_FILE
 from tests.auxiliaries import PROJECT_ROOT
 
 TOX_INI = PROJECT_ROOT / "tox.ini"
@@ -93,6 +95,35 @@ def test_the_ci_matrix_covers_exactly_the_advertised_versions(
     assert matrix_minors == classifier_minors, (
         "pyproject.toml classifiers and the build.yml test matrix disagree: a "
         "version claimed but not in the matrix is never tested"
+    )
+
+
+@pytest.mark.unit
+def test_the_wheel_is_installed_on_exactly_the_advertised_versions(
+    classifier_minors, build_workflow
+):
+    """The end-to-end job is what proves the abi3 wheel loads on each version.
+
+    Free-threaded identifiers (a trailing ``t``) are a separate claim and are not
+    counted here.
+    """
+    versions = build_workflow["jobs"]["end-to-end-test"]["strategy"]["matrix"][
+        "uv-python-version"
+    ]
+    installed_minors = sorted(int(v[3:]) for v in versions if not v.endswith("t"))
+    assert installed_minors == classifier_minors, (
+        "pyproject.toml classifiers and the build.yml end-to-end matrix disagree: a "
+        "version claimed but not in that matrix never installs the built wheel"
+    )
+
+
+@pytest.mark.unit
+def test_the_data_distribution_mirrors_the_requires_python_floor():
+    root = tomllib.loads(PYPROJECT_FILE.read_text())["project"]["requires-python"]
+    data = tomllib.loads(DATA_PYPROJECT_FILE.read_text())["project"]["requires-python"]
+    assert data == root, (
+        "timezonefinder-data is only ever imported by timezonefinder, so its "
+        "requires-python must be the root distribution's"
     )
 
 
