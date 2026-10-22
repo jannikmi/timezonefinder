@@ -227,12 +227,15 @@ the `code-release workflow
 <https://github.com/jannikmi/timezonefinder/blob/master/contributing/workflows/prepare-and-publish-code-release.md>`__
 and the ``Makefile``; this section is the *why*.
 
-**One wheel per target, not one per Python version.** The C extension is built once against the
-stable ABI (``py_limited_api``, ``cp312``), so a single wheel serves every later interpreter instead
-of the build matrix growing a row per Python release. The saving is only real if the claim is true,
+**Two wheels per target, not one per Python version.** The C extension is built once per stable
+ABI: abi3 on ``cp312``, and abi3t on ``cp315t``, the first free-threaded interpreter that has a
+stable ABI. Each wheel serves every later interpreter its ABI covers, so the build matrix does not
+grow a row per Python release. setuptools tags the abi3t wheel ``abi3.abi3t``, which makes GIL
+builds from 3.15 on choose it over the ``cp312`` one. The saving is only real if the claim is true,
 which is why every wheel goes through ``abi3audit --strict`` in the repair step: a wheel that
 *declares* abi3 and links something version-specific installs happily and crashes at runtime on an
-interpreter no CI job ever ran.
+interpreter no CI job ever ran. ``abi3audit`` checks the abi3 symbol set only and cannot see a rule
+``abi3t`` adds, so for the abi3t wheel the free-threaded end-to-end leg below is the proof.
 
 **Three libc targets.** manylinux2014, manylinux_2_28 and musllinux are built separately, so an
 Alpine container and an old glibc host both get the compiled path rather than the far slower
@@ -240,12 +243,14 @@ pure-Python fallback. Platforms without a published wheel install from the sdist
 fails, ``fallible_build_ext`` in ``setup.py`` swallows the error and the install still succeeds -
 slower, never broken.
 
-**The end-to-end job is the interesting one.** It installs the *built wheel* on four Python versions
-and asserts both a known lookup result and ``clang_extension_loaded``. A smoke test that only checked
-``import timezonefinder`` would pass on a wheel whose extension had silently failed to build, which
-is the one failure this package must not ship quietly - it would degrade to the pure-Python path
-without a single red check. It doubles as the proof that the abi3 claim holds, since one cp312 wheel
-is what all four interpreters install.
+**The end-to-end job is the interesting one.** On each of the four Python versions and on 3.15t, it
+installs the *built wheel* an installer would pick there, and asserts ``clang_extension_loaded``, a
+known lookup result, and, after that lookup, that a free-threaded interpreter still runs without
+the GIL. A smoke test that only checked ``import timezonefinder`` would pass on a wheel whose
+extension had silently failed to build, which is the one failure this package must not ship
+quietly - it would degrade to the pure-Python path without a single red check. It doubles as the
+proof that both stable-ABI claims hold: the cp312 abi3 wheel is what 3.12 to 3.14 install, and the
+abi3t wheel is what 3.15 and 3.15t install.
 
 **Two distributions, one repository.** The boundary data ships as ``timezonefinder-data``, a
 separate distribution built from the same checkout. Every release used to carry the whole ~65 MB
