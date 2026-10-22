@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792635529773,
+  "lastUpdate": 1792636125735,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16407,6 +16407,93 @@ window.BENCHMARK_DATA = {
             "range": "± 10445",
             "unit": "lookups/sec",
             "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.3602 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c51af2e0219037e2c9812d2fb57816492910a739",
+          "message": "Run the slow tox env in its own CI job; run each pytz env once (#746)\n\nThe 3.14 matrix job was the critical path of every pull request at about\n11.5 min, against about 7 min for the next job. Two causes, both changed\nhere at the maintainer's request:\n\n- `!numba:` in tox.ini also matched `pyXY-pytz`, so every pytz env ran the\n  plain suite (~60 s on CI) before its own. The condition is now\n  `!numba-!pytz:`, checked with `tox config -k commands` for all three\n  variants.\n- `slow` (~280 s of pytest) ran after the four other 3.14 envs. It now has\n  a matrix entry of its own. The version-support guard compares the set of\n  matrix minors, since one version may carry several entries; `ci-ok` is the\n  only required check, so the new job name needs no protection change.\n\nTOOL-9 records the follow-up: measure pytest-xdist on the CI envs before\nadopting it.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T02:27:54Z",
+          "tree_id": "fb88558e83161e83a719f2d69ca997a09cc0d2c4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c51af2e0219037e2c9812d2fb57816492910a739"
+        },
+        "date": 1792636124042,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 807074.6224422033,
+            "range": "± 12952",
+            "unit": "lookups/sec",
+            "extra": "min of 288 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 987216.3381902715,
+            "range": "± 28195",
+            "unit": "lookups/sec",
+            "extra": "min of 360 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 176797.39301642802,
+            "range": "± 3448",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4454850.976334903,
+            "range": "± 163151",
+            "unit": "lookups/sec",
+            "extra": "min of 974 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33306687.98279223,
+            "range": "± 3041327",
+            "unit": "lookups/sec",
+            "extra": "min of 6965 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 242248.90706973147,
+            "range": "± 2694",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4213471.310438957,
+            "range": "± 151138",
+            "unit": "lookups/sec",
+            "extra": "min of 1039 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24118935.294538498,
+            "range": "± 1899586",
+            "unit": "lookups/sec",
+            "extra": "min of 6057 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 240118.1996243995,
+            "range": "± 2304",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2304 GHz"
           }
         ]
       }
