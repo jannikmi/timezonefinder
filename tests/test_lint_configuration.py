@@ -157,7 +157,7 @@ def test_the_hook_does_not_carry_a_second_exclusion():
     diverging copy of the same list.
     """
     config = PRE_COMMIT_CONFIG_PATH.read_text()
-    ruff_hook = config.split("- id: ruff\n", 1)[1].split("- id:", 1)[0]
+    ruff_hook = config.split("- id: ruff-check\n", 1)[1].split("- id:", 1)[0]
     assert "exclude:" not in ruff_hook, (
         "The ruff hook carries its own `exclude:`. What is linted is stated in "
         "[tool.ruff.lint] in pyproject.toml so that `uv run ruff check` and the hook "
