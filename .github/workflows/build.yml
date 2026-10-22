@@ -83,6 +83,11 @@ jobs:
           # entry of its own, and the matrix keeps one entry per advertised version
           - python-version: "3.14"
             tox-env: "py314,py314-numba,py314-pytz,slow,free-threaded"
+          # `slow` alone takes about as long as all the other 3.14 envs together, so it
+          # gets a runner of its own instead of being the critical path of that job.
+          # A second entry for an advertised version adds a job, not a version.
+          - python-version: "3.14"
+            tox-env: "slow"
           - python-version: "3.15"
             tox-env: "py315,py315-numba,py315-pytz"
     env:
