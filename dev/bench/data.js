@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792636125735,
+  "lastUpdate": 1792636127714,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -31280,6 +31280,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4833 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c51af2e0219037e2c9812d2fb57816492910a739",
+          "message": "Run the slow tox env in its own CI job; run each pytz env once (#746)\n\nThe 3.14 matrix job was the critical path of every pull request at about\n11.5 min, against about 7 min for the next job. Two causes, both changed\nhere at the maintainer's request:\n\n- `!numba:` in tox.ini also matched `pyXY-pytz`, so every pytz env ran the\n  plain suite (~60 s on CI) before its own. The condition is now\n  `!numba-!pytz:`, checked with `tox config -k commands` for all three\n  variants.\n- `slow` (~280 s of pytest) ran after the four other 3.14 envs. It now has\n  a matrix entry of its own. The version-support guard compares the set of\n  matrix minors, since one version may carry several entries; `ci-ok` is the\n  only required check, so the new job name needs no protection change.\n\nTOOL-9 records the follow-up: measure pytest-xdist on the CI envs before\nadopting it.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T02:27:54Z",
+          "tree_id": "fb88558e83161e83a719f2d69ca997a09cc0d2c4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c51af2e0219037e2c9812d2fb57816492910a739"
+        },
+        "date": 1792636127260,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946191787719727,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6947975158691406,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9599618911743164,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9606819152832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.65633487701416,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65710163116455,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           }
         ]
       }
