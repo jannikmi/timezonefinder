@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792637020990,
+  "lastUpdate": 1792637022580,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -31433,6 +31433,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d4da3db89abee01d5246e8613afb39d1d00ef987",
+          "message": "Support Python 3.15, keep 3.12 until NEP 29's date, and free GH-721 (#747)\n\n* Record PY-1, the Python window, and unblock GH-721 from setuptools\n\nCPython 3.15 is released and the package neither claims nor tests it,\nalthough the default selection passes on 3.15.1; a 3.15 leg needs a\nlock refresh of numba, llvmlite and shapely. The comment above\nrequires-python says 3.12 passed its binding drop date on 2026-10-02,\nwhile 3.12 carries 40 % of downloads and NumPy still supports it, so\nwhich window the next release ships is recorded as a maintainer\ndecision.\n\nsetuptools 84.2.0 accepts a limited-API build on free-threaded 3.15+,\nwhich clears GH-721's recorded blocker; its abi3t wheels claim 3.15t,\nso it now waits on PY-1.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Support Python 3.15 and keep 3.12 until NEP 29's date\n\nThe maintainer chose PY-1's option (a): 3.15 joins the classifiers, the\ntox envlist, the test matrix and the end-to-end wheel matrix, and 3.12\nstays until 2027-04-02. The comment above requires-python now says the\nlater of the NEP 29 and SPEC 0 dates binds, and why the earlier one is\nrefused. The lock moves numba, llvmlite and shapely to the first\nreleases with cp315 wheels; its header revision is restored.\n\nPY-1 is kept as a conditional item for retiring 3.12 after that date.\nGH-721 is now free: setuptools 84.2.0 accepts the abi3t tag and 3.15\nis in the supported window.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Hold the e2e matrix and the data floor to the window, and settle review\n\nReview of 264f6c9b and 7ed091f0 found the version-support test silent on\nthe end-to-end matrix this change edits and on the data distribution's\nrequires-python, which PY-1 claimed it covered; both are now asserted.\nPY-1 names the tox basepython lines it would otherwise leave on 3.12,\nand says which files the test does not check. The requires-python\ncomment gives a reason that survives the next date change rather than\none tied to 3.12. GH-721 no longer claims 3.15t is tested: its change\nmoves the free-threaded tests there. The surface record's coverage\nstate and unread list are corrected.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T02:42:48Z",
+          "tree_id": "82622c6ba927c1c88d7abad68b459ac768d80684",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d4da3db89abee01d5246e8613afb39d1d00ef987"
+        },
+        "date": 1792637022351,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.694575309753418,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6947536468505859,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.959686279296875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9604530334472656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.65629863739014,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65697383880615,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2437 GHz"
           }
         ]
       }
