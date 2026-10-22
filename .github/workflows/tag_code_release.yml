@@ -36,6 +36,8 @@ jobs:
       # first, because an absent credential would otherwise fail at the token step with
       # an input error naming neither secret nor this repository, in a workflow_run
       # whose failures appear on no pull request
+      # DATA_UPDATER_GH_* hold the timezonefinder-updater App's credentials; the
+      # names date from when the App only published data updates
       - name: Check that the timezonefinder-updater App is configured
         env:
           # the expression, never the values, so no credential reaches the shell

@@ -672,6 +672,8 @@ jobs:
       contents: read
       actions: read
     steps:
+      # DATA_UPDATER_GH_* hold the timezonefinder-updater App's credentials; the
+      # names date from when the App only published data updates
       - name: Check that the timezonefinder-updater App is configured
         env:
           # the expression, never the values, so no credential reaches the shell

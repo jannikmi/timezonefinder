@@ -92,6 +92,8 @@ jobs:
       # repository does not carry reads exactly like one nobody ever created, which is
       # what the update to upstream `2026d` met: the credentials existed the whole
       # time, under other names.
+      # DATA_UPDATER_GH_* hold the timezonefinder-updater App's credentials; the
+      # names date from when the App only published data updates
       - name: Check that the timezonefinder-updater App is configured
         env:
           # The expression, never the values: this yields 'true' or 'false', so no
