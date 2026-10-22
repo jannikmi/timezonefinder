@@ -32,14 +32,12 @@ repos:
             -   id: detect-private-key
 
 
-    # held at 0.15.x deliberately: 0.16 widens the default rule set, which rewrites
-    # ~145 sites and leaves ~97 findings needing real judgement (B023, F841, BLE001,
-    # DTZ001). That is a lint pass to take on its own; `ruff` is bounded to match in
-    # [dependency-groups] dev so a bare `uv run ruff` cannot disagree with this hook.
+    # `ruff` is bounded to match in [dependency-groups] dev, so a bare `uv run ruff`
+    # cannot disagree with this hook: raising one means raising both.
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.15.21
+      rev: v0.17.1
       hooks:
-          - id: ruff
+          - id: ruff-check
             # linter. What it checks, and why `prototypes/` is left out of it, is
             # stated once in [tool.ruff.lint] in pyproject.toml.
             args: [ --fix ]
