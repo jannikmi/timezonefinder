@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792637022580,
+  "lastUpdate": 1792638510087,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16581,6 +16581,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7112",
             "unit": "lookups/sec",
             "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdc9fb98449cf993294e987d7f090888fc0c5aab",
+          "message": "GH-721: ship abi3t wheels for free-threaded 3.15 and later (#748)\n\nsetup.py names two stable-ABI bases: abi3 on cp312 for GIL builds, and\nabi3t on cp315 for free-threaded ones, claimed only from 3.15 on\nsetuptools 84.2.0, below which setuptools raises on py_limited_api. The\nwheel build adds the cp315t identifiers on images dated after 3.15.0\nfinal. The free-threaded tests move to 3.15t, and the end-to-end job\ngains a cp315t leg, installs on each leg the wheel that interpreter's\ntag ranking prefers, and asserts a free-threaded interpreter keeps the\nGIL off. The version-support test holds both bases.\n\nGH-721 is deleted; its refused options move to the distribution\ndecisions.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T03:07:35Z",
+          "tree_id": "cc6a816d1b0ba59b02f9e80c274487fa1a771d8c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fdc9fb98449cf993294e987d7f090888fc0c5aab"
+        },
+        "date": 1792638508072,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 798391.2097758789,
+            "range": "± 111908",
+            "unit": "lookups/sec",
+            "extra": "min of 250 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 961155.8475742246,
+            "range": "± 12892",
+            "unit": "lookups/sec",
+            "extra": "min of 332 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 165882.27573757272,
+            "range": "± 2256",
+            "unit": "lookups/sec",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4403036.3338707965,
+            "range": "± 152166",
+            "unit": "lookups/sec",
+            "extra": "min of 874 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33328889.48308571,
+            "range": "± 3257884",
+            "unit": "lookups/sec",
+            "extra": "min of 4937 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 227998.0512549236,
+            "range": "± 5129",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4169376.761548748,
+            "range": "± 185486",
+            "unit": "lookups/sec",
+            "extra": "min of 905 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24011909.90750244,
+            "range": "± 5739198",
+            "unit": "lookups/sec",
+            "extra": "min of 4408 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 230487.92911665287,
+            "range": "± 5209",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2497 GHz"
           }
         ]
       }
