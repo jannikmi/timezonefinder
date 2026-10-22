@@ -11,12 +11,13 @@ name: benchmark
 #                     upload it as `benchmark-pages`, and commit it to the branch
 #                     (`commit-reports`), so a release needs nobody to download
 #                     and install the pages by hand. The render job stays
-#                     read-only; only the commit job writes, with the data-updater
-#                     App token, because a push with GITHUB_TOKEN would start no
-#                     CI on the release pull request's new head. The pages commit
-#                     is itself a push to the branch, so the render skips a head
-#                     commit carrying REPORTS_COMMIT_PREFIX - re-rendering it would
-#                     commit again, forever. A release branch is a base repository
+#                     read-only; only the commit job writes, with the
+#                     timezonefinder-updater App token, because a push with
+#                     GITHUB_TOKEN would start no CI on the release pull
+#                     request's new head. The pages commit is itself a push to
+#                     the branch, so the render skips a head commit carrying
+#                     REPORTS_COMMIT_PREFIX - re-rendering it would commit
+#                     again, forever. A release branch is a base repository
 #                     branch, so unlike the `pull_request` trigger this runs no
 #                     untrusted code. The measurement half is skipped here: a
 #                     release branch's numbers must not enter the cross-machine
@@ -671,7 +672,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - name: Check that the data-updater App is configured
+      - name: Check that the timezonefinder-updater App is configured
         env:
           # the expression, never the values, so no credential reaches the shell
           APP_CONFIGURED: >-
@@ -686,7 +687,7 @@ jobs:
               "this run and install it by hand, as the code-release workflow describes."
             exit 1
           fi
-          echo "the data-updater App is configured"
+          echo "the timezonefinder-updater App is configured"
 
       - name: Generate GitHub App token
         id: app-token

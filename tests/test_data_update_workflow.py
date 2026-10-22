@@ -19,8 +19,9 @@ RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
 UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
 APP_TOKEN_ACTION = "actions/create-github-app-token"
 # Every workflow minting the App token, found rather than listed: the code release
-# borrows the data updater's App for its tag and its report commit, and a workflow
-# added later inherits the credential checks below without anyone remembering them.
+# borrows the timezonefinder-updater App for its tag and its report commit, and a
+# workflow added later inherits the credential checks below without anyone
+# remembering them.
 APP_TOKEN_WORKFLOWS = sorted(
     path
     for path in WORKFLOW_DIR.glob("*.yml")

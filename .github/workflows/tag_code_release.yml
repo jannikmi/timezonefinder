@@ -12,7 +12,7 @@ name: Tag a merged code release
 # fragment is left unconsumed, and the tag does not exist yet. Every check is
 # one `make release` or the code-release workflow already makes by hand.
 #
-# NOTE: the tag is pushed with the data-updater GitHub App token, since a tag
+# NOTE: the tag is pushed with the timezonefinder-updater GitHub App token, since a tag
 # pushed with the default GITHUB_TOKEN triggers no other workflow, and build.yml
 # would never publish it.
 
@@ -36,7 +36,7 @@ jobs:
       # first, because an absent credential would otherwise fail at the token step with
       # an input error naming neither secret nor this repository, in a workflow_run
       # whose failures appear on no pull request
-      - name: Check that the data-updater App is configured
+      - name: Check that the timezonefinder-updater App is configured
         env:
           # the expression, never the values, so no credential reaches the shell
           APP_CONFIGURED: >-
@@ -51,7 +51,7 @@ jobs:
               "pushes triggers no workflow, so build.yml would never publish it."
             exit 1
           fi
-          echo "the data-updater App is configured"
+          echo "the timezonefinder-updater App is configured"
 
       - name: Generate GitHub App token
         id: app-token

@@ -92,7 +92,7 @@ jobs:
       # repository does not carry reads exactly like one nobody ever created, which is
       # what the update to upstream `2026d` met: the credentials existed the whole
       # time, under other names.
-      - name: Check that the data-updater App is configured
+      - name: Check that the timezonefinder-updater App is configured
         env:
           # The expression, never the values: this yields 'true' or 'false', so no
           # credential reaches a shell where a trace or an error message could echo it.
@@ -112,7 +112,7 @@ jobs:
               "release_data_update.yml could never merge."
             exit 1
           fi
-          echo "the data-updater App is configured"
+          echo "the timezonefinder-updater App is configured"
 
       - name: Generate GitHub App token
         id: app-token
