@@ -42,7 +42,9 @@ jobs:
       # keyed to, so none of them can report it. Naming the cause in the log is all
       # that is left, and it is worth more than the third-party input error it
       # replaces, which names neither secret nor this repository.
-      - name: Check that the data-updater App is configured
+      # DATA_UPDATER_GH_* hold the timezonefinder-updater App's credentials; the
+      # names date from when the App only published data updates
+      - name: Check that the timezonefinder-updater App is configured
         env:
           # The expression, never the values: this yields 'true' or 'false', so no
           # credential reaches a shell where a trace or an error message could echo it.
@@ -61,7 +63,7 @@ jobs:
               "would never run and the merged update would never reach PyPI."
             exit 1
           fi
-          echo "the data-updater App is configured"
+          echo "the timezonefinder-updater App is configured"
 
       - name: Generate GitHub App token
         id: app-token

@@ -1,0 +1,1 @@
+A push to a ``release/**`` branch now commits the benchmark pages rendered for it, and a merged release pull request is tagged by CI once its ``master`` build is green, so neither is installed or pushed by hand.
