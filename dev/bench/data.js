@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792633252151,
+  "lastUpdate": 1792634077338,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16233,6 +16233,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2650",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3b7f4a158e4f4862595bc6dacb0f96ce621bfd10",
+          "message": "Let an improvement pass change any dependency and its lockfile (#744)\n\nSupported Python versions and the release version stay off-limits; a\ndependency change is still a named trade-off, a new runtime dependency\nmust keep the GIL disabled and the pure-Python fallback working, and a\nchanged runtime dependency gets a changelog fragment. The ruff decision\nrecord and TOOL-5 now point at the general boundary instead of a\ndev-tool-pin exception.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-22T01:53:51Z",
+          "tree_id": "18edab2fdbfc46a9fe3e472178f4655b20f5ccac",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3b7f4a158e4f4862595bc6dacb0f96ce621bfd10"
+        },
+        "date": 1792634075420,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1140664.9803161605,
+            "range": "± 14672",
+            "unit": "lookups/sec",
+            "extra": "min of 401 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1385488.2848605898,
+            "range": "± 38862",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 243703.98076693987,
+            "range": "± 3226",
+            "unit": "lookups/sec",
+            "extra": "min of 89 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6887052.341730456,
+            "range": "± 484382",
+            "unit": "lookups/sec",
+            "extra": "min of 1199 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 51965328.69649333,
+            "range": "± 3418718",
+            "unit": "lookups/sec",
+            "extra": "min of 7893 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 330458.65149395127,
+            "range": "± 4260",
+            "unit": "lookups/sec",
+            "extra": "min of 107 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6500260.0100952815,
+            "range": "± 192846",
+            "unit": "lookups/sec",
+            "extra": "min of 1447 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 37752374.625895776,
+            "range": "± 1619286",
+            "unit": "lookups/sec",
+            "extra": "min of 6896 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 331749.2967924084,
+            "range": "± 3606",
+            "unit": "lookups/sec",
+            "extra": "min of 108 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
           }
         ]
       }
