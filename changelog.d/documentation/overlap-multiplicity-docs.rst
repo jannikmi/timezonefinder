@@ -1,0 +1,1 @@
+The data format page and the architecture page no longer say overlapping zones are unsupported: ``timezone_at()`` answers the smaller zone in an overlap, and ``timezones_at()`` returns every containing zone with that answer first.

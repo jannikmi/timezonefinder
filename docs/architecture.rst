@@ -368,10 +368,11 @@ for callers who want them, and that is the extent of it.
 processes that cannot afford construction cost; the full finder is built once and reused. The
 package optimises steady-state lookup throughput, not process startup.
 
-**Overlapping polygons are not resolved.** The upstream dataset contains coordinates claimed by more
-than one timezone. The first match is returned rather than a set - supporting multiplicity would
-change the return type of the entire public API for a rare case that has no obviously correct
-answer.
+**Overlaps get one answer, not a set.** The upstream dataset contains coordinates claimed by more
+than one timezone. ``timezone_at()`` and the rest of the single-answer API return one zone, the
+smaller one by spherical area, rather than a set - returning a set would change the return type of
+the entire public API for a rare case. Callers who need every match use ``timezones_at()``, whose
+first element is always that same answer.
 
 **Correctness does not depend on optional dependencies.** Numba and a C compiler make the package
 fast. Neither makes it right, and neither may become required.
