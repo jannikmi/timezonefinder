@@ -1,0 +1,1 @@
+GitHub's release source archives, which Zenodo archives as each version, leave out the editor and coding-agent configuration (``.agents/``, ``.claude/``, ``.cursor/``, ``.vscode/``, ``AGENTS.md``, ``CLAUDE.md``) through ``export-ignore`` in ``.gitattributes``; tests, scripts and docs stay.
