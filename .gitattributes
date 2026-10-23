@@ -1,0 +1,10 @@
+# Kept out of GitHub's release source archives, which Zenodo archives as each version:
+# editor and coding-agent configuration is not part of the work. Tests, scripts, docs and
+# contributor docs stay, so an archive can still rebuild and test its release.
+# The PyPI sdist is shaped by MANIFEST.in instead.
+.agents/ export-ignore
+.claude/ export-ignore
+.cursor/ export-ignore
+.vscode/ export-ignore
+AGENTS.md export-ignore
+CLAUDE.md export-ignore
