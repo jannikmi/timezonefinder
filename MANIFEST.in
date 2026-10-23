@@ -1,31 +1,26 @@
-include README.md
-include LICENSE
+# An sdist carries only what is included here, plus what setuptools adds on its own:
+# README.md, LICENSE, pyproject.toml, setup.py and the declared packages' modules.
+# Nothing else in the checkout is picked up, so editor, agent and contributor files and
+# packages/ need no exclusion line here: the check-manifest ignore list in
+# .pre-commit-config.yaml names them, and tests/test_package_contents.py asserts that
+# none of them ships.
 include CITATION.cff
-include DATA_VERSION
-include DATA_SOURCE
-include pyproject.toml
-include setup.py
-recursive-include timezonefinder *.py *.fbs *.c *.h
+# py.typed is named because setuptools adds it on its own only from 69.0, below the
+# build floor in pyproject.toml. With 68 it was missing from both the sdist and the
+# wheel, since the wheel's package data comes from what this file includes.
+recursive-include timezonefinder *.py *.fbs *.c *.h py.typed
 # cffi regenerates this wrapper from inside_poly_extension/ during the wheel build, so
 # the sdist neither needs nor should carry it. Without the exclusion it is shipped
 # whenever the extension happens to have been compiled in place, and check-manifest
 # then fails because the file is (correctly) not in version control.
 exclude timezonefinder/inside_polygon_ext.c
-# the second distribution in this workspace, built and released on its own
-prune packages
-recursive-exclude prototypes *
-exclude AGENTS.md
-exclude CONTRIBUTING.md
-exclude CLAUDE.md
-recursive-exclude .cursor *
-recursive-exclude .claude *
-recursive-exclude .agents *
-recursive-exclude contributing *
-# unreleased changelog fragments; the release folds them into CHANGELOG.rst and
-# deletes them, so nothing here is ever part of a published distribution
-prune changelog.d
-graft tests
-prune tests/.pytest_cache
-prune .git
-global-exclude __pycache__/*
-global-exclude *.pyc
+# The two lines below must be explicit although nothing above includes these paths:
+# setuptools adds tests/test*.py to every sdist by default, and it re-adds each file
+# listed in an existing timezonefinder.egg-info/SOURCES.txt, so a checkout that built
+# an sdist with an earlier version of this file would keep shipping what that carried.
+# tests/ needs scripts/, the bootstrapped dataset under packages/ and the CI
+# configuration, none of which an sdist carries, so a copy of it could not even be
+# collected. DATA_VERSION and DATA_SOURCE describe the timezonefinder-data build, not
+# this distribution.
+prune tests
+exclude DATA_VERSION DATA_SOURCE

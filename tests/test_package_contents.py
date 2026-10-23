@@ -90,7 +90,13 @@ UNWANTED_CODE_DIST_PATTERNS = {
     "prototypes/",
     # the other distribution in this workspace, built and published on its own
     "packages/",
-    # "tests/", # NOTE: tests should be included in the package for users to validate the package
+    # the suite runs from a checkout only: it imports scripts/ and reads the
+    # bootstrapped dataset and the CI configuration, none of which an sdist carries
+    "tests/",
+    # data provenance, describing the timezonefinder-data build rather than this code
+    "DATA_VERSION",
+    "DATA_SOURCE",
+    "DATA_BUILD_RUN",
     ".coveragerc",
     ".editorconfig",
     ".gitignore",
@@ -125,23 +131,15 @@ PATTERNS_WITHOUT_PROJECT_FILES = {".git/*"}
 
 # ``MANIFEST.in`` exclusions whose agreement with the patterns above cannot be shown
 # from the paths in a checkout, mapped to the pattern that states the same intent.
-# Each names repository metadata, a cache or byte-code - none of it under version
-# control - so what it matches is a property of the machine rather than of the
-# project: ``.git`` is a directory in a clone and a *file* in a linked worktree,
-# ``tests/.pytest_cache`` need not exist at all, and ``timezonefinder/__pycache__/``
-# holds numba's ``.nbi``/``.nbc`` cache only once a numba-enabled run has happened.
+# Such a directive names repository metadata, a cache or byte-code - none of it under
+# version control - so what it matches is a property of the machine rather than of the
+# project (``.git`` is a directory in a clone and a *file* in a linked worktree).
 # Scanning those paths would make the check below depend on what a given machine had
 # run, so the mapping is asserted instead, by
-# ``test_pattern_only_exclusions_stay_current``.
-# Neither ``global-exclude`` is load-bearing on its own: dropping either one changes
-# neither distribution, because setuptools already prunes ``__pycache__`` from an
-# sdist by default.
-EXCLUSIONS_GUARDED_BY_PATTERN_ONLY = {
-    "prune .git": ".git/*",
-    "prune tests/.pytest_cache": "*.pytest_cache",
-    "global-exclude __pycache__/*": "__pycache__/",
-    "global-exclude *.pyc": "*.py[cod]",
-}
+# ``test_pattern_only_exclusions_stay_current``. None is needed today: setuptools
+# leaves ``.git`` and ``__pycache__`` out of an sdist by default, and nothing
+# ``MANIFEST.in`` includes reaches a cache.
+EXCLUSIONS_GUARDED_BY_PATTERN_ONLY: dict[str, str] = {}
 
 ALLOWED_IGNORED_CODE_PATTERNS = {
     "*.egg-info/",
@@ -179,13 +177,9 @@ ESSENTIAL_CODE_PATTERNS = {
     "*.so",  # Compiled shared objects
     # data files:
     "*.fbs",  # Flatbuffer schema files
-    # The dataset is the data distribution's, below - this one carries none of it.
-    # These two match only under tests/, which the sdist grafts and whose suite cannot
-    # run without them: the benchmark fixtures and the converter's test input. No
-    # "*.txt" entry, because after the split nothing in this distribution matches one,
-    # and a pattern matching nothing asserts nothing.
-    "*.npy",
-    "*.json",
+    # No "*.npy", "*.json" or "*.txt" entry: the dataset is the data distribution's,
+    # below, so nothing in this distribution matches one, and a pattern matching
+    # nothing asserts nothing.
 }
 
 # these files are not included in wheels
@@ -193,8 +187,6 @@ WHEEL_EXCEPTION_CODE_PATTERNS = {
     "pyproject.toml",
     "setup.py",
     "README*",
-    # wheels define what is installed. tests should not be included
-    "tests/*",
 }
 
 # What the data distribution exists to ship: the binaries, the licence that has to
@@ -879,12 +871,7 @@ def test_no_distribution_carries_the_others_payload():
 
     for dist_type, files in code_files.items():
         payload = sorted(
-            str(path)
-            for path in files
-            # scoped to the package directory: the sdist legitimately grafts
-            # tests/, whose benchmark fixtures are .npy and whose input is .json
-            if any(part == ROOT_DISTRIBUTION_NAME for part in path.parts)
-            and path.suffix in {".npy", ".json"}
+            str(path) for path in files if path.suffix in {".npy", ".json"}
         )
         assert not payload, (
             f"the {CODE_DIST.name} {dist_type} carries boundary data payload: "
