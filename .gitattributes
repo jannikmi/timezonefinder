@@ -1,10 +1,28 @@
-# Kept out of GitHub's release source archives, which Zenodo archives as each version:
-# editor and coding-agent configuration is not part of the work. Tests, scripts, docs and
-# contributor docs stay, so an archive can still rebuild and test its release.
+# Kept out of GitHub's release source archives, which Zenodo archives as each version.
+# An archive keeps what rebuilds and tests its release: code, tests, scripts, benchmarks,
+# docs, contributor docs, the CI workflows that build the wheels, and the tooling config
+# those run with. Left out is configuration for editors, coding agents and GitHub's
+# repository features, none of which is part of the work.
 # The PyPI sdist is shaped by MANIFEST.in instead.
+
+# editor and coding-agent configuration
 .agents/ export-ignore
 .claude/ export-ignore
 .cursor/ export-ignore
 .vscode/ export-ignore
+.editorconfig export-ignore
 AGENTS.md export-ignore
 CLAUDE.md export-ignore
+
+# GitHub repository features (issue and pull-request forms, sponsorship, Dependabot);
+# the workflows and their composite actions stay
+.github/ISSUE_TEMPLATE/ export-ignore
+.github/pull_request_template.md export-ignore
+.github/FUNDING.yml export-ignore
+.github/dependabot.yml export-ignore
+
+# changelog fragments: a release consumes them, so at a tag only the README and
+# placeholders are left
+changelog.d/ export-ignore
+
+.gitattributes export-ignore
