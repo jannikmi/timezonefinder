@@ -29,4 +29,4 @@ GitHub's `dependency graph <https://github.com/jannikmi/timezonefinder/network/d
 Citing
 ------
 
-To cite ``timezonefinder``, use the "Cite this repository" button on GitHub, which reads `CITATION.cff <https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff>`__.
+To cite ``timezonefinder``, use the DOI `10.5281/zenodo.23579731 <https://doi.org/10.5281/zenodo.23579731>`__, which Zenodo resolves to the latest release, or the "Cite this repository" button on GitHub, which reads `CITATION.cff <https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff>`__.

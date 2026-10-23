@@ -17,6 +17,7 @@
 [![latest version on PyPI](https://img.shields.io/pypi/v/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
 [![latest version on conda-forge](https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg)](https://anaconda.org/conda-forge/timezonefinder)
 [![supported python versions](https://img.shields.io/pypi/pyversions/timezonefinder.svg)](https://pypi.python.org/pypi/timezonefinder)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23579731.svg)](https://doi.org/10.5281/zenodo.23579731)
 [![linted and formatted with ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 In comparison to other alternatives this package aims at maximum accuracy around timezone borders while offering fast lookup performance and compatibility with many (Python) runtime environments.
@@ -123,7 +124,7 @@ GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/d
 * research and government: CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the National Laboratory of the Rockies' (formerly NREL) [HOPP](https://github.com/NatLabRockies/HOPP), the US EPA's [sensortoolkit](https://github.com/USEPA/sensortoolkit), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio), NASA JPL OPERA's [next_pass](https://github.com/OPERA-Cal-Val/next_pass)
 * open source: [LibrePhotos](https://github.com/LibrePhotos/librephotos), [RocketPy](https://github.com/RocketPy-Team/RocketPy), Bellingcat's [ShadowFinder](https://github.com/bellingcat/ShadowFinder), Catalyst Cooperative's [PUDL](https://github.com/catalyst-cooperative/pudl)
 
-To cite `timezonefinder`, use the "Cite this repository" button on GitHub, which reads [`CITATION.cff`](https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff).
+To cite `timezonefinder`, use the DOI [10.5281/zenodo.23579731](https://doi.org/10.5281/zenodo.23579731), which Zenodo resolves to the latest release, or the "Cite this repository" button on GitHub, which reads [`CITATION.cff`](https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff).
 
 
 ## Contributing
