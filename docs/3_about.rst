@@ -18,8 +18,7 @@ The data ships in the separate ``timezonefinder-data`` distribution and is licen
 Used by
 -------
 
-``timezonefinder`` is the most downloaded offline timezone lookup package for Python - see :doc:`alternatives` for how it compares.
-GitHub's `dependency graph <https://github.com/jannikmi/timezonefinder/network/dependents>`__ lists thousands of repositories and hundreds of published packages that depend on it, among them:
+GitHub's `dependency graph <https://github.com/jannikmi/timezonefinder/network/dependents>`__ lists thousands of repositories and hundreds of published packages that depend on ``timezonefinder``, among them:
 
 * industry: Google's `data-science-on-gcp <https://github.com/GoogleCloudPlatform/data-science-on-gcp>`__, Posit's `Shiny for Python <https://github.com/posit-dev/py-shiny>`__
 * research and government: CERN's `CAiMIRA <https://gitlab.cern.ch/caimira/caimira>`__, Sandia National Laboratories' `pvOps <https://github.com/sandialabs/pvOps>`__, the National Laboratory of the Rockies' (formerly NREL) `HOPP <https://github.com/NatLabRockies/HOPP>`__, the US EPA's `sensortoolkit <https://github.com/USEPA/sensortoolkit>`__, NOAA's `monetio <https://github.com/noaa-oar-arl/monetio>`__, NASA JPL OPERA's `next_pass <https://github.com/OPERA-Cal-Val/next_pass>`__
