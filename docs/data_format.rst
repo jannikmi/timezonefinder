@@ -29,7 +29,9 @@ Dataset version ``timezones-with-oceans``: Currently the boundaries with ocean t
 
     Please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__)
     and that hence a query coordinate can actually match multiple time zones.
-    ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
+    ``timezone_at()`` returns one of them: the zone with the smaller spherical area, i.e. the one
+    enclaved in the other (see :ref:`overlapping-zone precedence <overlap_precedence>` below).
+    ``timezones_at()`` returns all of them, with that same zone first (see :doc:`1_usage`).
 
 
 The processing pipeline for this data involves:
@@ -671,6 +673,8 @@ fallback heuristic used by ``TimezoneFinderL``.
 A cell is now its own rectangle, so the gate's envelope is exact rather than a
 circumscribed spherical cap, and no cell has to be refused for sitting at a pole or at
 the antimeridian the way a cap-derived envelope did.
+
+.. _overlap_precedence:
 
 Overlapping-zone precedence is a conversion rule of its own: where two zones'
 polygons overlap, the zone with the smaller spherical area comes first, so the
