@@ -129,7 +129,7 @@ pytz = [
 # this project builds for; on one it does not cover, `make install` needs a Rust
 # toolchain or `--no-group compare`, and nothing but the comparison is lost.
 compare = [
-    "tzfpy>=1,<2",
+    "tzfpy>=1,<3",
 ]
 # Drawing the committed report charts. Deliberately its own group, and
 # deliberately not part of `test` or of $(BENCHMARK_ENV) in the Makefile: this is a
