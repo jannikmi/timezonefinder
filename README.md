@@ -31,6 +31,7 @@ pip install timezonefinder
 
 This builds a small C extension for the point-in-polygon test.
 Without a compiler, install the [Numba](https://numba.pydata.org/) extra instead (`pip install timezonefinder[numba]`).
+Free-threaded Python builds are supported: the GIL stays disabled, so lookups run on all threads at once ([concurrency](https://timezonefinder.readthedocs.io/en/latest/1_usage.html#global-functions)).
 
 The boundary data comes as the separate `timezonefinder-data` package, so new datasets ship without a code release.
 A dataset update can change results, so pin a [version](https://pypi.org/project/timezonefinder-data/#history) (`pip install timezonefinder "timezonefinder-data==<version>"`) when results must stay reproducible; see [result stability](https://timezonefinder.readthedocs.io/en/latest/result_stability.html).
@@ -77,6 +78,9 @@ The exact figure depends on the backend, the machine and the dataset version, so
 The point-in-polygon test has three backends - the C extension, Numba and pure Python - and all of them return identical answers: a missing compiler costs speed, never results.
 The [acceleration path comparison](https://timezonefinder.readthedocs.io/en/latest/benchmark_results_acceleration_paths.html) measures which one is fastest.
 
+**Low memory by default.** The boundary coordinates are memory-mapped, so only the pages a lookup reads become resident and the operating system can reclaim them under pressure.
+`TimezoneFinder(in_memory=True)` trades memory for speed; the [memory report](https://timezonefinder.readthedocs.io/en/latest/benchmark_results_memory.html) measures both modes.
+
 * [benchmark trend chart](https://jannikmi.github.io/timezonefinder/dev/bench/) - appended to on every push to `master`
 * [benchmark reports](https://timezonefinder.readthedocs.io/en/latest/7_performance.html) - lookup, point-in-polygon, initialization and memory
 * [benchmarking methodology](https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html) - how these numbers are produced and what they can and cannot tell you
@@ -106,7 +110,8 @@ GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/d
 
 **Looking for maintainers. Reach out if you want to contribute!**
 
-Contribution guidelines, the development workflow and the testing/benchmarking gates are documented in [CONTRIBUTING.md](https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md) is the entrypoint for human and AI coding-agent contributors alike.
+Its routing table sends each task to the few files under `contributing/` it needs: coding and testing rules, the development and CI workflow, the benchmarking gates, step-by-step workflows for releases, reviews and improvement passes, and the recorded design decisions.
 
 
 ## References
