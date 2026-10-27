@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793084214641,
+  "lastUpdate": 1793084216407,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -32810,6 +32810,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6946 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fcbfb594157503b7638800e24336e98560ecf449",
+          "message": "Docs: memory mapping, free-threading, the contributing guide and the data-update guard (#763)",
+          "timestamp": "2026-10-27T07:56:04+01:00",
+          "tree_id": "5185fcd62a6dfe965058d6ddd0e3e5411e02c065",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fcbfb594157503b7638800e24336e98560ecf449"
+        },
+        "date": 1793084215999,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6946620941162109,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948404312133789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9598941802978516,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9606590270996094,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.656126976013184,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.65689277648926,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0764 GHz"
           }
         ]
       }
