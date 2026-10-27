@@ -1,0 +1,1 @@
+The README now says that the boundary coordinates are memory-mapped by default, that free-threaded Python keeps the GIL disabled, and that ``CONTRIBUTING.md`` routes human and AI contributors to the files a task needs. The result-stability page describes the check every new dataset passes before release, and where a data update's moved answers can be read.
