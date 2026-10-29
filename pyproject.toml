@@ -144,7 +144,7 @@ compare = [
 # number moved. Raise it deliberately, and regenerate the chart in the same change.
 benchmark = [
     "seaborn>=0.13.2",
-    "matplotlib>=3.9.4,<3.11",
+    "matplotlib>=3.9.4,<3.12",
     "pandas>=2.3.2",
 ]
 # prototyping, performance analytics
