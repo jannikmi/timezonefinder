@@ -4,13 +4,13 @@ Point-in-Polygon Algorithm Performance Benchmark
 ================================================
 
 
-**~498ns per check on a small polygon, ~918ns on the largest** (1.84x) - the kernel a lookup reaches, which skips the parts of a ring a horizontal ray cannot cross and is therefore nearly flat in polygon size.
+**~352ns per check on a small polygon, ~626ns on the largest** (1.78x) - the kernel a lookup reaches, which skips the parts of a ring a horizontal ray cannot cross and is therefore nearly flat in polygon size.
 
-The same check over an unindexed coordinate array is ~30.9µs on the largest polygon (33.7x the packed cost) - which is what the stratification below is for, and what the latitude block index removed.
+The same check over an unindexed coordinate array is ~19.0µs on the largest polygon (30.3x the packed cost) - which is what the stratification below is for, and what the latitude block index removed.
 
 This page describes one point-in-polygon implementation. The other two are measured against it in :doc:`benchmark_results_acceleration_paths` - which is where the ranking between them is stated, since it is a measurement that moves and a claim repeated in prose would not.
 
-*Measured on Linux x86_64, AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+*Measured on Linux x86_64, AMD EPYC 9V45 96-Core Processor @ 4.2918 GHz, Python 3.13.17, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
 Continuous integration tracks none of the rows on this page. This published table leads with ``Mean`` and belongs to the full on-demand suite, while the trend chart records the ``min`` estimator for the smaller ``benchmark_core`` subset.
 
@@ -26,13 +26,11 @@ Python Environment
 ~~~~~~~~~~~~~~~~~~
 
 
-**Python Version**: 3.13.16 (CPython)
+**Python Version**: 3.13.17 (CPython)
 
 **NumPy Version**: 2.5.2
 
 **Platform**: Linux x86_64
-
-**Processor**: x86_64
 
 
 
@@ -62,7 +60,7 @@ Benchmark Input Provenance
 
 **Fixture Version**: 5
 
-**Timezone Data Version**: 2026e
+**Timezone Data Version**: 2026f
 
 
 
@@ -108,29 +106,29 @@ bare kernel (C/clang)
      - Rounds
      - Throughput
    * - large polygons
-     - 77.2ms
-     - 77.2ms
-     - 94.0µs
-     - 77.1ms
-     - 77.4ms
+     - 47.4ms
+     - 47.4ms
+     - 426µs
+     - 46.9ms
+     - 48.2ms
      - 15
-     - 32.4k/s
+     - 52.7k/s
    * - medium polygons
-     - 8.87ms
-     - 8.85ms
-     - 40.7µs
-     - 8.82ms
-     - 8.96ms
+     - 6.19ms
+     - 6.12ms
+     - 165µs
+     - 6.05ms
+     - 6.67ms
      - 15
-     - 282k/s
+     - 404k/s
    * - small polygons
-     - 3.30ms
-     - 3.25ms
-     - 112µs
-     - 3.23ms
-     - 3.63ms
+     - 2.98ms
+     - 2.65ms
+     - 924µs
+     - 2.28ms
+     - 5.52ms
      - 15
-     - 759k/s
+     - 839k/s
 
 
 
@@ -153,29 +151,29 @@ packed kernel (C/clang)
      - Rounds
      - Throughput
    * - large polygons
-     - 2.30ms
-     - 2.29ms
-     - 16.1µs
-     - 2.28ms
-     - 2.34ms
+     - 1.56ms
+     - 1.55ms
+     - 41.1µs
+     - 1.53ms
+     - 1.67ms
      - 15
-     - 1.09M/s
+     - 1.60M/s
    * - medium polygons
-     - 1.35ms
-     - 1.35ms
-     - 12.1µs
-     - 1.34ms
-     - 1.39ms
+     - 946µs
+     - 943µs
+     - 10.1µs
+     - 939µs
+     - 979µs
      - 15
-     - 1.85M/s
+     - 2.64M/s
    * - small polygons
-     - 1.24ms
-     - 1.24ms
-     - 12.6µs
-     - 1.23ms
-     - 1.27ms
+     - 881µs
+     - 874µs
+     - 21.7µs
+     - 857µs
+     - 926µs
      - 15
-     - 2.01M/s
+     - 2.84M/s
 
 
 
@@ -198,29 +196,29 @@ bare kernel (pure Python)
      - Rounds
      - Throughput
    * - large polygons
-     - 16.4s
-     - 16.4s
-     - 51.4ms
-     - 16.4s
-     - 16.5s
+     - 9.76s
+     - 9.74s
+     - 101ms
+     - 9.65s
+     - 9.91s
      - 5
-     - 152/s
+     - 256/s
    * - medium polygons
-     - 1.11s
-     - 1.11s
-     - 7.10ms
-     - 1.11s
-     - 1.14s
+     - 668ms
+     - 663ms
+     - 17.1ms
+     - 645ms
+     - 700ms
      - 15
-     - 2.25k/s
+     - 3.75k/s
    * - small polygons
-     - 34.1ms
-     - 33.9ms
-     - 540µs
-     - 33.7ms
-     - 35.8ms
+     - 21.8ms
+     - 21.9ms
+     - 470µs
+     - 21.1ms
+     - 22.5ms
      - 15
-     - 73.4k/s
+     - 115k/s
 
 
 
@@ -243,29 +241,29 @@ packed kernel (pure Python)
      - Rounds
      - Throughput
    * - large polygons
-     - 375ms
-     - 376ms
-     - 3.74ms
-     - 367ms
-     - 378ms
+     - 259ms
+     - 258ms
+     - 3.18ms
+     - 254ms
+     - 267ms
      - 15
-     - 6.67k/s
+     - 9.67k/s
    * - medium polygons
-     - 138ms
-     - 137ms
-     - 1.95ms
-     - 137ms
-     - 145ms
+     - 96.0ms
+     - 96.2ms
+     - 1.86ms
+     - 93.4ms
+     - 98.9ms
      - 15
-     - 18.1k/s
+     - 26.0k/s
    * - small polygons
-     - 6.26ms
-     - 6.25ms
-     - 54.4µs
-     - 6.21ms
-     - 6.43ms
+     - 4.10ms
+     - 4.09ms
+     - 24.9µs
+     - 4.06ms
+     - 4.14ms
      - 15
-     - 399k/s
+     - 610k/s
 
 
 
@@ -276,18 +274,18 @@ Performance Summary
 
 **What the stored index and payload buy**, per polygon-size stratum - the same C predicate over the same pairs, reading the packed collection against reading a plain coordinate array with nothing in front of it:
 
-* Small polygons: **packed kernel (C/clang)** is 165% faster (2.65x) than **bare kernel (C/clang)** (1.24ms vs 3.30ms)
+* Small polygons: **packed kernel (C/clang)** is 239% faster (3.39x) than **bare kernel (C/clang)** (881µs vs 2.98ms)
 
-* Medium polygons: **packed kernel (C/clang)** is 554% faster (6.54x) than **bare kernel (C/clang)** (1.35ms vs 8.87ms)
+* Medium polygons: **packed kernel (C/clang)** is 555% faster (6.55x) than **bare kernel (C/clang)** (946µs vs 6.19ms)
 
-* Large polygons: **packed kernel (C/clang)** is 3265% faster (33.7x) than **bare kernel (C/clang)** (2.30ms vs 77.2ms)
+* Large polygons: **packed kernel (C/clang)** is 2932% faster (30.3x) than **bare kernel (C/clang)** (1.56ms vs 47.4ms)
 
 **The C extension against pure Python**, on the kernel a lookup reaches. Which of the two interpreted implementations these rows describe is decided by the measuring environment, not by the benchmark - see :doc:`benchmark_results_acceleration_paths`, which measures all three against each other:
 
-* Small polygons: **packed kernel (C/clang)** is 403% faster (5.03x) than **packed kernel (pure Python)** (1.24ms vs 6.26ms)
+* Small polygons: **packed kernel (C/clang)** is 365% faster (4.65x) than **packed kernel (pure Python)** (881µs vs 4.10ms)
 
-* Medium polygons: **packed kernel (C/clang)** is 10091% faster (102x) than **packed kernel (pure Python)** (1.35ms vs 138ms)
+* Medium polygons: **packed kernel (C/clang)** is 10046% faster (101x) than **packed kernel (pure Python)** (946µs vs 96.0ms)
 
-* Large polygons: **packed kernel (C/clang)** is 16218% faster (163x) than **packed kernel (pure Python)** (2.30ms vs 375ms)
+* Large polygons: **packed kernel (C/clang)** is 16427% faster (165x) than **packed kernel (pure Python)** (1.56ms vs 259ms)
 
-* Overall: fastest is **packed kernel (C/clang) - small polygons** (1.24ms), slowest is **packed kernel (pure Python) - large polygons** (375ms) - 30005% faster (301x)
+* Overall: fastest is **packed kernel (C/clang) - small polygons** (881µs), slowest is **packed kernel (pure Python) - large polygons** (259ms) - 29265% faster (294x)
