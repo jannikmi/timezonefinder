@@ -5,7 +5,7 @@
 Data Report
 ===========
 
-**Timezone Data Version**: 2026e
+**Timezone Data Version**: 2026f
 
 
 
@@ -20,7 +20,7 @@ Data Statistics
    * - General Metric
      - Value
    * - Total coordinate values (2 per point)
-     - 16,567,350
+     - 16,588,656
 
 
 
@@ -35,15 +35,15 @@ Boundary Polygon Statistics
    * - Boundary Metric
      - Value
    * - Total boundary polygons
-     - 1,358
+     - 1,356
    * - Total boundary coordinates
-     - 8,021,069
+     - 8,031,751
    * - Total boundary coordinate values (2 per point)
-     - 16,042,138
+     - 16,063,502
    * - Average coordinates per boundary polygon
-     - 5,906.53
+     - 5,923.12
    * - Maximum coordinates in one boundary polygon
-     - 193,006
+     - 192,909
    * - Minimum coordinates in one boundary polygon
      - 3
 
@@ -60,23 +60,23 @@ Hole Polygon Statistics
    * - Hole Metric
      - Value
    * - Total hole polygons
-     - 795
+     - 792
    * - Total hole coordinates
-     - 262,606
+     - 262,577
    * - Total hole coordinate values (2 per point)
-     - 525,212
+     - 525,154
    * - Average coordinates per hole polygon
-     - 330.32
+     - 331.54
    * - Maximum coordinates in one hole polygon
      - 24,023
    * - Minimum coordinates in one hole polygon
      - 3
    * - Number of boundary polygons with holes
-     - 99
+     - 100
    * - Percentage of boundary polygons with holes
-     - 7.29%
+     - 7.37%
    * - Average holes per boundary polygon (with holes)
-     - 8.03
+     - 7.92
 
 
 
@@ -93,9 +93,9 @@ Timezone Statistics
    * - Total timezones
      - 444
    * - Average boundary polygons per timezone
-     - 3.06
+     - 3.05
    * - Maximum polygons in one timezone
-     - 95
+     - 90
    * - Minimum polygons in one timezone
      - 1
    * - Median polygons per timezone
@@ -128,28 +128,28 @@ Polygons per Timezone Distribution
      - 6.53%
      - Africa/Blantyre
    * - 4 polygons
-     - 24
-     - 5.41%
+     - 23
+     - 5.18%
      - America/Anchorage
    * - 5 polygons
      - 14
      - 3.15%
-     - America/Asuncion
+     - America/Merida
    * - 6 polygons
-     - 7
-     - 1.58%
-     - Asia/Anadyr
+     - 8
+     - 1.8%
+     - America/Asuncion
    * - 7 polygons
      - 7
      - 1.58%
      - Africa/Ceuta
    * - 8 polygons
-     - 15
-     - 3.38%
+     - 14
+     - 3.15%
      - America/Caracas
    * - 9 polygons
-     - 4
-     - 0.9%
+     - 5
+     - 1.13%
      - America/Bogota
    * - 10 polygons
      - 6
@@ -207,7 +207,7 @@ Polygons per Timezone Distribution
      - 1
      - 0.23%
      - Pacific/Tahiti
-   * - 95 polygons
+   * - 90 polygons
      - 1
      - 0.23%
      - America/Argentina/Cordoba
@@ -232,25 +232,25 @@ Shortcut Index Overview
    * - Grid
      - 480 root columns, 4x4 blocks
    * - Total shortcut entries
-     - 319,275
+     - 319,320
    * - Zone entries (direct lookup)
-     - 253,548
+     - 253,575
    * - Polygon entries (require testing)
-     - 65,727
+     - 65,745
    * - Empty entries
      - 0
    * - Total polygon references
-     - 133,620
+     - 133,651
    * -
      -
    * - Root cells
      - 115,200
    * - Root cells refined into blocks
-     - 13,605
+     - 13,608
    * - Cells in the tree
-     - 319,275
+     - 319,320
    * - Cells stored
-     - 319,275
+     - 319,320
    * - Cells missing
      - 0
    * - Coverage ratio
@@ -268,11 +268,11 @@ Shortcut Index Overview
    * -
      -
    * - Zone storage (KB)
-     - 2228.4
+     - 2228.7
    * - Polygon storage (KB)
-     - 774.5
+     - 774.7
    * - Total estimated storage (KB)
-     - 3002.9
+     - 3003.4
    * - Storage compression ratio
      - 0.92x
 
@@ -296,12 +296,12 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 253548
+     - 253575
      - 79.41%
      - 79.41%
      - 20.59%
    * - 2
-     - 63848
+     - 63866
      - 20.0%
      - 99.41%
      - 0.59%
@@ -335,6 +335,11 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 0.0%
      - 100.0%
      - 0.0%
+   * - 9
+     - 1
+     - 0.0%
+     - 100.0%
+     - 0.0%
    * - 10
      - 2
      - 0.0%
@@ -346,7 +351,7 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 100.0%
      - 0.0%
    * - 14
-     - 3
+     - 2
      - 0.0%
      - 100.0%
      - 0.0%
@@ -392,17 +397,17 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 253548
+     - 253575
      - 79.41%
      - 79.41%
      - 20.59%
    * - 2
-     - 64127
+     - 64146
      - 20.09%
      - 99.5%
      - 0.5%
    * - 3
-     - 1560
+     - 1559
      - 0.49%
      - 99.99%
      - 0.01%
@@ -426,7 +431,7 @@ Binary File Sizes
      - Size (MB)
      - Percentage
    * - boundary polygon data
-     - 30.61
+     - 30.65
      - 97.60%
    * - hole polygon data
      - 0.09
@@ -435,5 +440,5 @@ Binary File Sizes
      - 0.66
      - 2.11%
    * - Total
-     - 31.36
+     - 31.40
      - 100.00%
