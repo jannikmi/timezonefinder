@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793582563306,
+  "lastUpdate": 1793583057428,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17799,6 +17799,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4555",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c67ccb74e16f3a134509da1462a885ac03a255f",
+          "message": "Bump setuptools from 84.0.0 to 84.1.0 (#760)\n\nBumps [setuptools](https://github.com/pypa/setuptools) from 84.0.0 to 84.1.0.\n- [Release notes](https://github.com/pypa/setuptools/releases)\n- [Changelog](https://github.com/pypa/setuptools/blob/main/NEWS.rst)\n- [Commits](https://github.com/pypa/setuptools/compare/v84.0.0...v84.1.0)\n\n---\nupdated-dependencies:\n- dependency-name: setuptools\n  dependency-version: 84.1.0\n  dependency-type: direct:development\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-11-02T01:30:07Z",
+          "tree_id": "4d15e0c691f17fa88d212651f91ea0fca20cd4d8",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5c67ccb74e16f3a134509da1462a885ac03a255f"
+        },
+        "date": 1793583054554,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 816514.2289042972,
+            "range": "± 18681",
+            "unit": "lookups/sec",
+            "extra": "min of 260 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 997343.078042268,
+            "range": "± 9894",
+            "unit": "lookups/sec",
+            "extra": "min of 362 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 175280.32758053648,
+            "range": "± 4406",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4551131.046994729,
+            "range": "± 136601",
+            "unit": "lookups/sec",
+            "extra": "min of 942 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33544439.674146246,
+            "range": "± 3658938",
+            "unit": "lookups/sec",
+            "extra": "min of 6925 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 243649.78014469307,
+            "range": "± 7748",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4266779.5372147765,
+            "range": "± 133132",
+            "unit": "lookups/sec",
+            "extra": "min of 1032 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23247163.84867109,
+            "range": "± 1787969",
+            "unit": "lookups/sec",
+            "extra": "min of 3809 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 243444.64433923707,
+            "range": "± 7408",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
