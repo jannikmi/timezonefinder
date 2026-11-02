@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793581553116,
+  "lastUpdate": 1793582038007,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17625,6 +17625,93 @@ window.BENCHMARK_DATA = {
             "range": "± 16045",
             "unit": "lookups/sec",
             "extra": "min of 78 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a1449c822d2ed7c645afc40ce27cb4c3ecc50177",
+          "message": "Update matplotlib requirement from <3.11,>=3.9.4 to >=3.9.4,<3.12 (#757)\n\nUpdates the requirements on [matplotlib](https://github.com/matplotlib/matplotlib) to permit the latest version.\n- [Release notes](https://github.com/matplotlib/matplotlib/releases)\n- [Commits](https://github.com/matplotlib/matplotlib/compare/v3.9.4...v3.11.2)\n\n---\nupdated-dependencies:\n- dependency-name: matplotlib\n  dependency-version: 3.11.2\n  dependency-type: direct:development\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-11-02T01:12:05Z",
+          "tree_id": "c604e886cad1f313cff8ff2715722b800cc9d3db",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a1449c822d2ed7c645afc40ce27cb4c3ecc50177"
+        },
+        "date": 1793582035885,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 808748.1968950117,
+            "range": "± 67138",
+            "unit": "lookups/sec",
+            "extra": "min of 263 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1011090.4489150251,
+            "range": "± 16675",
+            "unit": "lookups/sec",
+            "extra": "min of 365 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 174854.3375941075,
+            "range": "± 3134",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4530257.590414276,
+            "range": "± 443884",
+            "unit": "lookups/sec",
+            "extra": "min of 976 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33788806.443949245,
+            "range": "± 3165320",
+            "unit": "lookups/sec",
+            "extra": "min of 6303 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 242333.86511085616,
+            "range": "± 3556",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4216413.316451733,
+            "range": "± 138001",
+            "unit": "lookups/sec",
+            "extra": "min of 1029 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24058124.429349788,
+            "range": "± 1933006",
+            "unit": "lookups/sec",
+            "extra": "min of 4963 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 241955.30079061643,
+            "range": "± 4486",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2208 GHz"
           }
         ]
       }
