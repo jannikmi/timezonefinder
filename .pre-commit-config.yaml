@@ -35,7 +35,7 @@ repos:
     # `ruff` is bounded to match in [dependency-groups] dev, so a bare `uv run ruff`
     # cannot disagree with this hook: raising one means raising both.
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.17.2
+      rev: v0.17.3
       hooks:
           - id: ruff-check
             # linter. What it checks, and why `prototypes/` is left out of it, is
