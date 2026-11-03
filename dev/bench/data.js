@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793705273858,
+  "lastUpdate": 1793705669442,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "94a5f3e169f6ba7982f24f2653b453823404aed4",
-          "message": "Type-check the whole package except generated bindings (#459)\n\n* Type-check the whole package except generated bindings\n\nmypy's `ignore_errors` list covered seven hand-written modules alongside the\n`flatc` output: coord_accessors, polygon_array, np_binary_helpers, utils_numba,\nutils_clang, _numba_replacements and flatbuf.io.*. `ignore_errors` silences\n*every* error in a module, so roughly 800 lines of real logic were not type\nchecked at all - a `def f() -> int: return \"x\"` dropped into coord_accessors\nstill made `mypy timezonefinder` report \"Success\".\n\nAll seven pass once the exemption is lifted, bar three findings fixed here:\n\n- `AbstractCoordAccessor.__getitem__` and `read_polygon_array_from_binary`\n  declared `idx: int`, but polygon ids reach them as numpy integers straight\n  out of the shortcut arrays. Widened to `IntegerLike` rather than converting\n  at the call site, which would cost a conversion per candidate polygon on the\n  lookup fast path.\n- `FileCoordAccessor.coord_file` was annotated `object`, which says nothing;\n  `.fileno()` only type-checked because mypy narrows locally within `__init__`.\n- `ffi.from_buffer` trips a `types-cffi`/numpy stub gap - ignored at the two\n  offending lines with a note, rather than for the whole module.\n\nTwo `__del__` methods also gained `-> None`: without a single annotation mypy\nskips a function body even with the module exemption gone, so un-exempting\nthem would otherwise have bought nothing.\n\ntests/test_mypy_config.py keeps the list restricted to generated packages,\nsince appending a module is the cheapest way to make a real error disappear.\n\nAnnotations, comments and config only - the bytecode of every per-call\nfunction on the lookup path is unchanged.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Add changelog entry for the mypy coverage change\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-06T01:48:02+02:00",
-          "tree_id": "83a00f11757474768b3fc902cc5fa216a67e543e",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/94a5f3e169f6ba7982f24f2653b453823404aed4"
-        },
-        "date": 1785973739503,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 203010.35117305085,
-            "range": "± 4712",
-            "extra": "min of 60 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 628539.9369243595,
-            "range": "± 6925",
-            "extra": "min of 213 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 69182.38732644239,
-            "range": "± 541",
-            "extra": "min of 50 round(s) on an unrecorded CPU"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -17970,6 +17925,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5119",
             "unit": "lookups/sec",
             "extra": "min of 86 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.4942 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "53ae8ffa249ce6b80a0892d8b8333a9abbe54d98",
+          "message": "Bump https://github.com/astral-sh/ruff-pre-commit from v0.17.2 to 0.17.3 (#766)",
+          "timestamp": "2026-11-03T11:33:40Z",
+          "tree_id": "7f51dfa8a43e87f69249aa97c039def0a1748616",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/53ae8ffa249ce6b80a0892d8b8333a9abbe54d98"
+        },
+        "date": 1793705666646,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 789898.6496832477,
+            "range": "± 14772",
+            "unit": "lookups/sec",
+            "extra": "min of 254 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 962111.6580619257,
+            "range": "± 13392",
+            "unit": "lookups/sec",
+            "extra": "min of 339 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 172195.75764759674,
+            "range": "± 1759",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4475282.121842265,
+            "range": "± 125287",
+            "unit": "lookups/sec",
+            "extra": "min of 957 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 34188034.18797891,
+            "range": "± 3712207",
+            "unit": "lookups/sec",
+            "extra": "min of 6378 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 241139.45142703975,
+            "range": "± 3356",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4250334.501337168,
+            "range": "± 192863",
+            "unit": "lookups/sec",
+            "extra": "min of 1094 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24392861.673043247,
+            "range": "± 2052145",
+            "unit": "lookups/sec",
+            "extra": "min of 6068 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 239531.19338096573,
+            "range": "± 2142",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
           }
         ]
       }
