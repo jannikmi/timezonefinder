@@ -14,6 +14,7 @@ exclude timezonefinder/inside_polygon_ext.c
 # the second distribution in this workspace, built and released on its own
 prune packages
 recursive-exclude prototypes *
+exclude .mailmap
 exclude AGENTS.md
 exclude CONTRIBUTING.md
 exclude CLAUDE.md
