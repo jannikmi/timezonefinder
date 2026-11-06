@@ -17,25 +17,16 @@ It combines preprocessed polygon data, grid-based spatial shortcuts, and optiona
 How it works
 ------------
 
-A lookup scales the coordinates to 32-bit integers (x 10\ :sup:`7`, ~1.1 cm steps), finds the
-point's cell in an aligned grid tree - 480 x 240 cells of 0.75 degrees, each refining into a 4 x 4
-block of 0.1875-degree cells where several zones meet - by one integer division per axis, and reads
-a precomputed shortcut for that cell. Most cells are covered by a single timezone, so the answer is
-returned immediately with no geometry touched at all. Only an ambiguous cell falls through to the polygons it lists: bounding-box
-rejection first, then a ray-casting point-in-polygon test - holes before the outer ring, since holes
-are smaller and can reject the polygon outright. :doc:`architecture` walks through the full pipeline;
-:doc:`data_format` documents the binary layouts.
+A lookup first finds the point's cell in a precomputed grid index.
+Most cells lie inside a single timezone, so the index answers directly without touching any geometry.
+Only where zones meet does the lookup run an exact point-in-polygon test against the few zones listed for that cell, on coordinates stored to about 1 cm.
+:doc:`architecture` walks through the full pipeline, and :doc:`data_format` documents the index and the binary layouts.
 
-The central trade-off: **the boundary polygons are never simplified**, so border accuracy is limited
-only by the source dataset. The shortcut index is what makes carrying full-resolution geometry affordable,
-and :doc:`benchmarking_methodology` describes how the resulting numbers are measured.
+**The boundary polygons are never simplified**, so border accuracy is limited only by the source dataset; the grid index is what keeps full-resolution geometry fast.
+:doc:`why_no_simplification` explains the trade-off.
 
-Since the dataset includes ocean zones, every coordinate on earth matches some timezone -
-``timezone_at()`` therefore effectively never returns ``None``; use ``timezone_at_land()`` when you
-need to tell land from sea.
-
-The dataset also contains genuinely overlapping zones, so a coordinate can match *more than one* -
-``timezone_at()`` picks one of them, and ``timezones_at()`` returns all of them.
+The dataset includes ocean zones, so every coordinate on earth gets a timezone - use ``timezone_at_land()`` to tell land from sea.
+Where zones overlap, ``timezone_at()`` returns the smaller one and ``timezones_at()`` returns all of them.
 
 
 References

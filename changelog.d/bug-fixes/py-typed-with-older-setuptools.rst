@@ -1,0 +1,1 @@
+``py.typed`` is now included in the sdist and in a wheel built from it with any setuptools the build allows. Before, it was only added by setuptools 69 and later, so a build with an older setuptools produced a package that type checkers treated as untyped.

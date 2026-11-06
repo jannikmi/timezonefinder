@@ -33,6 +33,10 @@
     :alt: supported python versions
     :target: https://pypi.python.org/pypi/timezonefinder
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.23579731.svg
+    :alt: DOI
+    :target: https://doi.org/10.5281/zenodo.23579731
+
 .. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
     :alt: linted and formatted with ruff
     :target: https://github.com/astral-sh/ruff

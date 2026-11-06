@@ -1,0 +1,1 @@
+``timezonefinder`` has a Zenodo DOI, `10.5281/zenodo.23579731 <https://doi.org/10.5281/zenodo.23579731>`__, which names every release and resolves to the latest; ``CITATION.cff``, the README and the About page give it, and the README carries a DOI badge.

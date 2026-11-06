@@ -97,6 +97,19 @@ Two consequences follow, and both are easy to miss:
 
 The remedy is the pin below, not vigilance about version numbers.
 
+What the release pipeline checks first
+--------------------------------------
+
+Every new dataset is answered against a frozen sample of on-land points before it can be released,
+and the answers are committed with the update, so the data-update pull request's diff of
+``tests/fixtures/data_update/answers.txt`` shows exactly which sampled coordinates moved and to
+which zone. An update that moves more than ``CHANGED_ANSWER_GATE`` of them, or whose compiled
+boundary data changes size beyond ``PAYLOAD_SIZE_GATES`` (both in ``scripts/data_update_guard.py``),
+is held for human review instead of being released automatically.
+
+That is a guard against a truncated or mangled dataset, not a promise about your answers: an
+ordinary release below the threshold still moves answers through all three channels below.
+
 Three channels a dataset can change an answer through
 -----------------------------------------------------
 

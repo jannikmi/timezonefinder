@@ -1,0 +1,122 @@
+name: Tag a merged code release
+
+# The code stream's counterpart of release_data_update.yml's tag step: when the
+# build of a master commit succeeds and that commit is a merged release pull
+# request, push its bare version tag, which build.yml turns into the GitHub
+# Release and the PyPI upload. Merging the release pull request is therefore the
+# authorization to publish; nobody pushes the tag by hand.
+#
+# "Is a merged release" is read off the commit, never off a branch name or a pull
+# request: the project version moved in this commit (so a later commit's build
+# never tags it again), the top changelog section is dated for that version, no
+# fragment is left unconsumed, and the tag does not exist yet. Every check is
+# one `make release` or the code-release workflow already makes by hand.
+#
+# NOTE: the tag is pushed with the timezonefinder-updater GitHub App token, since a tag
+# pushed with the default GITHUB_TOKEN triggers no other workflow, and build.yml
+# would never publish it.
+
+on:
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Tag the release commit
+    if: >
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      # first, because an absent credential would otherwise fail at the token step with
+      # an input error naming neither secret nor this repository, in a workflow_run
+      # whose failures appear on no pull request
+      # DATA_UPDATER_GH_* hold the timezonefinder-updater App's credentials; the
+      # names date from when the App only published data updates
+      - name: Check that the timezonefinder-updater App is configured
+        env:
+          # the expression, never the values, so no credential reaches the shell
+          APP_CONFIGURED: >-
+            ${{ secrets.DATA_UPDATER_GH_APP_ID != ''
+            && secrets.DATA_UPDATER_GH_PRIVATE_KEY != '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$APP_CONFIGURED" != "true" ]]; then
+            echo "::error::the DATA_UPDATER_GH_APP_ID and DATA_UPDATER_GH_PRIVATE_KEY" \
+              "repository secrets are not both set, so no code release can be tagged." \
+              "The default GITHUB_TOKEN is deliberately not a fallback: a tag it" \
+              "pushes triggers no workflow, so build.yml would never publish it."
+            exit 1
+          fi
+          echo "the timezonefinder-updater App is configured"
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.DATA_UPDATER_GH_APP_ID }}
+          private-key: ${{ secrets.DATA_UPDATER_GH_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # the built commit, not master's tip: another merge may have landed since, and
+      # the tag has to name the commit this green build tested
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Decide whether this commit is a release
+        id: release
+        run: |
+          set -euo pipefail
+          version=$(uv version --short)
+          # through a file, never a pipe: `grep -m1` exits at its match, and under
+          # pipefail the writer's SIGPIPE would end this step without a word
+          git show HEAD^:pyproject.toml > "$RUNNER_TEMP/previous-pyproject.toml"
+          previous=$(grep -m1 '^version = ' "$RUNNER_TEMP/previous-pyproject.toml" | cut -d'"' -f2)
+          if [[ "$version" == "$previous" ]]; then
+            echo "the version stays $version in this commit; not a release"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          heading=$(grep -m1 -E '^[0-9X]+\.[0-9X]+\.[0-9X]+ \(' CHANGELOG.rst)
+          if [[ "$heading" != "$version ("* || "$heading" == *unreleased* ]]; then
+            echo "::error::the version moved to $version, but the top changelog" \
+              "section is '$heading' - a release commit dates its own section"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null; then
+            echo "::error::the tag $version already exists; a published version is" \
+              "never tagged twice"
+            exit 1
+          fi
+          echo "tag=$version" >> "$GITHUB_OUTPUT"
+
+      # the same gate `make release` runs before it tags: a fragment surviving the
+      # release ships a change with no changelog entry
+      - name: Check every changelog fragment was consumed
+        if: steps.release.outputs.tag != ''
+        run: uv run --no-project python -m scripts.changelog_fragments --check --require-consumed
+
+      - name: Tag the release
+        if: steps.release.outputs.tag != ''
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # an annotated tag records a tagger, and a runner has no git identity
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # the same annotated form `make release` creates
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "refs/tags/$TAG"
+          echo "pushed $TAG; build.yml publishes it"

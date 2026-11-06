@@ -26,6 +26,7 @@ from tests.auxiliaries import ACTION_DIR, PROJECT_ROOT, WORKFLOW_DIR
 
 BUILD_WORKFLOW = WORKFLOW_DIR / "build.yml"
 PUBLISH_DATA_WORKFLOW = WORKFLOW_DIR / "publish_data.yml"
+TAG_CODE_WORKFLOW = WORKFLOW_DIR / "tag_code_release.yml"
 
 DATA_TAG_PREFIX = "data-v"
 # the actions that make a release public; a job using either must not be reachable
@@ -824,3 +825,38 @@ def test_a_job_declaring_permissions_declares_every_one_it_uses(
         f"jobs in {workflow_file.name} whose `permissions:` omit a scope their own "
         f"steps require: {missing}"
     )
+
+
+@pytest.mark.unit
+def test_a_merged_release_is_tagged_only_from_its_own_green_master_build() -> None:
+    """Merging the release pull request is the authorization to publish.
+
+    So the tag job must answer only a *successful push build of master* - a pull
+    request's build would tag code nobody merged, and a failed one code the tag
+    run would then refuse without a word - and must tag the commit that build
+    tested rather than master's tip, which may have moved on since. The tag goes
+    out with the App token, because a tag pushed with GITHUB_TOKEN triggers no
+    workflow and build.yml would never publish it; and the fragment gate `make
+    release` runs before tagging runs here too, ahead of the push.
+    """
+    workflow = _workflow(TAG_CODE_WORKFLOW)
+    assert _triggers(workflow) == {
+        "workflow_run": {"workflows": ["build"], "types": ["completed"]}
+    }
+    (job,) = workflow["jobs"].values()
+    condition = " ".join(str(job["if"]).split())
+    for clause in (
+        "github.event.workflow_run.event == 'push'",
+        "github.event.workflow_run.conclusion == 'success'",
+        "github.event.workflow_run.head_branch == 'master'",
+    ):
+        assert clause in condition
+    steps = job["steps"]
+    checkout = next(s for s in steps if _uses(s).startswith("actions/checkout"))
+    assert checkout["with"]["ref"] == "${{ github.event.workflow_run.head_sha }}"
+    assert checkout["with"]["token"] == "${{ steps.app-token.outputs.token }}"
+    runs = [str(step.get("run", "")) for step in steps]
+    gate = next(i for i, run in enumerate(runs) if "scripts.changelog_fragments" in run)
+    push = next(i for i, run in enumerate(runs) if "git push" in run)
+    assert "--require-consumed" in runs[gate]
+    assert gate < push

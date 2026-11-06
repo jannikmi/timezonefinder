@@ -36,9 +36,6 @@ from tests.auxiliaries import PROJECT_ROOT, WORKFLOW_DIR
 BENCHMARK_WORKFLOW = WORKFLOW_DIR / "benchmark.yml"
 BENCHMARK_COMMENT_WORKFLOW = WORKFLOW_DIR / "benchmark-comment.yml"
 MAKEFILE = PROJECT_ROOT / "Makefile"
-RELEASE_WORKFLOW = (
-    PROJECT_ROOT / "contributing/workflows/prepare-and-publish-code-release.md"
-)
 
 # workflow-level `env:` entries that both files declare and that must be
 # identical - see the "must match" comments in benchmark-comment.yml.
@@ -208,17 +205,41 @@ def test_the_report_job_renders_the_selected_groups_and_stages_exactly_those(
 
 
 @pytest.mark.unit
-def test_the_release_installs_only_reports_for_its_exact_commit() -> None:
-    instructions = RELEASE_WORKFLOW.read_text(encoding="utf-8")
-    push = instructions.index('git push -u origin "$release_branch"')
-    listing = instructions.index("gh run list --workflow benchmark.yml", push)
-    download = instructions.index("gh run download", listing)
-    validation = instructions.index('--expected-commit "$release_sha"', download)
-    assert push < listing < download < validation
-    # The run the release consumes is the one its own push started, so the
-    # listing must select `push` runs; `--event workflow_dispatch` would find
-    # nothing and send the reader back to pressing a button.
-    assert "--event push" in instructions[listing:download]
+def test_a_release_branch_commits_only_the_pages_rendered_for_its_head(
+    benchmark_workflow: dict[str, Any],
+) -> None:
+    """The commit job installs what the render job measured, for that commit only.
+
+    Its own push is what keeps the render from looping: the render skips a head
+    commit opening with the prefix the commit job writes, and `if:` cannot read
+    `env:`, so the literal is repeated there and held to the constant here. An
+    edit to one side alone would re-render the pages commit and commit again on
+    every push, each one a 60-minute runner.
+    """
+    jobs = benchmark_workflow["jobs"]
+    commit_job = jobs["commit-reports"]
+    assert commit_job["needs"] == "render-reports"
+    scripts = "\n".join(str(step.get("run", "")) for step in commit_job["steps"])
+    assert "scripts.benchmark_report_artifact install" in scripts
+    assert '--expected-commit "$GITHUB_SHA"' in scripts
+    assert '"${REPORTS_COMMIT_PREFIX}' in scripts
+    checkout = next(
+        step
+        for step in commit_job["steps"]
+        if str(step.get("uses", "")).startswith("actions/checkout")
+    )
+    # a push with GITHUB_TOKEN would start no CI on the release pull request
+    assert checkout["with"]["token"] == "${{ steps.app-token.outputs.token }}"
+    # the render job stays read-only; only the commit job holds a write credential
+    assert jobs["render-reports"]["permissions"] == {
+        "contents": "read",
+        "actions": "read",
+    }
+    prefix = benchmark_workflow["env"]["REPORTS_COMMIT_PREFIX"]
+    assert (
+        f"!startsWith(github.event.head_commit.message, '{prefix}')"
+        in jobs["render-reports"]["if"]
+    )
 
 
 # Every event `benchmark.yml` can receive, and the jobs that must run on it.
@@ -241,7 +262,17 @@ TRIGGER_TABLE: tuple[tuple[str, dict[str, Any], set[str]], ...] = (
     (
         "push to a release branch",
         {"event_name": "push", "ref": "refs/heads/release/8.4.0", "inputs": None},
-        {"render-reports"},
+        {"render-reports", "commit-reports"},
+    ),
+    (
+        "push of a release branch's installed pages",
+        {
+            "event_name": "push",
+            "ref": "refs/heads/release/8.4.0",
+            "inputs": None,
+            "head_commit_message": "Install the benchmark reports rendered for 0123456789ab",
+        },
+        set(),
     ),
     (
         "pull request",
@@ -292,6 +323,7 @@ GATED_JOBS = (
     "track",
     "noise",
     "render-reports",
+    "commit-reports",
     "calibrate-shortcuts",
 )
 
@@ -313,7 +345,15 @@ def _evaluate(expression: str, context: dict[str, Any]) -> bool:
     for token, python in _EXPRESSION_TOKENS:
         body = body.replace(token, python)
     namespace = {
-        "github": SimpleNamespace(event_name=context["event_name"], ref=context["ref"]),
+        "github": SimpleNamespace(
+            event_name=context["event_name"],
+            ref=context["ref"],
+            event=SimpleNamespace(
+                head_commit=SimpleNamespace(
+                    message=context.get("head_commit_message", "")
+                )
+            ),
+        ),
         "inputs": SimpleNamespace(
             **{
                 "render_reports": None,
@@ -360,6 +400,8 @@ def test_each_event_runs_exactly_the_jobs_it_should(
     # the table states the end result rather than the condition in isolation.
     if "measure" not in running:
         running.discard("track")
+    if "render-reports" not in running:
+        running.discard("commit-reports")
     assert running == expected, f"wrong job set on {event}"
 
 

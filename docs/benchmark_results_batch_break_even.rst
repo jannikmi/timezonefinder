@@ -4,11 +4,11 @@ When Batched Lookups Pay
 ========================
 
 
-**uniformly random points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``, and stops improving beyond ~50,000 (8.74x the scalar loop, faster); from 100,000 points it is slower per point again.
+**uniformly random points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``. Where it stops improving is **not established on this run**: the scalar baseline spread 26.1 % across rungs, above the 15 % this measurement needs before it can read an absolute quantity along the ladder.
 
-**unique-shortcut points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``. Where it stops improving is **not established on this run**: the scalar baseline spread 24.5 % across rungs, above the 15 % this measurement needs before it can read an absolute quantity along the ladder.
+**unique-shortcut points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``. Where it stops improving is **not established on this run**: the scalar baseline spread 26.4 % across rungs, above the 15 % this measurement needs before it can read an absolute quantity along the ladder.
 
-*Measured on Linux x86_64, AMD EPYC 9V45 96-Core Processor @ 4.2325 GHz, Python 3.13.16, using the C extension (clang) point-in-polygon path.*
+*Measured on Linux x86_64, AMD EPYC 9V45 96-Core Processor @ 4.4355 GHz, Python 3.13.17, using the C extension (clang) point-in-polygon path.*
 
 ``timezone_names_at()`` spreads its fixed cost per call over the whole batch, so it beats a ``timezone_at()`` loop only above some batch size, and stops getting faster per point at a larger one. Both depend on the machine and on how clustered the coordinates are - points sharing a shortcut cell are answered together, so a clustered stream pays off sooner than the uniformly random points measured here. Run ``scripts/measure_batch_break_even.py --points your.csv`` (columns ``lng,lat``) to measure your own. How the sweep is taken: :doc:`benchmarking_methodology`.
 
@@ -40,80 +40,80 @@ Batch size against speed-up, uniformly random points
      - Rounds won
      - Verdict
    * - 10
-     - 887ns
+     - 1.01µs
      - 2.44µs
-     - 0.36x
+     - 0.41x
      - 0 of 61
      - slower
    * - 20
-     - 913ns
-     - 1.38µs
-     - 0.66x
+     - 1.01µs
+     - 1.36µs
+     - 0.74x
      - 0 of 61
      - slower
    * - 50
-     - 894ns
-     - 655ns
-     - 1.36x
+     - 975ns
+     - 652ns
+     - 1.50x
      - 61 of 61
      - faster
    * - 100
-     - 901ns
-     - 404ns
-     - 2.23x
+     - 966ns
+     - 402ns
+     - 2.40x
      - 61 of 61
      - faster
    * - 127
-     - 911ns
-     - 353ns
-     - 2.58x
+     - 953ns
+     - 348ns
+     - 2.74x
      - 61 of 61
      - faster
    * - 128
-     - 883ns
-     - 330ns
-     - 2.68x
+     - 936ns
+     - 325ns
+     - 2.88x
      - 61 of 61
      - faster
    * - 500
-     - 875ns
-     - 171ns
-     - 5.12x
+     - 842ns
+     - 168ns
+     - 5.01x
      - 61 of 61
      - faster
    * - 1,000
-     - 906ns
-     - 150ns
-     - 6.05x
+     - 942ns
+     - 146ns
+     - 6.44x
      - 61 of 61
      - faster
    * - 5,000
-     - 916ns
-     - 126ns
-     - 7.27x
+     - 811ns
+     - 116ns
+     - 6.98x
      - 61 of 61
      - faster
    * - 10,000
-     - 911ns
-     - 121ns
-     - 7.56x
+     - 803ns
+     - 108ns
+     - 7.40x
      - 61 of 61
      - faster
    * - 50,000
-     - 988ns
-     - 113ns
-     - 8.74x
+     - 979ns
+     - 112ns
+     - 8.70x
      - 61 of 61
      - faster
    * - 100,000
-     - 963ns
-     - 128ns
-     - 7.53x
+     - 899ns
+     - 98.3ns
+     - 9.15x
      - 61 of 61
      - faster
 
 
-Check: the loop's per-point time, which should not depend on the batch size, varied **12.9 %** across batch sizes from 10 up (limit 15 %).
+Check: the loop's per-point time, which should not depend on the batch size, varied **26.1 %** across batch sizes from 10 up (limit 15 %) - too much to say where batching stops improving on this run.
 
 
 
@@ -133,80 +133,80 @@ Batch size against speed-up, unique-shortcut points
      - Rounds won
      - Verdict
    * - 10
-     - 824ns
-     - 2.22µs
-     - 0.37x
+     - 712ns
+     - 2.05µs
+     - 0.35x
      - 0 of 61
      - slower
    * - 20
-     - 807ns
-     - 1.19µs
-     - 0.68x
-     - 0 of 61
+     - 804ns
+     - 1.12µs
+     - 0.72x
+     - 1 of 61
      - slower
    * - 50
-     - 861ns
-     - 516ns
-     - 1.67x
+     - 778ns
+     - 480ns
+     - 1.62x
      - 61 of 61
      - faster
    * - 100
-     - 806ns
-     - 279ns
-     - 2.89x
+     - 781ns
+     - 265ns
+     - 2.94x
      - 61 of 61
      - faster
    * - 127
-     - 777ns
-     - 229ns
-     - 3.39x
+     - 781ns
+     - 212ns
+     - 3.68x
      - 61 of 61
      - faster
    * - 128
-     - 726ns
-     - 204ns
-     - 3.57x
+     - 794ns
+     - 199ns
+     - 3.99x
      - 61 of 61
      - faster
    * - 500
-     - 692ns
-     - 61.6ns
-     - 11.2x
+     - 757ns
+     - 59.9ns
+     - 12.6x
      - 61 of 61
      - faster
    * - 1,000
-     - 724ns
-     - 38.0ns
-     - 19.1x
+     - 789ns
+     - 37.3ns
+     - 21.1x
      - 61 of 61
      - faster
    * - 5,000
-     - 773ns
-     - 16.6ns
-     - 46.5x
+     - 702ns
+     - 16.4ns
+     - 42.9x
      - 61 of 61
      - faster
    * - 10,000
-     - 700ns
-     - 14.1ns
-     - 49.6x
+     - 668ns
+     - 13.8ns
+     - 48.4x
      - 61 of 61
      - faster
    * - 50,000
-     - 726ns
-     - 12.0ns
-     - 60.3x
+     - 779ns
+     - 11.9ns
+     - 65.5x
      - 61 of 61
      - faster
    * - 100,000
-     - 723ns
-     - 22.7ns
-     - 31.9x
+     - 845ns
+     - 11.3ns
+     - 74.9x
      - 61 of 61
      - faster
 
 
-Check: the loop's per-point time, which should not depend on the batch size, varied **24.5 %** across batch sizes from 10 up (limit 15 %) - too much to say where batching stops improving on this run.
+Check: the loop's per-point time, which should not depend on the batch size, varied **26.4 %** across batch sizes from 10 up (limit 15 %) - too much to say where batching stops improving on this run.
 
 This page measures name-returning lookups. ``scripts/measure_batch_break_even.py --api ids`` compares ``timezone_ids_at()`` against a ``timezone_id_at()`` loop instead.
 
@@ -222,13 +222,11 @@ Python Environment
 ~~~~~~~~~~~~~~~~~~
 
 
-**Python Version**: 3.13.16 (CPython)
+**Python Version**: 3.13.17 (CPython)
 
 **NumPy Version**: 2.5.2
 
 **Platform**: Linux x86_64
-
-**Processor**: x86_64
 
 
 
@@ -258,7 +256,7 @@ Benchmark Input Provenance
 
 **Fixture Version**: 5
 
-**Timezone Data Version**: 2026e
+**Timezone Data Version**: 2026f
 
 
 

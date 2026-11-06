@@ -1,0 +1,1 @@
+The README is shorter and links the matching docs pages: a leaner Quick Guide, *How it works* (also on the docs start page) in plain words, a *Citing* section, and a *Used by* section (also on the About page) that no longer claims to be the most downloaded package.

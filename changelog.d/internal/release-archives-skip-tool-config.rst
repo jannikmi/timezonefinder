@@ -1,0 +1,1 @@
+GitHub's release source archives, which Zenodo archives as each version, leave out configuration for editors, coding agents and GitHub's repository features, and the consumed ``changelog.d/`` folder, through ``export-ignore`` in ``.gitattributes``; code, tests, scripts, benchmarks, docs, contributor docs and the CI workflows stay.
