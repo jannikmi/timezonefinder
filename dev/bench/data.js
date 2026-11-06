@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793924249294,
+  "lastUpdate": 1793944117547,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3d9c1f7d6801e10a670d42cfaf590a381a772e84",
-          "message": "Collapse the uint8/uint16 shortcut schema dispatch into one registry (#461)",
-          "timestamp": "2026-08-06T09:05:56+02:00",
-          "tree_id": "dcaebafeb3ecbc5a0683acf2ca8edafac1e25565",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/3d9c1f7d6801e10a670d42cfaf590a381a772e84"
-        },
-        "date": 1786000030780,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 183856.83994484597,
-            "range": "± 2084",
-            "extra": "min of 61 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 577513.5178568693,
-            "range": "± 11990",
-            "extra": "min of 195 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62781.818164478405,
-            "range": "± 584",
-            "extra": "min of 50 round(s) on an unrecorded CPU"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18054,6 +18009,93 @@ window.BENCHMARK_DATA = {
             "range": "± 22935",
             "unit": "lookups/sec",
             "extra": "min of 115 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f544db39e87a44828d4e1451691f07f3ff6e04a",
+          "message": "Add a .mailmap unifying the maintainer's identities (#768)",
+          "timestamp": "2026-11-06T05:47:40Z",
+          "tree_id": "2258b78dc4237ebc2b1dc07d737499a2f9b5835e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7f544db39e87a44828d4e1451691f07f3ff6e04a"
+        },
+        "date": 1793944114332,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 788846.8415981836,
+            "range": "± 88469",
+            "unit": "lookups/sec",
+            "extra": "min of 253 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 944391.2227527568,
+            "range": "± 11351",
+            "unit": "lookups/sec",
+            "extra": "min of 336 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 151207.695866904,
+            "range": "± 6500",
+            "unit": "lookups/sec",
+            "extra": "min of 57 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4443883.527564771,
+            "range": "± 155400",
+            "unit": "lookups/sec",
+            "extra": "min of 836 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 32980660.141853515,
+            "range": "± 2806063",
+            "unit": "lookups/sec",
+            "extra": "min of 4959 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 215152.28005049226,
+            "range": "± 3970",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4243898.547050958,
+            "range": "± 134582",
+            "unit": "lookups/sec",
+            "extra": "min of 877 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23894634.22039499,
+            "range": "± 4367833",
+            "unit": "lookups/sec",
+            "extra": "min of 4328 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 217221.11632529664,
+            "range": "± 4963",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           }
         ]
       }
