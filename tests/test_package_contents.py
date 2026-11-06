@@ -100,6 +100,7 @@ UNWANTED_CODE_DIST_PATTERNS = {
     ".coveragerc",
     ".editorconfig",
     ".gitignore",
+    ".mailmap",
     ".pre-commit-config.yaml",
     "CHANGELOG*",
     # unreleased changelog fragments, consumed into CHANGELOG.rst by the release
