@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793705671994,
+  "lastUpdate": 1793924247470,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "86f23fd2403adbe468f438f7f15ce384a49f709a",
-          "message": "Link the benchmark trend chart from the docs (#460)\n\nThe chart github-action-benchmark publishes to gh-pages was reachable\nonly at /dev/bench/, and that URL appeared nowhere in the repo -\nCONTRIBUTING.md described the location in prose without linking it, so\nthe natural guess (the Pages root) 404s.\n\nLink it from the README and docs/index.rst reference lists, from the\nPerformance page next to the static per-data-update tables, and turn the\nCONTRIBUTING sentence into an actual link that also names\nbenchmark-data-dir-path and marks dev/bench as action-owned.\n\nThe Performance page notes that CI measures the default installation\n(C extension, no Numba) on shared runners, so its absolute numbers are\nnot comparable to the committed tables.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-06T02:03:20+02:00",
-          "tree_id": "c051c59015f06fb8af35921a79f98f92e068c8e9",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/86f23fd2403adbe468f438f7f15ce384a49f709a"
-        },
-        "date": 1785974649662,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 182419.30317289138,
-            "range": "± 4675",
-            "extra": "min of 60 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 564103.8600950668,
-            "range": "± 8512",
-            "extra": "min of 176 round(s) on an unrecorded CPU"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61089.668637417766,
-            "range": "± 591",
-            "extra": "min of 50 round(s) on an unrecorded CPU"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18012,6 +17967,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2142",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2541 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "693b063e0e29736bf085fa4c027135e484360ee0",
+          "message": "Bump https://github.com/pre-commit/mirrors-mypy from v2.4.0 to 2.4.1 (#767)",
+          "timestamp": "2026-11-06T00:16:40Z",
+          "tree_id": "0541c3b606b5e8adb8051c608eda730fe0c85b25",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/693b063e0e29736bf085fa4c027135e484360ee0"
+        },
+        "date": 1793924245361,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1626022.6056158207,
+            "range": "± 66601",
+            "unit": "lookups/sec",
+            "extra": "min of 401 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 2003490.8825139438,
+            "range": "± 67753",
+            "unit": "lookups/sec",
+            "extra": "min of 619 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 316678.1325263108,
+            "range": "± 19595",
+            "unit": "lookups/sec",
+            "extra": "min of 104 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8723658.911894888,
+            "range": "± 1994305",
+            "unit": "lookups/sec",
+            "extra": "min of 1255 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 70179378.48697057,
+            "range": "± 33853321",
+            "unit": "lookups/sec",
+            "extra": "min of 7782 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 422857.08293215226,
+            "range": "± 21173",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8384338.056580353,
+            "range": "± 1051982",
+            "unit": "lookups/sec",
+            "extra": "min of 1264 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 49023452.82097864,
+            "range": "± 5671914",
+            "unit": "lookups/sec",
+            "extra": "min of 6089 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 428093.8470758743,
+            "range": "± 22935",
+            "unit": "lookups/sec",
+            "extra": "min of 115 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.1088 GHz"
           }
         ]
       }
