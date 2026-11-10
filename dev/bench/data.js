@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793944119831,
+  "lastUpdate": 1794303045135,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "fcba8d7db491ec857bf12feff3cc1efe2c363bb2",
-          "message": "Compare benchmarks on one runner instead of across the pool (#462)",
-          "timestamp": "2026-08-06T09:30:52+02:00",
-          "tree_id": "b1f610da761b2870011a4dbfdb06e3795980f168",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/fcba8d7db491ec857bf12feff3cc1efe2c363bb2"
-        },
-        "date": 1786001507905,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 171921.10279275902,
-            "range": "± 3040",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 581904.0412306376,
-            "range": "± 15118",
-            "extra": "min of 187 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 60331.95170750042,
-            "range": "± 1032",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18096,6 +18051,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4963",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1a5df37799b6872a8e3beea1ab4eb5f906181a43",
+          "message": "Bump https://github.com/astral-sh/ruff-pre-commit from v0.17.3 to 0.17.4 (#770)",
+          "timestamp": "2026-11-10T10:30:00+01:00",
+          "tree_id": "6ece763ecf7df5bc587a926f91d82323f8387e4a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1a5df37799b6872a8e3beea1ab4eb5f906181a43"
+        },
+        "date": 1794303042400,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1605959.2651623478,
+            "range": "± 33136",
+            "unit": "lookups/sec",
+            "extra": "min of 452 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1894902.6361111852,
+            "range": "± 294869",
+            "unit": "lookups/sec",
+            "extra": "min of 632 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 325352.0146122142,
+            "range": "± 23721",
+            "unit": "lookups/sec",
+            "extra": "min of 97 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8992967.499493472,
+            "range": "± 302349",
+            "unit": "lookups/sec",
+            "extra": "min of 1329 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 69573929.25821929,
+            "range": "± 3887881",
+            "unit": "lookups/sec",
+            "extra": "min of 9413 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 458509.89785320463,
+            "range": "± 14976",
+            "unit": "lookups/sec",
+            "extra": "min of 128 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8509537.489605008,
+            "range": "± 340582",
+            "unit": "lookups/sec",
+            "extra": "min of 1449 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 51543203.510907985,
+            "range": "± 3461097",
+            "unit": "lookups/sec",
+            "extra": "min of 8811 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 456206.3775461654,
+            "range": "± 13127",
+            "unit": "lookups/sec",
+            "extra": "min of 124 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2755 GHz"
           }
         ]
       }
