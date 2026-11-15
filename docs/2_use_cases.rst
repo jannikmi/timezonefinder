@@ -110,8 +110,10 @@ stations - convert to local time with one batch lookup and the stdlib ``zoneinfo
 
 Pass ``on_invalid="skip"`` to answer ``None`` for out-of-range coordinates instead of raising,
 and pin the ``timezonefinder-data`` version so the same coordinates keep resolving to the same
-zones (:doc:`result_stability`). ``examples/batch_processing.py`` covers the batch API, including
-the id form for datasets large enough that one string per row matters.
+zones (:doc:`result_stability`). ``examples/localize_dataset.py`` runs this over a small dataset
+with a summer and a winter timestamp and a row that cannot be looked up;
+``examples/batch_processing.py`` covers the batch API, including the id form for datasets large
+enough that one string per row matters.
 
 
 Django
