@@ -1,0 +1,1 @@
+The About page gains a *Statement of need* for research use - turning UTC timestamps recorded with coordinates into local time offline and reproducibly - and the use cases gain *Localizing timestamps in a dataset*, a batch lookup that reports the data version alongside its results.
