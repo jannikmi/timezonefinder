@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794823058882,
+  "lastUpdate": 1794823508740,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "68107f0282f567a7721afb0356e89d05b412fea6",
-          "message": "Trim the unreleased changelog to end states (#474)\n\nSeveral unreleased bullets ran 8-15 lines and read as design journal\nentries, against this repository's own rule that a released section\nshould read as if each feature arrived in one step. The reasoning they\ncarried was also invisible to anyone not reading a changelog diff.\n\nEach is reduced to end state plus the one decision-relevant sentence,\nwith the reasoning left where it now lives:\n\n- the six bullets covering continuous benchmarking - CI setup,\n  merge-base comparison, machine stamping, estimator and threshold,\n  tracked core set, guardrails - become two, pointing at\n  docs/benchmarking_methodology.rst, which carries the ~25.5% ambiguous\n  ratio, the ~14x cost ratio, the 134-158% cross-machine spread and\n  every threshold derivation\n- the per-axis storage and layout_version bullets shrink to their user\n  visible consequence and link docs/data_format.rst, which documents\n  both already\n- the __slots__ item keeps the one line that matters (an unassigned slot\n  re-permits the attribute it names); the design context is in\n  docs/architecture.rst\n- pre-commit-clean generators, `make flatbuf`, the mypy exemption list,\n  the shortcut schema registry and the dead-code removal trim to end\n  state and leave the why at the point of decision, where it already is\n\nBullets describing one feature are merged: the BufferError fix and its\naccessor half, the weekly data update workflow across its three stages,\nthe update_data.sh changes, the quality-pass skill and its ledger, the\ntwo generator normalisations.\n\n28 Internal bullets become 17, 9 user-facing become 8, the section loses\na quarter of its lines. Every issue reference and contributor\nattribution is preserved - verified by extracting both sets before and\nafter. Released sections are untouched: they are historical record.\n\nNo changelog entry for this, deliberately. Amending the unreleased\nsection is the prescribed mechanism, and a bullet announcing that\nbullets were edited would be self-referential noise.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T15:20:34+02:00",
-          "tree_id": "abb8db7f6ca8afb681f0f99f1d36aef8f62e5c55",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/68107f0282f567a7721afb0356e89d05b412fea6"
-        },
-        "date": 1786108919539,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 175230.92632392657,
-            "range": "± 2800",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 571900.340189278,
-            "range": "± 7560",
-            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61349.33945780105,
-            "range": "± 914",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18306,6 +18261,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7848",
             "unit": "lookups/sec",
             "extra": "min of 96 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a22062d7e3c7c98d1314da8ad2b3d34695d5801a",
+          "message": "Add a research-facing statement of need to the docs (#771)\n\n* Add a research-facing statement of need to the docs\n\nThe About page now states who needs timezonefinder in research terms:\nUTC timestamps recorded with coordinates that must become local time,\nwith border accuracy, offline reproducibility (pinned data version,\nTimezoneFinder.data_version) and whole-dataset batch lookups as the\nproperties that matter. A new use case shows localizing a dataset's\ntimestamps with timezone_names_at and zoneinfo; its example output was\ntaken from a run against timezonefinder-data 4.2026.6 (release 2026f).\nThe README links the new section.\n\nRequested by the maintainer, to address the expected JOSS reviewer\npushback that the existing purpose statement is written for\nlatency-sensitive services rather than research users.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV768Gz52dbuyudrgZ64\n\n* Add an example script for localizing a dataset's timestamps\n\nexamples/localize_dataset.py runs the new use case end to end: one\ntimezone_names_at call with on_invalid=\"skip\" over a small set of UTC\nobservations, conversion through zoneinfo, a summer and a winter\ntimestamp at the same station to show the daylight-saving shift, a row\nthat cannot be looked up kept as None, and the data version printed\nwith the results. The use-case page and the changelog fragment point\nat it; tests/test_example_scripts.py picks it up automatically.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV768Gz52dbuyudrgZ64\n\n* Ground the statement of need in published research use\n\nThe publication survey in #772 shows how research actually uses the\npackage. The statement of need now names the fields and three cited\nstudies, the research software that ships it as a dependency, and why a\nwrong zone at a border moves published results. The dataset use case\nwarns against the post-lookup mistakes the surveyed code makes: fixed or\ncurrent-moment offsets, whole-hour truncation, and a new finder per call.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* State the upstream caveat and the grid-centre limit in the statement of need\n\nThe border-accuracy bullet now says the guarantee is fidelity to the\nsource, not ground truth: the boundaries come from OpenStreetMap via\ntimezone-boundary-builder, and where OpenStreetMap is wrong this package\nis wrong the same way, linking why_no_simplification. It also says a\nlookup answers only for the exact point passed, so looking up grid-cell\ncentres assigns a cell straddling a border wholly to the zone at its\ncentre, which covers the gridded fire-weather case.\n\nRequested by the maintainer in a review note on the pull request.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV768Gz52dbuyudrgZ64\n\n* Point the border-accuracy claim at its measurement\n\nThe alternatives page already measures where a simplified boundary\ndisagrees with this package: nowhere on a uniform global sample, and on\nmost land-zone border locations within metres of a border. The statement\nof need now says so instead of resting on the argument alone.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Link the border-accuracy claim to its measurement page\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T10:04:20Z",
+          "tree_id": "a3a129cdf2b52e67574b9f6849f277804f6d90e8",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a22062d7e3c7c98d1314da8ad2b3d34695d5801a"
+        },
+        "date": 1794823505586,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1064090.1497181808,
+            "range": "± 10103",
+            "unit": "lookups/sec",
+            "extra": "min of 319 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1324094.3327193218,
+            "range": "± 20292",
+            "unit": "lookups/sec",
+            "extra": "min of 470 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 231599.44708875922,
+            "range": "± 1485",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6356309.272587878,
+            "range": "± 191712",
+            "unit": "lookups/sec",
+            "extra": "min of 1183 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 47967152.09484317,
+            "range": "± 3423496",
+            "unit": "lookups/sec",
+            "extra": "min of 8940 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 316632.89038082736,
+            "range": "± 9558",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5961479.3052906385,
+            "range": "± 563244",
+            "unit": "lookups/sec",
+            "extra": "min of 1104 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 33898305.08541671,
+            "range": "± 3332094",
+            "unit": "lookups/sec",
+            "extra": "min of 6468 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 314803.29767793475,
+            "range": "± 6066",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
           }
         ]
       }
