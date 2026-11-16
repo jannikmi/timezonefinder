@@ -76,6 +76,7 @@ References
    Initialization Benchmarks <benchmark_results_initialization>
    Memory Benchmarks <benchmark_results_memory>
    Speed and Startup against tzfpy <benchmark_results_vs_tzfpy>
+   Border Accuracy against tzfpy <border_accuracy_vs_tzfpy>
 
 .. toctree::
    :maxdepth: 2

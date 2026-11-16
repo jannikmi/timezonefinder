@@ -1,0 +1,1 @@
+The measured border disagreement between this package and ``tzfpy``'s simplified polygons has its own page, `Border Accuracy against tzfpy <https://timezonefinder.readthedocs.io/en/latest/border_accuracy_vs_tzfpy.html>`__, listed under *Performance*, and the tzfpy speed comparison no longer calls accuracy unscored: it points there for where the two packages differ.
