@@ -2,7 +2,7 @@
 name = "timezonefinder"
 version = "9.2.0"
 description = "Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification"
-authors = [{name = "jannikmi", email = "github@michelfe.it"}]
+authors = [{name = "Jannik Kissinger", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
 license = {file="LICENSE"}
 readme = "README.md"
@@ -58,6 +58,7 @@ dependencies = [
 homepage = "https://timezonefinder.michelfe.it/gui"
 repository = "https://github.com/jannikmi/timezonefinder"
 documentation = "https://timezonefinder.readthedocs.io/en/latest/"
+doi = "https://doi.org/10.5281/zenodo.23579731"
 
 [project.scripts]
 timezonefinder = "timezonefinder.command_line:main"

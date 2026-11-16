@@ -1,0 +1,1 @@
+The *Citing* section of the README and the About page gives a ready-to-paste BibTeX entry with the Zenodo DOI and asks authors to state the ``timezonefinder`` and ``timezonefinder-data`` versions they used, and the PyPI project links carry the DOI.
