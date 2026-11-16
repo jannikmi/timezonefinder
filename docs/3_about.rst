@@ -23,6 +23,8 @@ Three properties matter for that use:
 * **Accuracy at borders.** The boundary polygons are never simplified (:doc:`why_no_simplification`), so accuracy is limited only by the source dataset.
   The errors a simplified boundary makes are not random noise: they cluster along borders and coastlines, which biases exactly the analyses that compare regions across them.
   Studies like those above feed the zone straight into their main variable - the hour a fire-danger input is taken at, whether a walk happened after dark, the time-zone distance between two places - so a wrong zone near a border moves a published result.
+  The guarantee is fidelity to the source, not ground truth: the boundaries come from OpenStreetMap via timezone-boundary-builder, and where OpenStreetMap is wrong this package is wrong the same way (:doc:`why_no_simplification`).
+  A lookup also answers only for the exact point passed, so a study that looks up grid-cell centres assigns a cell straddling a border wholly to the zone at its centre.
 * **Reproducibility.** A lookup needs no network access and no online service, so it runs on clusters without internet access and is subject to neither quotas nor data that changes without notice.
   The boundary data ships as a separately versioned package: pin it and report ``TimezoneFinder.data_version``, the timezone-boundary-builder release the answers come from, and the lookups can be repeated exactly (:doc:`result_stability`).
 * **Whole datasets in one call.** ``timezone_names_at()`` takes one array per axis, and every backend, including pure Python on a machine without a compiler, returns identical answers.
