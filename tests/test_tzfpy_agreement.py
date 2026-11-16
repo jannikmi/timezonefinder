@@ -355,7 +355,7 @@ def test_the_committed_chart_is_where_the_docs_page_looks_for_it() -> None:
     # notice a rename until the page rendered a broken image
     assert CHART_PATH.parent == DOC_ROOT
     assert CHART_PATH.is_file(), f"{CHART_PATH} is missing - run `make tzfpy-agreement`"
-    assert CHART_PATH.name in (DOC_ROOT / "alternatives.rst").read_text(
+    assert CHART_PATH.name in (DOC_ROOT / "border_accuracy_vs_tzfpy.rst").read_text(
         encoding="utf-8"
     )
 
