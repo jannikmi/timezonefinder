@@ -45,7 +45,7 @@ Used by
 GitHub's `dependency graph <https://github.com/jannikmi/timezonefinder/network/dependents>`__ lists thousands of repositories and hundreds of published packages that depend on ``timezonefinder``, among them:
 
 * industry: Google's `data-science-on-gcp <https://github.com/GoogleCloudPlatform/data-science-on-gcp>`__, Posit's `Shiny for Python <https://github.com/posit-dev/py-shiny>`__
-* research and government: CERN's `CAiMIRA <https://gitlab.cern.ch/caimira/caimira>`__, Sandia National Laboratories' `pvOps <https://github.com/sandialabs/pvOps>`__, the National Laboratory of the Rockies' (formerly NREL) `HOPP <https://github.com/NatLabRockies/HOPP>`__, the US EPA's `sensortoolkit <https://github.com/USEPA/sensortoolkit>`__, NOAA's `monetio <https://github.com/noaa-oar-arl/monetio>`__, NASA JPL OPERA's `next_pass <https://github.com/OPERA-Cal-Val/next_pass>`__
+* research and government: CERN's `CAiMIRA <https://gitlab.cern.ch/caimira/caimira>`__, the Barcelona Supercomputing Center's `HERMESv3 <https://earth.bsc.es/gitlab/es/hermesv3_gr>`__ emission model, Forschungszentrum Jülich's `ETHOS.TISED <https://github.com/FZJ-IEK3-VSA/ETHOS.TISED>`__, Sandia National Laboratories' `pvOps <https://github.com/sandialabs/pvOps>`__, the National Laboratory of the Rockies' (formerly NREL) `HOPP <https://github.com/NatLabRockies/HOPP>`__, the US EPA's `sensortoolkit <https://github.com/USEPA/sensortoolkit>`__, NOAA's `monetio <https://github.com/noaa-oar-arl/monetio>`__, NASA JPL OPERA's `next_pass <https://github.com/OPERA-Cal-Val/next_pass>`__
 * open source: `LibrePhotos <https://github.com/LibrePhotos/librephotos>`__, `RocketPy <https://github.com/RocketPy-Team/RocketPy>`__, Bellingcat's `ShadowFinder <https://github.com/bellingcat/ShadowFinder>`__, Catalyst Cooperative's `PUDL <https://github.com/catalyst-cooperative/pudl>`__
 
 
@@ -53,3 +53,15 @@ Citing
 ------
 
 To cite ``timezonefinder``, use the DOI `10.5281/zenodo.23579731 <https://doi.org/10.5281/zenodo.23579731>`__, which Zenodo resolves to the latest release, or the "Cite this repository" button on GitHub, which reads `CITATION.cff <https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff>`__.
+As BibTeX:
+
+.. code-block:: bibtex
+
+    @software{kissinger_timezonefinder,
+      author = {Kissinger, Jannik},
+      title = {timezonefinder},
+      url = {https://github.com/jannikmi/timezonefinder},
+      doi = {10.5281/zenodo.23579731}
+    }
+
+In a methods section, also state the ``timezonefinder`` and ``timezonefinder-data`` versions you used: a data release can move answers, and ``TimezoneFinder.data_version`` names the boundary release a finder answers from (see :doc:`result_stability`).

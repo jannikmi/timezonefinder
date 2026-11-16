@@ -135,7 +135,8 @@ timezone_at()
 --------------
 
 This is the default function to check which timezone a point lies within.
-If no timezone has been matched, ``None`` is being returned.
+With the packaged data it always returns a zone: the ocean zones cover the globe, so a remote station, a ship or an offshore platform gets an answer like any other point, and code that falls back to searching nearby zones or to ``"UTC"`` when it gets ``None`` never takes that branch.
+``None`` comes only from :ref:`custom data <parse_data>` that leaves areas uncovered, and from the lookups that are meant to answer "no": ``timezone_at_land()`` at sea, ``unique_timezone_at()`` where the cell holds several zones and ``certain_timezone_at()``.
 
 Using the global function:
 
@@ -304,6 +305,7 @@ timezone_at_land()
 ------------------
 
 This package includes ocean timezones (``Etc/GMT...``).
+Such an answer is the nautical zone of a 15° band of longitude, a fixed offset with no daylight saving time, which need not be the clock a ship or an offshore installation actually keeps.
 If you want to explicitly receive only "land" timezones use:
 
 Using the global function:
@@ -479,7 +481,8 @@ Using a TimezoneFinder instance:
 closest_timezone_at()
 ----------------------
 
-removed in version ``6.0.0``
+removed in version ``6.0.0``.
+Every point lies in some zone of the packaged data, so code that searched for the closest zone where none was found can call ``timezone_at()`` directly.
 
 
 get_geometry()

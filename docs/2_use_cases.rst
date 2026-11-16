@@ -51,7 +51,8 @@ Getting a location's time zone offset
 
 :meth:`utc_offset_at <timezonefinder.TimezoneFinder.utc_offset_at>` answers it directly.
 The offset depends on the date, since it changes with daylight saving time, so it takes
-the moment to read it at and defaults to now:
+the moment to read it at and defaults to now. When converting a timestamp, pass that
+timestamp: an offset read now carries today's daylight-saving state to every other date.
 
 .. code-block:: python
 
