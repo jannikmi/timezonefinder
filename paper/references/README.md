@@ -42,9 +42,27 @@ Check the last two grades against the full text before quoting them.
 - *Exploring Scientists' Working Timetable: A Global Survey* (arXiv:1310.5777, 2013). It converts coordinates to time zones but predates the package.
 - *catalyst-cooperative/pudl: PUDL v2025.7.0* (Zenodo). A software release whose changelog mentions moving an expensive `TimezoneFinder` call. It is not a scientific publication. It is still noteworthy as a downstream report about lookup cost.
 - A Scholar "[CITATION]" record by Харсун & Бекирова (*Информационно-компьютерные технологии в экономике, образовании и социальной сфере*). There is no identifiable work, full text or passage behind it.
-- Google Scholar hits for `"Michelfeit" timezone` other than GHOST: they cite or thank people of that name for unrelated work and mention time zones in passing.
 - Repository copies of already recorded papers (the UPCommons versions of both HERMESv3 parts) are not counted separately.
 - Publications about time zones that do not use the package (trade economics, collaboration across time zones, RFC 7808, etc.).
+
+
+### Ruled-out sources
+
+These were checked and gave nothing; re-running them is not worth it unless the index changes.
+
+- **Searches with no relevant hits:** Google Scholar `"timezonefinderL"`, `"jannikmi/timezonefinder"`, `"Kissinger" "timezonefinder"` and `"zenodo.23579731"` returned nothing. The arXiv and Crossref APIs search metadata only, and Zenodo holds only the package's own record.
+- **`"Michelfeit" timezone` false positives:** 16 of its 17 Scholar hits are unrelated. They are corpus-linguistics papers and theses citing Jan Michelfeit's Sketch Engine and tokenisation work (for example Klamm 2024, Gothenburg; Savuran & Wulff 2026; Zaikovskii 2025), a 2009 Brno thesis thanking an IBM manager named Michelfeit (Kováčová), and books and articles that mention "time zones" in passing (Bolognesi & Horvat 2022; Smith 2019; Handford et al. 2019; Zylali 2014, Masaryk University; LADAL tutorial; Chen et al. 2016; Mesiti 2015; Phelan 2023; Mamajonova 2026; Raza et al. 2026).
+- **Generic phrases:** "time zone finder" without the package name (the JMIR sister paper above) does not count as a mention.
+- **Sort by date:** Google Scholar's date sorting lists only recently added records (one hit for `"timezonefinder"`), so it cannot replace paging through the relevance-sorted list.
+
+### Still to check
+
+Candidates and gaps that were not fully checked, with what blocked them.
+
+- **Recorded entries without full text.** Snippet grade: `manchin2025collaboration` and `carey2027darkness` (ScienceDirect refuses the browser with HTTP 403; Manchin has an SSRN working paper and a Politecnico di Milano copy at hdl:11311/1295769, both behind a bot check), `omoyele2026ethos` (ScienceDirect; SSRN preprint 6357987 behind a bot check; the call is confirmed in its source code), `benetka2019context` (ACM, paywalled, no open copy known) and `srijon2021covid` (ProQuest; institution not identified). Index-match grade: `kolluri2025panchang`, `talafha2026sharjah` and `babar2026franchising` (SSRN bot check) and `steinertthrelkeld2018twitter` (paywalled book; its accompanying code, if public, would settle it).
+- **Parts of recorded entries not read.** The online appendix of `bahar2023innovation` (how "time zone difference from GMT" in Table 8 was computed), and the code archive `appendix-1.zip` of `barton2024uwc` (how the zone is used).
+- **Searches not completed.** Paging through the full relevance-sorted Google Scholar list for `"timezonefinder"` once more, to catch records added after the maintainer's two result lists (Scholar rate-limited the browser). Semantic Scholar snippet search and OpenAlex full-text search (both refused with rate limits). Scholar searches for the method names `"timezone_at_land"`, `"certain_timezone_at"` and `"TimezoneFinder()"`, which, like `"timezone_at"`, would surface code listings.
+- **Excluded but reversible.** McDonnell et al. (bioRxiv 2020 / Biological Rhythm Research 2021): the full text was not searched for the package.
 
 ## Findings
 
