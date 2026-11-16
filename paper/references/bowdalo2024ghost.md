@@ -22,6 +22,6 @@ Assigns IANA time zones to ~thousands of monitoring stations of 38 networks (7.3
 
 ## Notes
 
-- The most detailed scientific use found, and the only one with a proper reference-list entry.
+- The most detailed scientific use found, and one of three reference-list entries (with the UPC flight-school thesis and pynasonde); the only one in a journal that names the author correctly.
 - **Relevant feedback for the project:** the paper reports "no zone found" results for remote stations and works around them with its own expanding-radius search and time-out. The paper does not say which release or method it called. With the default dataset, which includes ocean zones, `timezone_at` returns a zone for every coordinate; `None` comes only from `timezone_at_land` or a dataset without ocean zones. The "Timezone Doubt" QA flag shows that users treat the lookup as a source of uncertainty for remote points.
 - Same institution as [`guevara2019hermes`](guevara2019hermes.md).
