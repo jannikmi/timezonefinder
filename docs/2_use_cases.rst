@@ -108,6 +108,8 @@ stations - convert to local time with one batch lookup and the stdlib ``zoneinfo
     ]
     # local hours: 14, 8, 22
 
+Convert each timestamp through its zone, as above, not through a UTC offset: an offset taken at another moment is wrong on the far side of a daylight-saving change, and offsets are not always whole hours (``Asia/Kolkata`` is UTC+5:30).
+Create one ``TimezoneFinder`` for the whole dataset, not one per row or per object: initialisation costs far more than a lookup.
 Pass ``on_invalid="skip"`` to answer ``None`` for out-of-range coordinates instead of raising,
 and pin the ``timezonefinder-data`` version so the same coordinates keep resolving to the same
 zones (:doc:`result_stability`). ``examples/localize_dataset.py`` runs this over a small dataset

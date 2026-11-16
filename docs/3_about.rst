@@ -11,13 +11,18 @@ About
 Statement of need
 -----------------
 
-Much research data records *when* and *where* something happened as a UTC timestamp and a WGS84 coordinate: sensor networks and field stations, GPS and animal tracking, photo and social-media metadata, satellite overpasses.
-Questions about human activity or daily cycles need the local time instead - the hour of day, the date in the local calendar, whether daylight saving time applied - and recovering it means knowing the IANA timezone at each coordinate.
+Much research data records *when* and *where* something happened as a UTC timestamp and a WGS84 coordinate: monitoring stations, GPS tracks from wearables, geotagged social-media posts, points of a model grid.
+Questions about human activity or daily cycles need the local time instead - the hour of day, the date in the local calendar, whether it was dark, whether daylight saving time applied - and recovering it means knowing the IANA timezone at each coordinate.
 ``timezonefinder`` answers that offline, from the coordinates alone.
+
+Published research uses it this way in fields from atmospheric chemistry, fire-weather forecasting and ionospheric physics to public health, transport safety, economics and radio-spectrum measurement.
+It converts monitoring-station records between local time and UTC (`Bowdalo et al., 2024 <https://doi.org/10.5194/essd-16-4417-2024>`__), takes every fire-danger input at local noon on a forecast grid (`Worsnop et al., 2021 <https://doi.org/10.1175/WAF-D-21-0075.1>`__), and measures the time-zone distance between cities linked by nonstop flights (`Bahar et al., 2023 <https://doi.org/10.1287/mnsc.2023.4682>`__).
+Research software such as the HERMESv3 emission model (`Guevara et al., 2019 <https://doi.org/10.5194/gmd-12-1885-2019>`__) and pynasonde (`Chakraborty et al., 2026 <https://doi.org/10.1016/j.softx.2026.102617>`__) ships it as a dependency, so their users inherit its answers.
 Three properties matter for that use:
 
 * **Accuracy at borders.** The boundary polygons are never simplified (:doc:`why_no_simplification`), so accuracy is limited only by the source dataset.
   The errors a simplified boundary makes are not random noise: they cluster along borders and coastlines, which biases exactly the analyses that compare regions across them.
+  Studies like those above feed the zone straight into their main variable - the hour a fire-danger input is taken at, whether a walk happened after dark, the time-zone distance between two places - so a wrong zone near a border moves a published result.
 * **Reproducibility.** A lookup needs no network access and no online service, so it runs on clusters without internet access and is subject to neither quotas nor data that changes without notice.
   The boundary data ships as a separately versioned package: pin it and report ``TimezoneFinder.data_version``, the timezone-boundary-builder release the answers come from, and the lookups can be repeated exactly (:doc:`result_stability`).
 * **Whole datasets in one call.** ``timezone_names_at()`` takes one array per axis, and every backend, including pure Python on a machine without a compiler, returns identical answers.
