@@ -22,7 +22,7 @@ Three properties matter for that use:
 
 * **Accuracy at borders.** The boundary polygons are never simplified (:doc:`why_no_simplification`), so accuracy is limited only by the source dataset.
   The errors a simplified boundary makes are not random noise: they cluster along borders and coastlines, which biases exactly the analyses that compare regions across them.
-  This is measured, not assumed: against ``tzfpy``, which ships simplified polygons built from the same release, a uniform global sample shows no disagreement at all, while most sampled land-zone border locations are affected within metres of the border and the disagreement reaches out to about a hundred metres (:doc:`alternatives`).
+  This is measured, not assumed: against ``tzfpy``, which ships simplified polygons built from the same release, a uniform global sample shows no disagreement at all, while most sampled land-zone border locations are affected within metres of the border and the disagreement reaches out to about a hundred metres (:doc:`border_accuracy_vs_tzfpy`).
   Studies like those above feed the zone straight into their main variable - the hour a fire-danger input is taken at, whether a walk happened after dark, the time-zone distance between two places - so a wrong zone near a border moves a published result.
   The guarantee is fidelity to the source, not ground truth: the boundaries come from OpenStreetMap via timezone-boundary-builder, and where OpenStreetMap is wrong this package is wrong the same way (:doc:`why_no_simplification`).
   A lookup also answers only for the exact point passed, so a study that looks up grid-cell centres assigns a cell straddling a border wholly to the zone at its centre.
