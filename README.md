@@ -21,6 +21,7 @@
 [![linted and formatted with ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Compared with the [alternatives](https://timezonefinder.readthedocs.io/en/latest/alternatives.html), it puts accuracy at timezone borders first while keeping lookups fast, and it runs with or without a C compiler.
+For research data, it turns UTC timestamps recorded with coordinates into local time offline and reproducibly - see the [statement of need](https://timezonefinder.readthedocs.io/en/latest/3_about.html#statement-of-need).
 
 
 ## Quick Guide

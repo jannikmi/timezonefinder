@@ -80,6 +80,45 @@ wraps it as the offset in minutes. For new code, the stdlib
 recommended way to attach an IANA timezone to a datetime, and these helpers use it.
 
 
+.. _localize_dataset:
+
+Localizing timestamps in a dataset
+----------------------------------
+
+Observations recorded in UTC together with their coordinates - from sensors, trackers or field
+stations - convert to local time with one batch lookup and the stdlib ``zoneinfo``:
+
+.. code-block:: python
+
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    from timezonefinder import TimezoneFinder
+
+    lngs = [13.358, -74.0060, 151.2093]
+    lats = [52.5061, 40.7128, -33.8688]
+    utc_times = [datetime(2026, 7, 1, 12, tzinfo=timezone.utc)] * 3
+
+    with TimezoneFinder() as tf:
+        names = tf.timezone_names_at(lngs=lngs, lats=lats)
+        # ['Europe/Berlin', 'America/New_York', 'Australia/Sydney']
+        data_version = tf.data_version  # report it alongside the results
+
+    local_times = [
+        t.astimezone(ZoneInfo(name)) for t, name in zip(utc_times, names, strict=True)
+    ]
+    # local hours: 14, 8, 22
+
+Convert each timestamp through its zone, as above, not through a UTC offset: an offset taken at another moment is wrong on the far side of a daylight-saving change, and offsets are not always whole hours (``Asia/Kolkata`` is UTC+5:30).
+Create one ``TimezoneFinder`` for the whole dataset, not one per row or per object: initialisation costs far more than a lookup.
+Pass ``on_invalid="skip"`` to answer ``None`` for out-of-range coordinates instead of raising,
+and pin the ``timezonefinder-data`` version so the same coordinates keep resolving to the same
+zones (:doc:`result_stability`). ``examples/localize_dataset.py`` runs this over a small dataset
+with a summer and a winter timestamp and a row that cannot be looked up;
+``examples/batch_processing.py`` covers the batch API, including the id form for datasets large
+enough that one string per row matters.
+
+
 Django
 ------
 
