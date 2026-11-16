@@ -827,7 +827,8 @@ class AbstractTimezoneFinder(ABC):
         :param lat: latitude in degree (90.0 to -90.0)
         :param when: the moment to read the offset at, defaulting to now. A naive
             datetime is read as local wall-clock time in the zone found; an aware one
-            is read as the instant it denotes.
+            is read as the instant it denotes. When converting a timestamp, pass that
+            timestamp: the default applies today's daylight-saving state to every date.
         :return: the offset as a ``timedelta``, or ``None`` where :meth:`timezone_at`
             answers ``None``
         :raises ValueError: if the coordinates are out of bounds
