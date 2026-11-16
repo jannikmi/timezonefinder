@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794821940089,
+  "lastUpdate": 1794823056964,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "8e1b48151709324633de207020b41e437d823dee",
-          "message": "Stop the shortcut loader pinning the whole file buffer (#467)\n\n* Stop the shortcut loader pinning the whole file buffer\n\n`PolyIdsAsNumpy()` is `np.frombuffer` under the hood, so every poly id\narray the hybrid shortcut reader returned was a view onto the `bytes` it\nhad read the file into. 10,511 such views held the full 1,566,856 byte\nbuffer alive for the lifetime of every finder instance, although the\nlive poly id payload is only 46,746 bytes - ~33x more pinned than used.\n\nCopy each block out in the iteration that decodes it, so the view dies\nimmediately, and fill the entries with read-only slices of the\naccumulated payload afterwards. The buffer is released when the loader\nreturns: heap 7,433,653 -> 4,652,471 B (-37.4%), resident set ~2 MB\nlower per instance, load time unchanged at ~0.39 s (the per-entry\nflatbuffers decode dominates).\n\nCopying per block rather than holding the views and concatenating them\nat the end is what keeps the resident set moving in the same direction\nas the heap. Both free the buffer, but concatenating has the whole set\nof views alive while the replacement arrays are built, and that\ntransient peak (8.98 MiB, against 7.09 MiB for the pinning version)\nnever comes back: the allocator does not return the pages, so a 2.65 MiB\nheap saving turned into a 3.5 MiB RSS regression - measured, and the\nwrong trade for the constrained containers this is for. Streaming the\ncopy peaks at 6.14 MiB instead, below the version it replaces.\n\nOverwriting an existing dict key preserves its insertion position, so\nthe mapping is still iterated in file order by `test_shortcut_sorting`\nand `scripts/reporting.py`.\n\nBoth memory modes and both public classes were affected - `in_memory`\ndoes not reach this path.\n\n`test_shortcut_arrays_do_not_pin_the_file_buffer` asserts the ownership\ncontract by walking each array's `.base` chain, next to the opposite\ncontract for polygon coordinates, which are views onto the mmap by\ndesign. It asserts the size of the shared buffer rather than its type:\nthe whole file would satisfy any weaker check, and is what this used to\nhand out.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Regenerate the memory report against the compact shortcut mapping\n\n`make memory` + `scripts.render_benchmark_reports --memory-json`, on the\nsame machine and interpreter the committed report was measured on\n(Python 3.14.2, NumPy 2.3.5, Darwin arm64, numba). Re-rendering the\npre-change measurement first reproduced every committed heap figure\nexactly, so the diff below is the change, not the machine.\n\nHeap drops by 2.65 MiB in all three configurations - the shortcut\nmapping is loaded by each of them - which is 37% of `TimezoneFinderL`,\nwhose only large structure it is. RSS drops by 1.4-1.7 MiB. The\nin-memory-vs-file-based heap ratio in the summary rises from 8.58x to\n12.1x because the denominator shrank.\n\n`docs/alternatives.rst` quotes two of these figures by hand and is\nupdated with them.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T15:15:54+02:00",
-          "tree_id": "a3009cc671be5c069ca21a50f672341dcd8a8c84",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/8e1b48151709324633de207020b41e437d823dee"
-        },
-        "date": 1786108633974,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 176651.20474032706,
-            "range": "± 4382",
-            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 553378.5642865623,
-            "range": "± 6946",
-            "extra": "min of 176 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 60179.81970846747,
-            "range": "± 298",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18264,6 +18219,93 @@ window.BENCHMARK_DATA = {
             "range": "± 8705",
             "unit": "lookups/sec",
             "extra": "min of 71 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc7bb674249a81f059c68a2049baf84c60ce47e6",
+          "message": "Docs: give the measured border accuracy against tzfpy its own page (#776)\n\nThe tzfpy agreement measurement (chart, run parameters, tables, the unattributed cases and every disagreement 100 m or more from a border) moves out of the alternatives argument page onto docs/border_accuracy_vs_tzfpy.rst, listed under Performance next to the tzfpy speed comparison. alternatives.rst keeps a short summary under its own heading and links the page from the Border Accuracy row; why_no_simplification.rst cites the new page.\n\nThe generated tzfpy speed page described accuracy as an unscored small fraction of disagreements, which contradicts the measurement; the renderer and the committed page now say uniform points agree and border points are where the two differ, linking the new page.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T10:56:38+01:00",
+          "tree_id": "c3227e5f0a1603a9d4d75d092433c25c73929c26",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fc7bb674249a81f059c68a2049baf84c60ce47e6"
+        },
+        "date": 1794823054520,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1071820.0919965398,
+            "range": "± 63042",
+            "unit": "lookups/sec",
+            "extra": "min of 312 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1307044.657011036,
+            "range": "± 36426",
+            "unit": "lookups/sec",
+            "extra": "min of 466 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 228571.90922537696,
+            "range": "± 11604",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6493068.0005424665,
+            "range": "± 411490",
+            "unit": "lookups/sec",
+            "extra": "min of 1139 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48490020.75463537,
+            "range": "± 5604335",
+            "unit": "lookups/sec",
+            "extra": "min of 6202 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 305760.57821534673,
+            "range": "± 16596",
+            "unit": "lookups/sec",
+            "extra": "min of 94 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6033837.762093995,
+            "range": "± 509591",
+            "unit": "lookups/sec",
+            "extra": "min of 1082 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 34303434.459349595,
+            "range": "± 4420899",
+            "unit": "lookups/sec",
+            "extra": "min of 5114 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 301207.32328993164,
+            "range": "± 7848",
+            "unit": "lookups/sec",
+            "extra": "min of 96 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6783 GHz"
           }
         ]
       }
