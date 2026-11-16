@@ -46,15 +46,6 @@ Check the last two grades against the full text before quoting them.
 - Publications about time zones that do not use the package (trade economics, collaboration across time zones, RFC 7808, etc.).
 
 
-### Ruled-out sources
-
-These were checked and gave nothing; re-running them is not worth it unless the index changes.
-
-- **Searches with no relevant hits:** Google Scholar `"timezonefinderL"`, `"jannikmi/timezonefinder"`, `"Kissinger" "timezonefinder"` and `"zenodo.23579731"` returned nothing. The arXiv and Crossref APIs search metadata only, and Zenodo holds only the package's own record.
-- **`"Michelfeit" timezone` false positives:** 16 of its 17 Scholar hits are unrelated. They are corpus-linguistics papers and theses citing Jan Michelfeit's Sketch Engine and tokenisation work (for example Klamm 2024, Gothenburg; Savuran & Wulff 2026; Zaikovskii 2025), a 2009 Brno thesis thanking an IBM manager named Michelfeit (Kováčová), and books and articles that mention "time zones" in passing (Bolognesi & Horvat 2022; Smith 2019; Handford et al. 2019; Zylali 2014, Masaryk University; LADAL tutorial; Chen et al. 2016; Mesiti 2015; Phelan 2023; Mamajonova 2026; Raza et al. 2026).
-- **Generic phrases:** "time zone finder" without the package name (the JMIR sister paper above) does not count as a mention.
-- **Sort by date:** Google Scholar's date sorting lists only recently added records (one hit for `"timezonefinder"`), so it cannot replace paging through the relevance-sorted list.
-
 ### Still to check
 
 Candidates and gaps that were not fully checked, with what blocked them.
