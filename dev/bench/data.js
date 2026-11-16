@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794821938382,
+  "lastUpdate": 1794821940089,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -34700,6 +34700,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bf4f1d7382fe6c0a1845b632f7f847916369b9aa",
+          "message": "Docs: timezone_at() answers every coordinate, and offsets need the converted moment (#775)\n\n* Docs: timezone_at() answers every coordinate, and offsets need the converted moment\n\nPublished research code works around a None from timezone_at(): the\nGHOST dataset searches an expanding radius around remote stations and\nflags the result, and ETHOS.TISED falls back to \"UTC\". With the packaged\ndata that branch never runs, since the ocean zones cover the globe and a\ncell without boundary polygons cannot occur. The usage page now says so,\nnames the lookups that do answer None, says what an Etc/GMT answer at\nsea means, and gives code written against the removed\nclosest_timezone_at() its replacement.\n\nutc_offset_at() reads the offset now unless told otherwise, which is the\nmistake a published solar-tracking listing makes when computing other\ndates. Its docstring and use case advise passing the timestamp being\nconverted.\n\nThe maintainer asked for these changes after reviewing the publication\nrecord in paper/references (#772). Addresses the documentation part of\n#773.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Drop the changelog fragments for the docs clarifications\n\nThe maintainer asked for these small documentation clarifications to\ncarry no changelog entry.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T09:38:04Z",
+          "tree_id": "4ed1bf787e26b97c53d67b562cb05492ea0c1aa9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bf4f1d7382fe6c0a1845b632f7f847916369b9aa"
+        },
+        "date": 1794821939831,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9613704681396484,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.962092399597168,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69700336456299,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.6978120803833,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2427 GHz"
           }
         ]
       }
