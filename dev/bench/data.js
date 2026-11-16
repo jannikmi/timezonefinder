@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794821449596,
+  "lastUpdate": 1794821938382,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "85ca39ceca8311e423a9ba679445e08e6566e6b1",
-          "message": "Add code-quality-pass agent skill with a persistent findings ledger (#466)\n\nTurns the standalone quality-pass prompt into a Claude Code skill so it\ntriggers on request instead of having to be pasted in.\n\nThe pass is meant to be run repeatedly, so its findings now accumulate in\npotential-improvements.md at the repository root: tracked and committed,\nso it reaches the next pass through master, and read before any source\nfile so earlier triage is reused rather than repeated. Statuses keep a\nshipped or rejected candidate from being raised again.\n\nThe skill names no files or suspected defects on purpose - an example in\nthe instructions would anchor every run on the same handful of findings.\nIt also does not restate CLAUDE.md or CONTRIBUTING.md, which would drift.\n\n.claude/skills/ is un-ignored (the rest of .claude/ stays local) and\nexcluded from the sdist alongside .cursor.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-06T14:11:27+02:00",
-          "tree_id": "c57d023b844fcb9465ac2626b78f218f48cce8c5",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/85ca39ceca8311e423a9ba679445e08e6566e6b1"
-        },
-        "date": 1786018450008,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 188137.8342927194,
-            "range": "± 2430",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 613280.9673155384,
-            "range": "± 16149",
-            "extra": "min of 187 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 64974.88356890561,
-            "range": "± 513",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18222,6 +18177,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7797",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bf4f1d7382fe6c0a1845b632f7f847916369b9aa",
+          "message": "Docs: timezone_at() answers every coordinate, and offsets need the converted moment (#775)\n\n* Docs: timezone_at() answers every coordinate, and offsets need the converted moment\n\nPublished research code works around a None from timezone_at(): the\nGHOST dataset searches an expanding radius around remote stations and\nflags the result, and ETHOS.TISED falls back to \"UTC\". With the packaged\ndata that branch never runs, since the ocean zones cover the globe and a\ncell without boundary polygons cannot occur. The usage page now says so,\nnames the lookups that do answer None, says what an Etc/GMT answer at\nsea means, and gives code written against the removed\nclosest_timezone_at() its replacement.\n\nutc_offset_at() reads the offset now unless told otherwise, which is the\nmistake a published solar-tracking listing makes when computing other\ndates. Its docstring and use case advise passing the timestamp being\nconverted.\n\nThe maintainer asked for these changes after reviewing the publication\nrecord in paper/references (#772). Addresses the documentation part of\n#773.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* Drop the changelog fragments for the docs clarifications\n\nThe maintainer asked for these small documentation clarifications to\ncarry no changelog entry.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T09:38:04Z",
+          "tree_id": "4ed1bf787e26b97c53d67b562cb05492ea0c1aa9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bf4f1d7382fe6c0a1845b632f7f847916369b9aa"
+        },
+        "date": 1794821936357,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 813332.1404563435,
+            "range": "± 14140",
+            "unit": "lookups/sec",
+            "extra": "min of 257 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 978359.088290847,
+            "range": "± 10553",
+            "unit": "lookups/sec",
+            "extra": "min of 348 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 171321.1188224584,
+            "range": "± 3463",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4502354.731502763,
+            "range": "± 145283",
+            "unit": "lookups/sec",
+            "extra": "min of 978 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33825837.53217803,
+            "range": "± 2621987",
+            "unit": "lookups/sec",
+            "extra": "min of 5951 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 242046.989455206,
+            "range": "± 3499",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4256811.75047955,
+            "range": "± 183620",
+            "unit": "lookups/sec",
+            "extra": "min of 1023 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24170469.473199055,
+            "range": "± 2008910",
+            "unit": "lookups/sec",
+            "extra": "min of 4442 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 229933.9831948389,
+            "range": "± 8705",
+            "unit": "lookups/sec",
+            "extra": "min of 71 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
