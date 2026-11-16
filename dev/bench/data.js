@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794821447517,
+  "lastUpdate": 1794821449596,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -34592,6 +34592,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4e8e44b7b7ca82d1ed2b7c8ab623a1dde4a40ed3",
+          "message": "Give citers a BibTeX entry, the author's name and two research dependents (#774)\n\nPublications that use timezonefinder mostly cite it by its PyPI URL, and\nthe PyPI page named only the account \"jannikmi\", so several invented an\nauthor. Both distributions now name Jannik Kissinger, as CITATION.cff\ndoes, and the code distribution's project links carry the Zenodo DOI.\n\nThe Citing section in the README and on the About page gains a BibTeX\nentry with the concept DOI and no version or year, so it cannot go\nstale, and asks authors to state the code and data versions they used.\n\nThe Used by section names HERMESv3 (Barcelona Supercomputing Center) and\nETHOS.TISED (Forschungszentrum Jülich); both list timezonefinder in their\nown manifests (hermesv3_gr setup.py, ETHOS.TISED pyproject.toml).\n\nThe maintainer asked for these changes after reviewing the publication\nrecord in paper/references (#772).\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T10:29:43+01:00",
+          "tree_id": "ab877a6171a42b38b5b0eae9bf4e3826030a61fb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4e8e44b7b7ca82d1ed2b7c8ab623a1dde4a40ed3"
+        },
+        "date": 1794821449189,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947259902954102,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6949043273925781,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9613265991210938,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.962052345275879,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.697360038757324,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69809150695801,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2131 GHz"
           }
         ]
       }
