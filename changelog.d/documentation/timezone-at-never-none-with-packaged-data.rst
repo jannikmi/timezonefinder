@@ -1,1 +1,0 @@
-The usage page states that ``timezone_at()`` answers every coordinate with the packaged data, so remote and offshore points need no fallback for ``None``, names the lookups that do return ``None``, and says what an ``Etc/GMT`` answer at sea means.
