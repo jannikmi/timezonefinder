@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794303638288,
+  "lastUpdate": 1794821447517,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "a9206faa4a9d188715647419386d701e8a28170a",
-          "message": "Record the triaged quality backlog in potential-improvements.md (#465)\n\nFindings from a code-quality pass that were deliberately left out of #464 to\nkeep that PR to a single theme. Each entry names a location, the defect and\nwhy it is worth doing, ordered by expected value per line of review.\n\nNotable: tests/auxiliaries.py's run_command assembles the subprocess stdout\nand stderr into an error message and then raises without it, so a failing\nwheel build reports only an exit code; scripts/reporting.py omits the\nfile_path argument that exists to name the offending file in a layout error;\nand two public docstrings still point users at timezone_names.json, which has\nbeen timezone_names.txt for some time.\n\nThe coordinate-bounds duplication is recorded with the reason it was not\nfixed: both remaining copies sit on the lookup fast path, so it needs a\nno-numba benchmark, and the bounds are physical constants that will not drift.\n\nExcluded from the sdist via MANIFEST.in, as CLAUDE.md and AGENTS.md are.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-06T14:07:35+02:00",
-          "tree_id": "ec9cbc2e218175fed249948659c3b9907572695f",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/a9206faa4a9d188715647419386d701e8a28170a"
-        },
-        "date": 1786018108447,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 231554.7857231949,
-            "range": "± 4896",
-            "extra": "min of 74 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 735888.4557926046,
-            "range": "± 11834",
-            "extra": "min of 220 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 77201.52977610797,
-            "range": "± 572",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18180,6 +18135,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3797",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2978 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4e8e44b7b7ca82d1ed2b7c8ab623a1dde4a40ed3",
+          "message": "Give citers a BibTeX entry, the author's name and two research dependents (#774)\n\nPublications that use timezonefinder mostly cite it by its PyPI URL, and\nthe PyPI page named only the account \"jannikmi\", so several invented an\nauthor. Both distributions now name Jannik Kissinger, as CITATION.cff\ndoes, and the code distribution's project links carry the Zenodo DOI.\n\nThe Citing section in the README and on the About page gains a BibTeX\nentry with the concept DOI and no version or year, so it cannot go\nstale, and asks authors to state the code and data versions they used.\n\nThe Used by section names HERMESv3 (Barcelona Supercomputing Center) and\nETHOS.TISED (Forschungszentrum Jülich); both list timezonefinder in their\nown manifests (hermesv3_gr setup.py, ETHOS.TISED pyproject.toml).\n\nThe maintainer asked for these changes after reviewing the publication\nrecord in paper/references (#772).\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-16T10:29:43+01:00",
+          "tree_id": "ab877a6171a42b38b5b0eae9bf4e3826030a61fb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4e8e44b7b7ca82d1ed2b7c8ab623a1dde4a40ed3"
+        },
+        "date": 1794821445266,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 814076.3571118675,
+            "range": "± 59562",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 995325.5530700157,
+            "range": "± 21625",
+            "unit": "lookups/sec",
+            "extra": "min of 367 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 167612.72877898876,
+            "range": "± 4308",
+            "unit": "lookups/sec",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4571453.649108545,
+            "range": "± 214285",
+            "unit": "lookups/sec",
+            "extra": "min of 1007 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 34266759.87872678,
+            "range": "± 2643899",
+            "unit": "lookups/sec",
+            "extra": "min of 7186 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 249082.50459447643,
+            "range": "± 13897",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4363382.494173567,
+            "range": "± 280935",
+            "unit": "lookups/sec",
+            "extra": "min of 1134 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24514610.70537949,
+            "range": "± 1631612",
+            "unit": "lookups/sec",
+            "extra": "min of 6110 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 247309.34848165358,
+            "range": "± 7797",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
