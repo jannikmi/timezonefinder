@@ -42,6 +42,7 @@ Check the last two grades against the full text before quoting them.
 - *Exploring Scientists' Working Timetable: A Global Survey* (arXiv:1310.5777, 2013). It converts coordinates to time zones but predates the package.
 - *catalyst-cooperative/pudl: PUDL v2025.7.0* (Zenodo). A software release whose changelog mentions moving an expensive `TimezoneFinder` call. It is not a scientific publication. It is still noteworthy as a downstream report about lookup cost.
 - A Scholar "[CITATION]" record by Харсун & Бекирова (*Информационно-компьютерные технологии в экономике, образовании и социальной сфере*). There is no identifiable work, full text or passage behind it.
+- Google Scholar hits for `"Michelfeit" timezone` other than GHOST: they cite or thank people of that name for unrelated work and mention time zones in passing.
 - Repository copies of already recorded papers (the UPCommons versions of both HERMESv3 parts) are not counted separately.
 - Publications about time zones that do not use the package (trade economics, collaboration across time zones, RFC 7808, etc.).
 
