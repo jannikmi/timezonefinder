@@ -8,7 +8,7 @@ Why timezonefinder doesn't simplify polygons
          that would reopen the question are listed at the end.
 :Scope: The boundary geometry shipped in ``timezonefinder-data`` and every lookup that reads it.
 :See also: :doc:`architecture` (what was deliberately not built), :doc:`data_format` (the two
-           coordinate grids), :doc:`alternatives` (the measured cost of simplification).
+           coordinate grids), :doc:`border_accuracy_vs_tzfpy` (the measured cost of simplification).
 
 
 Summary
@@ -37,7 +37,7 @@ Context: where a lookup can be wrong
 A coordinate far from every border has one possible answer, and any representation of the
 boundaries returns it. This is why "we tested it on random points and it agrees" says nothing.
 A uniformly drawn coordinate is usually hundreds of kilometres from the nearest border.
-:doc:`alternatives` found that a uniform global sample produces no disagreement at all between
+:doc:`border_accuracy_vs_tzfpy` found that a uniform global sample produces no disagreement at all between
 this package and a simplified one.
 
 All of the uncertainty sits in a thin band along the borders. Accuracy there is the product.
@@ -69,7 +69,7 @@ with ``tzfpy``, which ships simplified polygons, at fixed distances from a borde
 the same upstream release. Near a border they differ on at least one side of most sampled land-zone
 border locations. About half are still affected at ten metres. Disagreement stops at about a hundred
 metres, which matches the maximum displacement ``tzfpy``'s maintainer states for its
-simplification. :doc:`alternatives` has the current table, the chart and every individual case.
+simplification. :doc:`border_accuracy_vs_tzfpy` has the current table, the chart and every individual case.
 
 The *ε* that makes simplification worthwhile is orders of magnitude larger than the error that
 remains without it. The source publishes coordinates on a ~11 cm grid, and queries are resolved on

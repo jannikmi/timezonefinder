@@ -468,7 +468,7 @@ What This Page Does Not Measure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-* **Accuracy.** The two packages disagree on a small fraction of points, and a disagreement count on its own says nothing about which answer is right - settling that needs ground truth, which neither package carries. :doc:`alternatives` states the design difference instead of scoring it.
+* **Accuracy.** This page times the two packages, not their answers. On uniformly drawn points they agree; near a border they differ, because tzfpy's simplified polygons move it, and :doc:`border_accuracy_vs_tzfpy` measures how often by distance from the border.
 
 * **Memory footprint and distribution size.** :doc:`benchmark_results_memory` measures this package only: the harness behind it (``scripts/measure_memory.py``) constructs finders from this repository and has no tzfpy configuration.
 
