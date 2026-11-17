@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794930735367,
+  "lastUpdate": 1794954232471,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c0a68875e457105cab72a71b600de329bf74d533",
-          "message": "Let several quality passes run at once without colliding (#484)\n\nTwo passes running concurrently shared one repository, one ledger and one\nchangelog with nothing arranging that between them, and the skill actively made\nit worse: it hardcoded a single worktree path, so the second pass could not even\ncreate its tree, and it said nothing about when to push, so a branch became\nvisible only once the work was already done. Nothing stopped two passes from\npicking the same theme and doing it twice.\n\nThe remote branch list is now the coordination mechanism, used at two defined\nmoments: survey it before creating a worktree, and claim a theme by pushing the\nbranch the instant triage picks one - a slug that names the theme, pushed while\nit still points at master. First push wins a collision; the loser takes its\nnext-ranked candidate rather than racing. Worktree and branch names are per-pass.\n\nThe two files that collide regardless are named, with their resolutions: the\nchangelog, where both bullets are kept, and the ledger, whose remaining overlap\nis one entry both passes re-verified.\n\nThe ledger becomes a to-do list rather than a history: an entry is deleted by the\npull request that ships it, since the code is the evidence and git log keeps the\ntext. Only rejected, out-of-scope and withdrawn entries stay, because those\nencode a dead end worth not rediscovering. Shipped entries interleaved with live\nones were the ledger's largest conflict surface.\n\nThe changelog bullet is amended rather than appended, per CLAUDE.md - the skill\narrived in this same unreleased section.",
-          "timestamp": "2026-08-09T00:45:45+02:00",
-          "tree_id": "5b15034089463f4db849a2dae15ad8f4eab1580d",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/c0a68875e457105cab72a71b600de329bf74d533"
-        },
-        "date": 1786229229679,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 182878.41109379724,
-            "range": "± 10320",
-            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 553632.9727858359,
-            "range": "± 5810",
-            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62066.22227583368,
-            "range": "± 3725",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18642,6 +18597,93 @@ window.BENCHMARK_DATA = {
             "range": "± 6248",
             "unit": "lookups/sec",
             "extra": "min of 103 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7005 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ef94901aa6352ff43be3126d437db1dfcc7ad18",
+          "message": "paper: write the Statement of need (#784)",
+          "timestamp": "2026-11-17T23:22:51+01:00",
+          "tree_id": "f7fecef39d93fc777d2000a7290d48b000404c11",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7ef94901aa6352ff43be3126d437db1dfcc7ad18"
+        },
+        "date": 1794954230158,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1167739.1961919859,
+            "range": "± 125805",
+            "unit": "lookups/sec",
+            "extra": "min of 344 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1450249.7620136372,
+            "range": "± 87405",
+            "unit": "lookups/sec",
+            "extra": "min of 515 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 241423.94547032143,
+            "range": "± 12284",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6729004.161049078,
+            "range": "± 545536",
+            "unit": "lookups/sec",
+            "extra": "min of 1064 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 53096593.30432141,
+            "range": "± 5532664",
+            "unit": "lookups/sec",
+            "extra": "min of 7024 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 315955.5266057352,
+            "range": "± 15622",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6407020.043696295,
+            "range": "± 424510",
+            "unit": "lookups/sec",
+            "extra": "min of 1320 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 38134171.258264676,
+            "range": "± 4058077",
+            "unit": "lookups/sec",
+            "extra": "min of 5651 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 316211.77284175326,
+            "range": "± 14344",
+            "unit": "lookups/sec",
+            "extra": "min of 96 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
           }
         ]
       }
