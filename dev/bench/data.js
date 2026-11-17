@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794904084175,
+  "lastUpdate": 1794904866589,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "48ac98ba0b2e93f018220e9ab17155248131ddaa",
-          "message": "Post the benchmark comparison where reviewers can see it (#476)\n\nThe comparison was posted with `POST /repos/{owner}/{repo}/commits/{sha}/comments`,\non the assumption - written into the workflow and CONTRIBUTING.md - that a\ncommit comment surfaces in the pull request's conversation timeline. It does\nnot. GitHub renders issue comments, reviews and review comments there; a commit\ncomment appears only on the commit's own page.\n\nSo the job went green, the API call returned 201, and the table reached nobody.\nConfirmed on PR #472: commitcomment-195337089 exists on its head commit with the\nfull body, while the pull request's timeline holds no `commit_commented` event\nat all.\n\nIt is now an issue comment on the pull request:\n\n- the number is resolved from the trusted `workflow_run.head_sha` via\n  `GET /commits/{sha}/pulls`, not read from `workflow_run.pull_requests`, which\n  is empty for fork pull requests - the case this split workflow exists to serve\n- a marker identifies the workflow's own comment so each run edits it in place.\n  Commit comments were one per commit; issue comments would otherwise stack a\n  full table on every push\n- no open pull request for the SHA exits 0 with a notice, so a comparison\n  landing after a merge does not fail the run\n\n`contents` drops from write to read - that write bought nothing but\ncreateCommitComment - and `pull-requests: write` takes its place.\n\n`tests/test_benchmark_workflows.py` pins the endpoint and the permission.\nNothing failed while the comparison was being posted somewhere invisible, which\nis exactly the class of silent breakage that module exists to catch.\n\nNo changelog entry: the unreleased bullet already describes posting the\ncomparison on the pull request, which this makes true.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T15:54:16+02:00",
-          "tree_id": "e9e0dc06060e7819e2599ab77f71a99906293f5b",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/48ac98ba0b2e93f018220e9ab17155248131ddaa"
-        },
-        "date": 1786110947327,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 155421.31298673883,
-            "range": "± 38045",
-            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 523313.7313964603,
-            "range": "± 63258",
-            "extra": "min of 168 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 59138.29262638183,
-            "range": "± 2837",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18432,6 +18387,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4391",
             "unit": "lookups/sec",
             "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35f1f10c096765dc11afeb137b108c6d95c6c556",
+          "message": "Record scientific publications that reference timezonefinder (#772)",
+          "timestamp": "2026-11-17T08:40:14Z",
+          "tree_id": "1043ffa84b75a4c68ebd56be50fbfb90fa4c51d7",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/35f1f10c096765dc11afeb137b108c6d95c6c556"
+        },
+        "date": 1794904864739,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1160134.2600296107,
+            "range": "± 235263",
+            "unit": "lookups/sec",
+            "extra": "min of 366 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1408930.1373523176,
+            "range": "± 99543",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 238065.87663750033,
+            "range": "± 7072",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6681651.38369829,
+            "range": "± 416953",
+            "unit": "lookups/sec",
+            "extra": "min of 1141 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 53529751.85772458,
+            "range": "± 6038576",
+            "unit": "lookups/sec",
+            "extra": "min of 6683 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 318805.6570908015,
+            "range": "± 28035",
+            "unit": "lookups/sec",
+            "extra": "min of 98 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6393845.540085969,
+            "range": "± 467229",
+            "unit": "lookups/sec",
+            "extra": "min of 1180 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 38507154.63140765,
+            "range": "± 3467762",
+            "unit": "lookups/sec",
+            "extra": "min of 7076 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 317923.61796112807,
+            "range": "± 10869",
+            "unit": "lookups/sec",
+            "extra": "min of 95 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
           }
         ]
       }
