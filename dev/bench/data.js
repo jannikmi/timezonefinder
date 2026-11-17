@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794954232471,
+  "lastUpdate": 1794954234674,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -18702,72 +18702,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "c0a68875e457105cab72a71b600de329bf74d533",
-          "message": "Let several quality passes run at once without colliding (#484)\n\nTwo passes running concurrently shared one repository, one ledger and one\nchangelog with nothing arranging that between them, and the skill actively made\nit worse: it hardcoded a single worktree path, so the second pass could not even\ncreate its tree, and it said nothing about when to push, so a branch became\nvisible only once the work was already done. Nothing stopped two passes from\npicking the same theme and doing it twice.\n\nThe remote branch list is now the coordination mechanism, used at two defined\nmoments: survey it before creating a worktree, and claim a theme by pushing the\nbranch the instant triage picks one - a slug that names the theme, pushed while\nit still points at master. First push wins a collision; the loser takes its\nnext-ranked candidate rather than racing. Worktree and branch names are per-pass.\n\nThe two files that collide regardless are named, with their resolutions: the\nchangelog, where both bullets are kept, and the ledger, whose remaining overlap\nis one entry both passes re-verified.\n\nThe ledger becomes a to-do list rather than a history: an entry is deleted by the\npull request that ships it, since the code is the evidence and git log keeps the\ntext. Only rejected, out-of-scope and withdrawn entries stay, because those\nencode a dead end worth not rediscovering. Shipped entries interleaved with live\nones were the ledger's largest conflict surface.\n\nThe changelog bullet is amended rather than appended, per CLAUDE.md - the skill\narrived in this same unreleased section.",
-          "timestamp": "2026-08-09T00:45:45+02:00",
-          "tree_id": "5b15034089463f4db849a2dae15ad8f4eab1580d",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/c0a68875e457105cab72a71b600de329bf74d533"
-        },
-        "date": 1786229232517,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466689109802246,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466852188110352,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.529081344604492,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.537737846374512,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 67.84978199005127,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 67.85864353179932,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "ed54d346e509d33850542929b19feef375293ff3",
           "message": "Make the checks that cannot fail actually fail (#485)",
           "timestamp": "2026-08-09T07:01:24+02:00",
@@ -35186,6 +35120,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6947 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ef94901aa6352ff43be3126d437db1dfcc7ad18",
+          "message": "paper: write the Statement of need (#784)",
+          "timestamp": "2026-11-17T23:22:51+01:00",
+          "tree_id": "f7fecef39d93fc777d2000a7290d48b000404c11",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7ef94901aa6352ff43be3126d437db1dfcc7ad18"
+        },
+        "date": 1794954234209,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947164535522461,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948947906494141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9611339569091797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9618988037109375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69722557067871,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.697991371154785,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5811 GHz"
           }
         ]
       }
