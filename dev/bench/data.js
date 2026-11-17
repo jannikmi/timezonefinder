@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794823512364,
+  "lastUpdate": 1794903666329,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "d36ebdee0912f7752492bade84a392800e55446b",
-          "message": "Restructure the README around what the library does (#472)\n\nThe only page guaranteed to be read spent its budget on badges, a\nmaintainer-wanted notice, a six-line quickstart and a link list: one\nsentence on how the library works, zero numbers.\n\nThree short sections are added, all of it prose that already existed\nelsewhere in the repository:\n\n- *How it works* - the lookup pipeline, and the trade-off it exists to\n  serve: the polygons are never simplified, and the H3 index is what\n  makes carrying them affordable\n- *Performance* - one throughput figure with its configuration named,\n  the three point-in-polygon backends, and the pure-Python fallback that\n  costs speed but never results. Links to the trend chart, the reports\n  and the methodology\n- *Engineering notes* - architecture, data format, benchmarking\n  methodology, alternatives, changelog. The block that converts a\n  browsing reader into a reading one\n\nThe top of the page is reordered: banner, one-sentence positioning,\nbadges, quickstart. A reader now reaches a technical sentence within one\nscreen instead of ~10 badges and a maintainer notice.\n\nThe maintainers-wanted notice moves out of the first heading after the\nintro into a Contributing section at the bottom. The message is\nunchanged - as the second thing a reader saw it landed as \"this project\nis being wound down\" before any technical content. That section also\nlinks CONTRIBUTING.md, which the README did not link at all.\n\nEvery link and image source is absolute; verified by rendering the file\nthe way PyPI does rather than by rstcheck alone, which passes a valid\ndirective whose target does not resolve.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T15:30:32+02:00",
-          "tree_id": "afa08109f4d0c26466740a712a90f84bbc43155e",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/d36ebdee0912f7752492bade84a392800e55446b"
-        },
-        "date": 1786109511163,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 212449.16410184203,
-            "range": "± 7542",
-            "extra": "min of 62 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 680543.5855499157,
-            "range": "± 27308",
-            "extra": "min of 215 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 72953.94035466136,
-            "range": "± 1300",
-            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18348,6 +18303,93 @@ window.BENCHMARK_DATA = {
             "range": "± 6066",
             "unit": "lookups/sec",
             "extra": "min of 99 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6926 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd2c32a14fc544b09c80c06a8d435b4c49039374",
+          "message": "Bump https://github.com/myint/rstcheck from v6.3.0 to 6.3.1 (#778)",
+          "timestamp": "2026-11-17T09:20:19+01:00",
+          "tree_id": "6ad07b30ed3678104ac97c80d29eac8cd647b5af",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/cd2c32a14fc544b09c80c06a8d435b4c49039374"
+        },
+        "date": 1794903663909,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1551171.5999091163,
+            "range": "± 20829",
+            "unit": "lookups/sec",
+            "extra": "min of 444 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1905946.8591558726,
+            "range": "± 179959",
+            "unit": "lookups/sec",
+            "extra": "min of 667 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 322174.621995755,
+            "range": "± 11821",
+            "unit": "lookups/sec",
+            "extra": "min of 103 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8647078.152260602,
+            "range": "± 514772",
+            "unit": "lookups/sec",
+            "extra": "min of 1253 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 67465457.6856007,
+            "range": "± 18528896",
+            "unit": "lookups/sec",
+            "extra": "min of 9218 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 430807.0463491092,
+            "range": "± 21518",
+            "unit": "lookups/sec",
+            "extra": "min of 88 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8131350.584773341,
+            "range": "± 267533",
+            "unit": "lookups/sec",
+            "extra": "min of 1556 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 48189984.19301001,
+            "range": "± 3554181",
+            "unit": "lookups/sec",
+            "extra": "min of 8543 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 431027.19988538127,
+            "range": "± 10365",
+            "unit": "lookups/sec",
+            "extra": "min of 122 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
           }
         ]
       }
