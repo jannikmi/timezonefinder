@@ -157,8 +157,8 @@ NOT_ATTRIBUTED = "not_attributed"
 # High enough that the sparse groups are captured *exhaustively*: past the
 # simplification tolerance there are only tens of disagreements in twenty
 # thousand points, and those are the ones a reader has any hope of checking by
-# hand. `docs/alternatives.rst` publishes that list, so it has to be the whole
-# list rather than a sample of it.
+# hand. `docs/border_accuracy_vs_tzfpy.rst` publishes that list, so it has to
+# be the whole list rather than a sample of it.
 MAX_EXAMPLES = 60
 
 # Below this the report prints every example it kept rather than a sample. Above
@@ -167,8 +167,8 @@ MAX_EXAMPLES = 60
 EXHAUSTIVE_EXAMPLE_LIMIT = 20
 
 # Where the rendered chart goes. Declared here because this module writes it;
-# docs/alternatives.rst is the only reader, and the Makefile passes `--chart`
-# with no argument rather than retyping the path.
+# docs/border_accuracy_vs_tzfpy.rst is the only reader, and the Makefile passes
+# `--chart` with no argument rather than retyping the path.
 CHART_PATH = DOC_ROOT / "tzfpy_agreement_by_distance.svg"
 
 # The run itself, committed next to the chart it draws.
@@ -770,7 +770,7 @@ def format_report(measurement: Measurement) -> str:
     return "\n".join(lines)
 
 
-# --- the chart docs/alternatives.rst embeds ---------------------------------
+# --- the chart docs/border_accuracy_vs_tzfpy.rst embeds ---------------------
 
 #: Salt for the element ids matplotlib derives by hashing. Without a fixed salt,
 #: otherwise-identical renders differ because the SVG backend uses random ids.

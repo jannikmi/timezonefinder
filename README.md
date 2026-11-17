@@ -21,6 +21,7 @@
 [![linted and formatted with ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Compared with the [alternatives](https://timezonefinder.readthedocs.io/en/latest/alternatives.html), it puts accuracy at timezone borders first while keeping lookups fast, and it runs with or without a C compiler.
+For research data, it turns UTC timestamps recorded with coordinates into local time offline and reproducibly - see the [statement of need](https://timezonefinder.readthedocs.io/en/latest/3_about.html#statement-of-need).
 
 
 ## Quick Guide
@@ -102,7 +103,7 @@ The [acceleration path comparison](https://timezonefinder.readthedocs.io/en/late
 GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/dependents) lists thousands of repositories and hundreds of published packages that depend on `timezonefinder`, among them:
 
 * industry: Google's [data-science-on-gcp](https://github.com/GoogleCloudPlatform/data-science-on-gcp), Posit's [Shiny for Python](https://github.com/posit-dev/py-shiny)
-* research and government: CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the National Laboratory of the Rockies' (formerly NREL) [HOPP](https://github.com/NatLabRockies/HOPP), the US EPA's [sensortoolkit](https://github.com/USEPA/sensortoolkit), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio), NASA JPL OPERA's [next_pass](https://github.com/OPERA-Cal-Val/next_pass)
+* research and government: CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), the Barcelona Supercomputing Center's [HERMESv3](https://earth.bsc.es/gitlab/es/hermesv3_gr) emission model, Forschungszentrum Jülich's [ETHOS.TISED](https://github.com/FZJ-IEK3-VSA/ETHOS.TISED), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the National Laboratory of the Rockies' (formerly NREL) [HOPP](https://github.com/NatLabRockies/HOPP), the US EPA's [sensortoolkit](https://github.com/USEPA/sensortoolkit), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio), NASA JPL OPERA's [next_pass](https://github.com/OPERA-Cal-Val/next_pass)
 * open source: [LibrePhotos](https://github.com/LibrePhotos/librephotos), [RocketPy](https://github.com/RocketPy-Team/RocketPy), Bellingcat's [ShadowFinder](https://github.com/bellingcat/ShadowFinder), Catalyst Cooperative's [PUDL](https://github.com/catalyst-cooperative/pudl)
 
 
@@ -128,6 +129,18 @@ Its routing table sends each task to the few files under `contributing/` it need
 ## Citing
 
 To cite `timezonefinder`, use the DOI [10.5281/zenodo.23579731](https://doi.org/10.5281/zenodo.23579731), which Zenodo resolves to the latest release, or the "Cite this repository" button on GitHub, which reads [`CITATION.cff`](https://github.com/jannikmi/timezonefinder/blob/master/CITATION.cff).
+As BibTeX:
+
+```bibtex
+@software{kissinger_timezonefinder,
+  author = {Kissinger, Jannik},
+  title = {timezonefinder},
+  url = {https://github.com/jannikmi/timezonefinder},
+  doi = {10.5281/zenodo.23579731}
+}
+```
+
+In a methods section, also state the `timezonefinder` and `timezonefinder-data` versions you used: a data release can move answers, and `TimezoneFinder.data_version` names the boundary release a finder answers from (see [result stability](https://timezonefinder.readthedocs.io/en/latest/result_stability.html)).
 
 
 ## LICENSE

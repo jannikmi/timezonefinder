@@ -2012,10 +2012,10 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
 
     reporter.add_section("What This Page Does Not Measure", level=2)
     reporter.add_text(
-        "* **Accuracy.** The two packages disagree on a small fraction of points, "
-        "and a disagreement count on its own says nothing about which answer is "
-        "right - settling that needs ground truth, which neither package carries. "
-        ":doc:`alternatives` states the design difference instead of scoring it."
+        "* **Accuracy.** This page times the two packages, not their answers. On "
+        "uniformly drawn points they agree; near a border they differ, because "
+        "tzfpy's simplified polygons move it, and :doc:`border_accuracy_vs_tzfpy` "
+        "measures how often by distance from the border."
     )
     reporter.add_text(
         "* **Memory footprint and distribution size.** "
