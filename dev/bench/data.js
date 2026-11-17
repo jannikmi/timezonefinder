@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794927884742,
+  "lastUpdate": 1794927887196,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -18576,72 +18576,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "4f38bbe3e8e5b7678aecad0de1461fe9554fd484",
-          "message": "Make a stale generated report fail instead of reading plausible (#479)",
-          "timestamp": "2026-08-08T12:34:33+02:00",
-          "tree_id": "ea1e628828bf4386a8ce0b73113f3aa164a76c66",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/4f38bbe3e8e5b7678aecad0de1461fe9554fd484"
-        },
-        "date": 1786185354340,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466646194458008,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466809272766113,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.529247283935547,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.538018226623535,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 67.85002613067627,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 67.85881328582764,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "dd7237138870af7a65b8f96df366aea623440152",
           "message": "Print the CLI result instead of routing it through a temp file (#480)\n\n* Print the CLI result instead of routing it through a temp file\n\nmain redirected stdout to a mkstemp file for the duration of the lookup\nand then, in verbose mode, reopened that file to read back a string it\nstill held in a local variable. Nothing inside the redirected block ever\nwrote to stdout: the lookup functions return their result rather than\nprinting it, and the only prints in the package are on data *write*\npaths a lookup never reaches. The context manager, the read-back, the\nwarning it raised when the file could not be read and the cleanup that\nremoved it are gone.\n\nThe lookup function is now resolved once per invocation instead of\ntwice, so -f 3 / -f 4 under -v no longer construct a second\nTimezoneFinderL and reload its shortcut data purely to read a function\nname off it. _print_lookup_details is renamed _format_lookup_details\nafter what it does; _lookup_timezone is dropped, since its only job was\nto pair the resolution with the call.\n\nOutput is unchanged character for character, verified across 5 function\nids x 2 modes x 4 coordinates plus --help and a rejected id.\n\ntests/cli_test.py covered none of this. Its single test passed the\ncaptured stdout through rstrip(\"\\n\\x1b[0m\"), which strips a *set* of\ncharacters rather than a suffix and so truncates 12 of the 444 packaged\nzone names (Europe/Amsterdam -> Europe/Amsterda); it held only because\nthe four hardcoded coordinates happened to miss all twelve. Two of its\nasserts were vacuous: res == \"None\" can never match, since the CLI\nprints an empty line and not the string None - and that dead branch\nmasked exactly the regression of printing None - while the\n\"command not found\" check is unreachable under check=True. The\nreplacement asserts the printed name verbatim and adds the missing\ncases: verbose mode, the empty line printed when no timezone is found,\nand the rejected function id.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record pass 3 in the findings ledger\n\nCLI-1, CLI-2 and CLI-3 shipped, with the judgement call on CLI-3 (remove\nthe redirect rather than document it) written down. Adds CLI-4 for the\ntest defect found while covering them, TEST-1 and TEST-2 from this\npass's sweep, and folds a second A002 site into TYPE-4.\n\nCoverage log gains pass 3 and narrows what is left unswept to\nrender_benchmark_reports.py, describe_benchmark_machine.py and the\nbenchmarks/test_*.py suites, plus the ruff --select ALL families already\njudged not worth acting on so the next pass does not re-triage them.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record that a local test run covers one point in the support matrix\n\nA test in this PR asserted argparse's exact wording, which renders the\nrejected value bare on 3.11 and quoted from 3.12 on. It passed a full\nlocal make testall and failed the 3.11 CI job.\n\nThe interpreter is only one axis, and not the sharpest one: tox spans\npy{311,312,313,314}{,-numba,-pytz}, and because the default dev\nenvironment installs numba, utils.py's import-time dispatch resolves\ninside_polygon to the numba path locally - so a local gate never\nexercises the C extension the bare CI envs use, however green it is.\n\nAdds the general rule to the Testing section, next to the existing note\non gate ordering, with the cheap way to test a single axis.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-09T00:15:29+02:00",
@@ -35060,6 +34994,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4216 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1337c6719fdbd70f254f2139c9659433cd6f949d",
+          "message": "docs: state support channels and governance in CONTRIBUTING.md (#781)\n\nJOSS's 2026 pre-review screening asks single-author projects for stated\nsupport and governance expectations (#780). Added at the maintainer's request.\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-17T15:03:56Z",
+          "tree_id": "5f6eaeddbd89af930db5d9c15a3f6a96b9ddfaeb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1337c6719fdbd70f254f2139c9659433cd6f949d"
+        },
+        "date": 1794927886669,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6949081420898438,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9614105224609375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9621772766113281,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69676685333252,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69757556915283,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
           }
         ]
       }
