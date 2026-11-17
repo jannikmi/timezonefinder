@@ -88,6 +88,8 @@ UNWANTED_CODE_DIST_PATTERNS = {
     "scripts/",
     "benchmarks/",
     "prototypes/",
+    # the record of scientific publications referencing the package
+    "paper/",
     # the other distribution in this workspace, built and published on its own
     "packages/",
     # the suite runs from a checkout only: it imports scripts/ and reads the

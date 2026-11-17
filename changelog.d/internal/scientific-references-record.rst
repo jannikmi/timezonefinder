@@ -1,0 +1,1 @@
+The repository records scientific publications that reference timezonefinder in ``paper/references.bib``, with one note per publication and a summary of the findings under ``paper/references/``; ``paper/`` ships in no distribution.
