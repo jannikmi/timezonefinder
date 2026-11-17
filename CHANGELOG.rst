@@ -143,7 +143,7 @@ Documentation:
 * Reworked the aware-datetime and UTC-offset examples around the standard-library helpers; Windows users must install ``tzdata``. The retained ``pytz`` example uses ``localize()`` rather than ``replace(tzinfo=...)``. Solves issue #502.
 * The NumPy 1 migration guidance identifies 8.2.1 as the last compatible timezonefinder release and recommends an isolated environment when a system NumPy constraint conflicts.
 * The reduced ``timezones-now`` documentation reports the 2026c dataset accurately and points to the vendored upstream mapping for exact release-specific counts.
-* The use-case documentation explains the inverted sign convention of ``Etc/GMT`` names and recommends resolving offsets through ``ZoneInfo``. Solves issue #503. Thanks to `weed33834 <https://github.com/weed33834>`__ for PR #538.
+* The use-case documentation explains the inverted sign convention of ``Etc/GMT`` names and recommends resolving offsets through ``ZoneInfo``. Solves issue #503. Thanks to `badhope <https://github.com/badhope>`__ for PR #538.
 * The usage documentation states that coordinates exactly on timezone boundaries have no guaranteed side and that ``certain_timezone_at()`` may return ``None`` there.
 * The package comparison now states the border-correctness trade-off and directs readers to reproducible comparison reports rather than embedding transient performance claims.
 * Added a point-in-polygon acceleration-path report covering the C extension, Numba, and pure-Python implementations.
@@ -271,8 +271,8 @@ Internal:
 
 New features:
 
-* The dataset version is now exposed at runtime. ``TimezoneFinder().data_version`` (and ``TimezoneFinderL().data_version``) return the timezone-boundary-builder release the packaged data was built from, read from a ``data_version.txt`` stamp that ``scripts/file_converter.py`` writes into the data directory it generates and that ships in the wheel. Previously an installed ``timezonefinder`` could not state it at all: the release tag lived only in a repo-root file that is not packaged. Which release a parse is stamped with comes from the input's filename (``combined-with-oceans-2026c.json``, which ``update_data.sh`` now produces), or from ``scripts/file_converter.py --data-version`` for an input that cannot carry it; your own GeoJSON is stamped ``"unknown"``, and an unpacked release archive that lost its tag is refused rather than compiled into data that could never say where it came from. ``timezonefinder.__version__`` is now exposed as well, read from the installed distribution metadata. Solves issue #498.
-* The command line script gained a ``--stdin`` streaming mode: it reads delimited rows from standard input and writes each back out with a ``timezone`` column appended, building the finder once instead of paying full initialisation per coordinate. Which columns hold the coordinates is read off the header by name, or stated with ``--lng-col``/``--lat-col``, and never inferred from their position - a swapped pair is still a valid coordinate for any longitude between -90 and 90, so guessing would answer with a real but wrong timezone instead of failing. Every input row produces exactly one output row, and a row that cannot be used warns on stderr and makes the run exit non-zero rather than ending the stream. Whether the first row is a header is worked out from the row, or stated with ``--header``/``--no-header``. New flags ``-d``/``--delimiter`` and ``--in-memory`` apply to the whole stream. See the `usage documentation <https://timezonefinder.readthedocs.io/en/latest/1_usage.html#looking-up-many-coordinates-at-once>`__. Solves issue #504. Thanks to `weed33834 <https://github.com/weed33834>`__ for the PR #516.
+* The dataset version is now exposed at runtime. ``TimezoneFinder().data_version`` (and ``TimezoneFinderL().data_version``) return the timezone-boundary-builder release the packaged data was built from, read from a ``data_version.txt`` stamp that ``scripts/file_converter.py`` writes into the data directory it generates and that ships in the wheel. Previously an installed ``timezonefinder`` could not state it at all: the release tag lived only in a repo-root file that is not packaged. Which release a parse is stamped with comes from the input's filename (``combined-with-oceans-2026c.json``, which ``update_data.sh`` now produces), or from ``scripts/file_converter.py --data-version`` for an input that cannot carry it; your own GeoJSON is stamped ``"unknown"``, and an unpacked release archive that lost its tag is refused rather than compiled into data that could never say where it came from. ``timezonefinder.__version__`` is now exposed as well, read from the installed distribution metadata. Solves issue #498. Thanks to `MsfPablo <https://github.com/MsfPablo>`__ for the PR #521.
+* The command line script gained a ``--stdin`` streaming mode: it reads delimited rows from standard input and writes each back out with a ``timezone`` column appended, building the finder once instead of paying full initialisation per coordinate. Which columns hold the coordinates is read off the header by name, or stated with ``--lng-col``/``--lat-col``, and never inferred from their position - a swapped pair is still a valid coordinate for any longitude between -90 and 90, so guessing would answer with a real but wrong timezone instead of failing. Every input row produces exactly one output row, and a row that cannot be used warns on stderr and makes the run exit non-zero rather than ending the stream. Whether the first row is a header is worked out from the row, or stated with ``--header``/``--no-header``. New flags ``-d``/``--delimiter`` and ``--in-memory`` apply to the whole stream. See the `usage documentation <https://timezonefinder.readthedocs.io/en/latest/1_usage.html#looking-up-many-coordinates-at-once>`__. Solves issue #504. Thanks to `badhope <https://github.com/badhope>`__ for the PR #516.
 
 Changed:
 
@@ -431,7 +431,7 @@ Internal:
 Internal:
 
 * using abi3 (aka Python limited API) wheels to avoid a combinatory explosion with Python version. It allows the use of a single Python 3.9 base and building future-proof wheels. Thanks to `theirix <https://github.com/theirix>`__
-* using pydantic to validating and parsing the GeoJSON dataset. Thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* using pydantic to validating and parsing the GeoJSON dataset. Thanks to `ARYAN RAJ <https://github.com/a-ryanraj>`__ for the PR.
 * refactored file_converter.py to improve code quality. Thanks to `Pratyush Kumar <https://github.com/pratyushkumar211>`__ for the PR.
 * consolidated shortcut data structures: replaced ``shortcuts.fbs`` file with ``hybrid_shortcuts_uint8.fbs`` (or ``hybrid_shortcuts_uint16.fbs``) file that stores both polygon lists and direct zone IDs using the minimal dtype for zone IDs.
 
@@ -481,7 +481,7 @@ Internal:
 
 * when ``in_memory=True``, all polygon ``numpy`` arrays are constructed once during startup rather than repeatedly on demand. This should significantly improve performance for applications that make frequent polygons queries.
 * Created a ``coord_accessors.py`` module for abstracting access to polygon coordinates, allowing for both in-memory and file-based access.
-* added auto-generated data report to the documentation. thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* added auto-generated data report to the documentation. thanks to `ARYAN RAJ <https://github.com/a-ryanraj>`__ for the PR.
 
 
 
@@ -511,7 +511,7 @@ Internal:
 * separate binary data storage folders for polygon boundaries and holes. handling both with the PolygonArray class
 * parameterised location tests
 * improved CLI code quality suppressing any output. added nicer output in verbose mode
-* dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/a-ryanraj>`__ for the PR.
 * added support for official for python 3.12
 * added usage example scripts
 * switched from `poetry` to `uv` for dependency management and packaging. Thanks to `theirix <https://github.com/theirix>`__
@@ -627,7 +627,7 @@ internal:
 6.1.10 (2023-03-22)
 -------------------
 
-* added a `pytz` extra for easily maintaining compatibility
+* added a `pytz` extra for easily maintaining compatibility. Thanks to `ringsaturn <https://github.com/ringsaturn>`__ for the PR #185.
 * improved documentation
 
 6.1.9 (2022-12-06)
@@ -723,7 +723,7 @@ internals:
 6.0.1 (2022-05-20)
 ------------------
 
-* explicitly included ``py.typed`` in the package to allow mypy users to run static type checking
+* explicitly included ``py.typed`` in the package to allow mypy users to run static type checking. Thanks to `josteinl <https://github.com/josteinl>`__ and `navignaw <https://github.com/navignaw>`__ for the PRs #131 and #138.
 
 
 6.0.0 (2022-05-09)
@@ -743,7 +743,7 @@ internals:
 * "most common": now meaning the zone with the largest polygons in the shortcut (last in the shortcut sorting). please note that this does not necessarily mean the most area in the shortcut is covered by this zone. the polygon size is just an easier to compute heuristic.
 * officially supporting python versions >=3.7,<3.11 (like ``numba``)
 * using poetry for dependency management
-* using GitHub actions for CI instead of travis
+* using GitHub actions for CI instead of travis. Thanks to `joshuadavidthomas <https://github.com/joshuadavidthomas>`__ for the initial workflow.
 * some minor typing improvements
 * pre-commit hook improvements
 
@@ -892,7 +892,7 @@ improvements of file_converter.py:
 
 * ATTENTION: Dropped Python2 support (#72)! `six` dependency no longer required.
 * BUGFIX: fixing #74 (broken py3 with numba support)
-* added `in_memory`-mode (adapted unit tests to test both modes, added speed tests and explanation to readme)
+* added `in_memory`-mode (adapted unit tests to test both modes, added speed tests and explanation to readme). Thanks to `sefiotonomo <https://github.com/sefiotonomo>`__ for the PR #75.
 * use of timeit in speed tests for more accurate results
 * dropped use of kwargs_only decorator (can be implemented directly with python3)
 
