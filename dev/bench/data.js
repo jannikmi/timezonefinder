@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794929519677,
+  "lastUpdate": 1794929522076,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -18618,72 +18618,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "dd7237138870af7a65b8f96df366aea623440152",
-          "message": "Print the CLI result instead of routing it through a temp file (#480)\n\n* Print the CLI result instead of routing it through a temp file\n\nmain redirected stdout to a mkstemp file for the duration of the lookup\nand then, in verbose mode, reopened that file to read back a string it\nstill held in a local variable. Nothing inside the redirected block ever\nwrote to stdout: the lookup functions return their result rather than\nprinting it, and the only prints in the package are on data *write*\npaths a lookup never reaches. The context manager, the read-back, the\nwarning it raised when the file could not be read and the cleanup that\nremoved it are gone.\n\nThe lookup function is now resolved once per invocation instead of\ntwice, so -f 3 / -f 4 under -v no longer construct a second\nTimezoneFinderL and reload its shortcut data purely to read a function\nname off it. _print_lookup_details is renamed _format_lookup_details\nafter what it does; _lookup_timezone is dropped, since its only job was\nto pair the resolution with the call.\n\nOutput is unchanged character for character, verified across 5 function\nids x 2 modes x 4 coordinates plus --help and a rejected id.\n\ntests/cli_test.py covered none of this. Its single test passed the\ncaptured stdout through rstrip(\"\\n\\x1b[0m\"), which strips a *set* of\ncharacters rather than a suffix and so truncates 12 of the 444 packaged\nzone names (Europe/Amsterdam -> Europe/Amsterda); it held only because\nthe four hardcoded coordinates happened to miss all twelve. Two of its\nasserts were vacuous: res == \"None\" can never match, since the CLI\nprints an empty line and not the string None - and that dead branch\nmasked exactly the regression of printing None - while the\n\"command not found\" check is unreachable under check=True. The\nreplacement asserts the printed name verbatim and adds the missing\ncases: verbose mode, the empty line printed when no timezone is found,\nand the rejected function id.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record pass 3 in the findings ledger\n\nCLI-1, CLI-2 and CLI-3 shipped, with the judgement call on CLI-3 (remove\nthe redirect rather than document it) written down. Adds CLI-4 for the\ntest defect found while covering them, TEST-1 and TEST-2 from this\npass's sweep, and folds a second A002 site into TYPE-4.\n\nCoverage log gains pass 3 and narrows what is left unswept to\nrender_benchmark_reports.py, describe_benchmark_machine.py and the\nbenchmarks/test_*.py suites, plus the ruff --select ALL families already\njudged not worth acting on so the next pass does not re-triage them.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record that a local test run covers one point in the support matrix\n\nA test in this PR asserted argparse's exact wording, which renders the\nrejected value bare on 3.11 and quoted from 3.12 on. It passed a full\nlocal make testall and failed the 3.11 CI job.\n\nThe interpreter is only one axis, and not the sharpest one: tox spans\npy{311,312,313,314}{,-numba,-pytz}, and because the default dev\nenvironment installs numba, utils.py's import-time dispatch resolves\ninside_polygon to the numba path locally - so a local gate never\nexercises the C extension the bare CI envs use, however green it is.\n\nAdds the general rule to the Testing section, next to the existing note\non gate ordering, with the cheap way to test a single axis.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-09T00:15:29+02:00",
-          "tree_id": "9675950d2bb209fe3f02955a5001b8b8fb1a73e6",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/dd7237138870af7a65b8f96df366aea623440152"
-        },
-        "date": 1786227405382,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466689109802246,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466852188110352,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.529267311096191,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.538111686706543,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 67.85002708435059,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 67.85875225067139,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7797 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "d65001fe3c0feb2daf965ee47cdc3f331a0f629b",
           "message": "Make the docstrings describe the code that exists (#481)\n\n* Make the docstrings describe the code that exists\n\nSix docstrings documented something the implementation contradicts, and five\nmore documented parameters that no longer exist.\n\nThe consequential ones are public API. AbstractTimezoneFinder.__init__ called\nin_memory inert and \"kept for API compatibility\" when it is exactly what selects\nmemory-mapped against in-memory coordinate access - and since\nTimezoneFinder.__init__ carries no docstring of its own, inspect.getdoc inherits\nthat claim, so help(TimezoneFinder.__init__) told users the opposite of\ndocs/1_usage.rst. Both get_geometry docstrings named a timezone_names.json that\nhas never existed under that name. read_zone_names promised an empty list for a\nmissing file where it raises FileNotFoundError, and illustrated itself with a\nhardcoded zone count the packaged data had outgrown by three. zone_id_of and\nzone_name_from_id each advertised an exception type their handler converts away,\nsending callers to write an except clause that can never fire while omitting the\none that will.\n\nThe remaining five are :param:/Args: entries in scripts/ and tests/ for\narguments removed along with the parallel shortcut compilation they belonged to;\ncompile_shortcut_mapping's summary still claimed \"optimized parallel processing\"\nthat the NOTE at the foot of its own docstring contradicts.\n\ntests/test_documented_contracts.py pins the claims that are behaviour: the\nexception types both finder methods raise, and that in_memory really does select\nthe coordinate accessor. Every assertion was mutation-checked.\n\n* Record pass 4 in the findings ledger, and drop what has shipped\n\nThe ledger is a to-do list, not a history: entries a pass ships are deleted in\nthe same PR rather than kept with a `shipped` status. The code is the evidence\nthey are done, the changelog says what changed, and git log still has the text.\nRejected, out-of-scope and withdrawn entries stay, because those encode a dead\nend worth not re-discovering. That removes the ERR-*, CLI-* and DOC-* sections -\nevery entry in them had shipped - and takes the file from 575 lines to 384.\n\nAlso cuts the ledger's largest source of merge conflicts between concurrent\npasses: a shipped entry is dead weight that every later pass has to carry past.\n\nPass 4 itself: DOC-1 and DOC-2 shipped (and so removed), plus a first sweep of\nscripts/render_benchmark_reports.py, scripts/describe_benchmark_machine.py and\nthe benchmarks/test_*.py suites - the areas the previous pass flagged as\nuncovered. Adds a Behaviour defects section for the two findings a quality pass\nmay not act on: a negative id silently returns the last zone from both\nzone_id_of and zone_name_from_id, and AbstractTimezoneFinder.__init__ accepts an\nin_memory it never reads.",
           "timestamp": "2026-08-09T00:43:07+02:00",
@@ -35102,6 +35036,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2332 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "deefb027ff0bad4b5c111efd609132d293021c72",
+          "message": "paper: compile the AI usage disclosure from the git history (#782)\n\n* paper: compile the AI usage disclosure from the git history\n\nDraft statement for paper.md plus the evidence behind it: tools, models,\nperiods and affected areas, read from commit trailers, branch names and\npull-request reviewers. Lists what the repository cannot tell and the\nauthors must confirm. Compiled at the maintainer's request (#780).\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* paper: record the Codex model and the pre-2025 confirmation\n\nBoth stated by the maintainer in conversation.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* paper: name GPT-5.6 Terra and the untraced Codex and Copilot use\n\nBoth stated by the maintainer in conversation.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-17T16:30:54+01:00",
+          "tree_id": "22b2458a649bcfccc57d28efe7b09d58736a1e4d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/deefb027ff0bad4b5c111efd609132d293021c72"
+        },
+        "date": 1794929521796,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9613780975341797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.962143898010254,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69735050201416,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69807052612305,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2174 GHz"
           }
         ]
       }
