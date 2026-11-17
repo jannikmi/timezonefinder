@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794904868160,
+  "lastUpdate": 1794905329696,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "1478c266bf0eb7b930ba5096ce4ae73c5b64fe74",
-          "message": "Stop restating generated figures in hand-written docs (#478)\n\n* Stop restating generated figures in hand-written docs\n\nExact numbers copied out of the generated pages go stale the moment the\ndata or the code moves, and nothing catches it. That had already\nhappened: #467 changed the memory footprint, leaving `~8 MiB`/`~71 MiB`\nwrong in `alternatives.rst` (twice), in the pytzwhere comparison and in\nthe changelog bullet describing the memory report.\n\nRemoved from the prose, with a link to the page that carries the live\nvalue instead:\n\n- the dataset counts - 7,925,313 boundary vertices, 1,322 polygons, 756\n  holes - from `alternatives.rst` and `architecture.rst`. These change\n  on every boundary-data update; `data_report.rst` is generated from the\n  packaged data\n- the shortcut index size, the wheel and installed sizes, and the\n  version-pinned `8.2.5`/`1.3.2` distribution figures\n- the memory footprints, now \"single-digit MiB\" against \"an order of\n  magnitude more\"\n- the lookup throughput, now \"hundreds of thousands of queries/s\", in\n  both the README and the comparison table\n\nThe tzfpy speed row becomes qualitative on both sides rather than a\nside-by-side of two numbers nobody measured together - which is what the\nnote under the table already told the reader to do with it.\n\nKept: figures fixed by a constant rather than by the data (`~1 cm`\nfollows from `COORD2INT_FACTOR`, `~41k` cells from H3 resolution 3, the\n`~400x` pure-Python penalty), and the pytzwhere figures, which describe a\npackage that has not moved since 2016.\n\nThe H3 resolution study in `data_format.rst` keeps its finding - the\n`>10 %` ratio that made resolution 4 not worth it - but drops the\nabsolute index size, which read as a current measurement and was already\noff. `CLAUDE.md` gains the rule under *Documentation Files*.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Round the ambiguous-query ratio, and rebase before the final test gate\n\nTwo follow-ups on the same theme as this branch.\n\n`~25.5 %` ambiguous queries in the benchmarking methodology page is\ndataset-derived and drifts with every boundary-data update. The argument\nit supports - that uniformly random points are the only globally\nrepresentative workload - does not need the decimal, so it is now `~25 %`,\nmatching the figure the same section already uses two paragraphs down.\n\n`CLAUDE.md` gains the ordering rule under *Testing*: fetch and rebase\nonto the latest `master` before running the final gate, not after. Other\nwork merges while a PR is open, and a rebase afterwards invalidates the\nrun - it tested a tree that never existed - so the wrong order costs a\nsecond `make testall`.\n\nAlso amends the package-comparison changelog bullet, which still\ndescribed the `Distribution Size` figure and the two-number speed row\nthat the previous commit removed. Per the amend-don't-append rule the\nunreleased section has to read as one end state.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T16:04:17+02:00",
-          "tree_id": "f9c6d02acd45e209e22f5fd7bac50d050d575c84",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/1478c266bf0eb7b930ba5096ce4ae73c5b64fe74"
-        },
-        "date": 1786111548221,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 187500.7078152512,
-            "range": "± 3819",
-            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 583462.4341215519,
-            "range": "± 3779",
-            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 64735.21974524649,
-            "range": "± 867",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18474,6 +18429,93 @@ window.BENCHMARK_DATA = {
             "range": "± 10869",
             "unit": "lookups/sec",
             "extra": "min of 95 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5251 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dfb96ea03e9d4e9720286db57a11e0ab5fb05c80",
+          "message": "Complete and correct the contributor acknowledgements (#777)",
+          "timestamp": "2026-11-17T08:48:05Z",
+          "tree_id": "fa706f46193ce5b0c09b44ea65f16973a853714c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dfb96ea03e9d4e9720286db57a11e0ab5fb05c80"
+        },
+        "date": 1794905326832,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1582401.6679946785,
+            "range": "± 33625",
+            "unit": "lookups/sec",
+            "extra": "min of 389 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1969702.8190818229,
+            "range": "± 42298",
+            "unit": "lookups/sec",
+            "extra": "min of 580 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 339462.39476352884,
+            "range": "± 31841",
+            "unit": "lookups/sec",
+            "extra": "min of 107 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 9113942.50908734,
+            "range": "± 493001",
+            "unit": "lookups/sec",
+            "extra": "min of 1262 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 68842076.29889177,
+            "range": "± 5433306",
+            "unit": "lookups/sec",
+            "extra": "min of 7785 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 451728.2308994037,
+            "range": "± 17582",
+            "unit": "lookups/sec",
+            "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8578389.321494067,
+            "range": "± 364734",
+            "unit": "lookups/sec",
+            "extra": "min of 1739 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 50767606.18070484,
+            "range": "± 2703396",
+            "unit": "lookups/sec",
+            "extra": "min of 6806 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 457961.2627063444,
+            "range": "± 170313",
+            "unit": "lookups/sec",
+            "extra": "min of 127 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           }
         ]
       }
