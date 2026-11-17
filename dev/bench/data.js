@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794903668700,
+  "lastUpdate": 1794904081728,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "46deb0ed04873d0c6e9590c765122e4d4338a808",
-          "message": "Put the headline figure and the configuration above the fold in the benchmark reports (#473)\n\n`benchmark_results_timezonefinding.rst` made a reader parse four tables\nbefore learning \"~3.50us per lookup, ~286k/s\". Each of the four generated\nreports now opens with the figure that answers \"how fast/how big is it\",\nderived from the same parsed JSON as the tables below it - nothing here\nis hardcoded, or the block would go stale exactly when the numbers move.\n\nUnderneath it, a one-line banner names the platform, Python version and\nthe acceleration path that produced the numbers, and states whether that\nis the configuration CI tracks. It usually is not: the committed reports\nare rendered from a developer machine with Numba on and the C extension\noff, while CI measures the C extension without Numba - what a plain\n`pip install timezonefinder` gives you. That was already discoverable\nfrom the \"System Status\" section three screens down, as two separate\nbooleans; a reader comparing a table here against the trend chart was\ncomparing two implementations on two machines with nothing saying so.\nThe banner links the methodology page.\n\n`acceleration_path_label` collapses the two recorded flags to the one\npath that ran, since `utils.py` prefers Numba when both are importable -\nthey were never two independent choices.\n\nThe memory report gets the same treatment rather than being deferred: it\nis a fourth page in the same sidebar rendered by the same module, and a\nbanner on three of four pages is worse than none.\n\nThe three timing reports re-rendered byte-identically from the stored\nJSON before this change, so their diffs are the new block and nothing\nelse. The memory report was re-measured instead, because the stored JSON\npredates #467: every heap figure reproduces that PR's values exactly and\nonly four RSS digits move, which is the metric whose residency depends on\nmachine-wide pressure and which is deliberately not charted for that\nreason.\n\n`tests/test_render_benchmark_reports.py` covers the path label, the\nCI-configuration branch and the environment description. It also pins\nthat a headline never nests an RST literal inside bold - that shipped in\nan intermediate version of this change and rendered as stray backticks in\nthe HTML, with no warning from Sphinx or rstcheck.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-07T15:35:18+02:00",
-          "tree_id": "21bc221203c641bc1c1b1c314275dc7659145338",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/46deb0ed04873d0c6e9590c765122e4d4338a808"
-        },
-        "date": 1786109797338,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 184795.70428351618,
-            "range": "± 4272",
-            "extra": "min of 58 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 569511.3683572616,
-            "range": "± 5878",
-            "extra": "min of 183 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62224.84949366695,
-            "range": "± 451",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18390,6 +18345,93 @@ window.BENCHMARK_DATA = {
             "range": "± 10365",
             "unit": "lookups/sec",
             "extra": "min of 122 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2280 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a0c29397c00a352e0c9ca759a93026c3f0aa73bb",
+          "message": "Bump https://github.com/astral-sh/ruff-pre-commit from v0.17.4 to 0.17.5 (#779)",
+          "timestamp": "2026-11-17T08:26:57Z",
+          "tree_id": "009242eb26c905bd6296fcc82930d238c28cbafb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a0c29397c00a352e0c9ca759a93026c3f0aa73bb"
+        },
+        "date": 1794904078372,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1319530.6904234176,
+            "range": "± 27829",
+            "unit": "lookups/sec",
+            "extra": "min of 417 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1596384.2535391764,
+            "range": "± 17223",
+            "unit": "lookups/sec",
+            "extra": "min of 565 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 269327.71063254745,
+            "range": "± 3428",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7468817.6864357,
+            "range": "± 222099",
+            "unit": "lookups/sec",
+            "extra": "min of 1274 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 61220491.7493878,
+            "range": "± 4380215",
+            "unit": "lookups/sec",
+            "extra": "min of 9175 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 348620.675325551,
+            "range": "± 6139",
+            "unit": "lookups/sec",
+            "extra": "min of 100 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 7087935.766402921,
+            "range": "± 235522",
+            "unit": "lookups/sec",
+            "extra": "min of 1516 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 43762144.0018976,
+            "range": "± 2465624",
+            "unit": "lookups/sec",
+            "extra": "min of 7782 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 347837.60491815064,
+            "range": "± 4391",
+            "unit": "lookups/sec",
+            "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7464 GHz"
           }
         ]
       }
