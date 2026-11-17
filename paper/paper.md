@@ -15,7 +15,7 @@ authors:
   - name: Lucas Hemkemeier
     affiliation: 3
 affiliations:
-  - name: Affiliation to be confirmed
+  - name: Independent Researcher
     index: 1
   - name: Affiliation to be confirmed
     index: 2
