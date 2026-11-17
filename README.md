@@ -133,7 +133,7 @@ As BibTeX:
 
 ```bibtex
 @software{kissinger_timezonefinder,
-  author = {Kissinger, Jannik and Seliverstov, Evgenii and Hemkemeier, Lucas},
+  author = {Kissinger, Jannik},
   title = {timezonefinder},
   url = {https://github.com/jannikmi/timezonefinder},
   doi = {10.5281/zenodo.23579731}
