@@ -43,7 +43,7 @@ The 273 commits with a Claude trailer touched these areas (a commit can touch se
 
 ### Share of the history
 
-- All development before September 2025 was done without generative AI, as the maintainer confirms. The history agrees: before then it has no AI trailers, branches or reviewers.
+- All development before September 2025 was done without generative AI, as the maintainer confirms. A spatial index existed before then; its current optimised implementation was enabled by AI assistance (maintainer, 2026-11-18). The history agrees: before then it has no AI trailers, branches or reviewers.
 - 273 of the 940 human-authored commits on `master` carry a Claude trailer, all from 2026-08-01 on. Of the 381 human-authored commits since then, 273 carry one.
 - The trailers undercount AI use: some squash merges dropped them. For example, #772 was produced with Claude Code but its commit on `master` has no trailer, and 25 of the trailerless commits since 2026-08 came from `codex/` branches. The figures above are lower bounds.
 
