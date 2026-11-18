@@ -53,6 +53,6 @@ These cannot be read from the repository and must be settled before the statemen
 
 - [ ] **Tool versions:** whether to name Claude Code and Codex client versions, or the model versions only.
 - [ ] **GitHub Copilot model:** which model or models Copilot used.
-- [ ] **Co-authors' contributions:** whether Evgenii Seliverstov's and Lucas Hemkemeier's contributions used generative AI. Their commits carry no AI trailer.
-- [ ] **Paper text:** the final statement must name the tools used for drafting and editing `paper.md` itself.
+- [ ] **Co-authors' contributions:** the maintainer confirmed on 2026-11-18 that Evgenii Seliverstov and Lucas Hemkemeier used generative AI for their contributions. Their tools and models are still to be named; their commits carry no AI trailer.
+- [ ] **Paper text:** the sections of `paper.md` were drafted with Claude Code (Claude Opus 5.5) and edited by the maintainer; any further tools used for editing are still to be named.
 - [ ] **Review confirmation:** each author confirms the closing sentence of the statement for their own part. This is the authors' assertion and cannot be drafted on their behalf.
