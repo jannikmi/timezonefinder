@@ -12,7 +12,7 @@ Open questions and TODOs for the authors are left as HTML comments in `paper.md`
 |---|---|---|
 | Length (750–1750 words) | About 4,400 words, 2.5 times the upper limit. The Software design section alone (about 1,570 words) was close to the limit. JOSS "may ask [authors] to reduce the length". | Unchanged; trimming is deferred to a later pass. The section sizes are listed at the top of `paper.md`, and `TRIM CANDIDATE` comments mark candidates. |
 | No API documentation | The paper names `TimezoneFinder.data_version`, `TimezoneFinderL`, the version string scheme (`4.2026.5`), cell sizes, 4 × 4 refinement, 128-vertex blocks, the wheel matrix and the test strategy. | Not changed. Marked as a `TRIM CANDIDATE` at the top of Software design. |
-| Authors and affiliations | Two affiliations "to be confirmed"; no ORCIDs for the co-authors; date set to the draft date. | TODO. |
+| Authors and affiliations | Two affiliations "to be confirmed"; no ORCIDs for the co-authors; date set to the draft date. | Lucas Hemkemeier's affiliation (Independent Researcher) and ORCID added from #780. TODO: Evgenii Seliverstov's affiliation, which waits on his employer's approval, and the submission date. |
 | Summary | Clear and written for a non-specialist audience. | Unchanged. |
 | Statement of need | Good: problem, audience and context are clear. It repeats the usage examples of the Research impact statement almost word for word. | `zoneinfo` cited. The duplicated examples are marked as a `TRIM CANDIDATE`. |
 | State of the field | Good: four routes, a measured comparison with `tzfpy` and a build-vs-contribute paragraph. Weak spots: uncited online services and `tzf-rs`, an uncited count of "more than twenty libraries", and the comparison given in words ("order of magnitude", "small single-digit factor") rather than numbers. | Citations added for the online services, `tzf-rs`, the lookup-library list (26 libraries in 15 languages) and the Zenodo archive. The `tzfpy` comparison now states the measured figures, the versions measured, the wheel sizes and the source of the ~111 m simplification bound (the `tzfpy` README), and links the documentation reports. The `pytzwhere` measurement is linked. TODO: re-run the `tzfpy` comparison against the current `tzfpy` 2.1.2 before submission. |
@@ -43,6 +43,13 @@ Compiling locally with `pandoc --citeproc` produced no warnings, and none of the
 ## Authorship
 
 The first author made the large majority of the commits. The co-authors' contributions are documented in the repository (`docs/5_contributing.rst` and `CHANGELOG.rst`): Evgenii Seliverstov (GitHub `theirix`, confirmed by the maintainer on 2026-11-18) built the build and release pipeline, and Lucas Hemkemeier (`hemkdev`) built the automated data updates (PRs #429, #432, #434 and #436). The maintainer considers this documentation sufficient, so the paper does not repeat it. Each co-author must agree to be listed.
+
+## Points from the submission issue (#780)
+
+- **Archive author list.** JOSS's editor guide (editing.html, Post-review) asks editors to "check the archive deposit has the correct metadata (title and author list)": "In most situations, the two author lists should match. Authors and editors should review the two, and any differences need to be explained." #780 keeps `CITATION.cff`, which the Zenodo archive is built from, at a single author. Either the archive lists all three paper authors, or the difference needs an explanation ready for the editor. This answers the open item in #780 on whether the archive has to list the paper's authors. Left as an OPEN QUESTION in `paper.md`.
+- **Development history.** #780 notes that a large share of the commits falls in 2026, and that JOSS runs automated checks on the commit distribution. The paper shows the long-term iteration only as "developed in the open since 2016" and "started in 2016". An OPEN QUESTION in `paper.md` suggests a sentence on the release history.
+- **Snippet- and index-grade entries.** The paper cites only publications at "full text read" grade, including the walking-at-night example (`vellimana2023walking`). The 9 lower-grade entries in `paper/references/` are not cited, so the paper does not depend on them.
+- **Distribution exclusion.** `paper/` is excluded from the distributions as a whole (`tests/test_package_contents.py`), so this review file is excluded too. `check-manifest` passes.
 
 ## Not checked
 

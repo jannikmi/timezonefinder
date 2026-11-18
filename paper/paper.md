@@ -13,14 +13,13 @@ authors:
   - name: Evgenii Seliverstov
     affiliation: 2
   - name: Lucas Hemkemeier
-    affiliation: 3
+    orcid: 0009-0002-6127-717X
+    affiliation: 1
 affiliations:
   - name: Independent Researcher
     index: 1
   - name: Affiliation to be confirmed
     index: 2
-  - name: Affiliation to be confirmed
-    index: 3
 date: 17 November 2026
 bibliography: paper.bib
 ---
@@ -29,8 +28,17 @@ bibliography: paper.bib
 JOSS review notes (see paper/joss-review.md for the full assessment against the review criteria).
 These comments do not appear in the compiled PDF. Search for TODO(authors) and OPEN QUESTION.
 
-TODO(authors): fill in the affiliations of Evgenii Seliverstov and Lucas Hemkemeier, and add
-  ORCIDs if they have them. JOSS requires an affiliation for every author.
+TODO(authors): fill in the affiliation of Evgenii Seliverstov (waiting on his employer's
+  approval, #780) and his ORCID if he has one. JOSS requires an affiliation for every author.
+OPEN QUESTION (archive authors): JOSS editors check that the archive deposited after acceptance
+  lists the paper's authors ("In most situations, the two author lists should match ... any
+  differences need to be explained", editing.html, Post-review). #780 keeps the software's
+  single author in CITATION.cff, which Zenodo uses for the archive. Either add the co-authors to
+  the archive metadata or prepare the explanation.
+OPEN QUESTION (development history): #780 notes that most commits fall in 2026 and that the
+  paper has to show the long-term iteration explicitly. The paper says only "developed in the
+  open since 2016" (Summary) and "started in 2016" (State of the field). Consider a sentence on
+  the release history (number of releases, major versions and what they changed).
 TODO(authors): set `date` to the submission date.
 TODO(authors, trimming pass): the paper is about 4,450 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~230, Statement of need ~810,
