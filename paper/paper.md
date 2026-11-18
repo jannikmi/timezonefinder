@@ -175,12 +175,11 @@ TODO(authors): each author confirms the second paragraph for their own part (ope
 
 We thank [Evan Siroky](https://github.com/evansiroky) and the contributors of timezone-boundary-builder [@tzbb], and the OpenStreetMap contributors [@osm; @haklay2008osm], whose boundary data `timezonefinder` is built on. We thank everyone who contributed code, reviews, issues and feedback to `timezonefinder`, in particular [Adam Johnson](https://github.com/adamchainz), [Han Xiao](https://github.com/ringsaturn), [Aryan Raj](https://github.com/a-ryanraj), [Pratyush Kumar](https://github.com/pratyushkumar211), [Lu Yicheng](https://github.com/01luyicheng), [Marco Barbosa](https://github.com/aureliobarbosa), [sefiotonomo](https://github.com/sefiotonomo), [joshuadavidthomas](https://github.com/joshuadavidthomas), [badhope](https://github.com/badhope), [Nice6042](https://github.com/Nice6042), [MsfPablo](https://github.com/MsfPablo), [Pxli9130](https://github.com/Pxli9130), [Kristian Sloth Lauszus](https://github.com/Lauszus), [Chase Horton](https://github.com/Chase-Horton), [Dave Tapley](https://github.com/davetapley), [David Park](https://github.com/daphtdazz), [WestonReed](https://github.com/WestonReed), [Tyler Huntley](https://github.com/Ty1776), [Greg Meyer](https://github.com/gmmeyer), [Romain Girard](https://github.com/romaingd-spi), [synapticarbors](https://github.com/synapticarbors) and [zedrdave](https://github.com/zedrdave), as well as [snowman2](https://github.com/snowman2) and [Xylar Asay-Davis](https://github.com/xylar) for creating and maintaining the conda-forge packages. A complete list is kept in the [documentation](https://timezonefinder.readthedocs.io/en/latest/5_contributing.html).
 
-The development of `timezonefinder` is supported by the sponsors of the first author through GitHub Sponsors. Han Xiao (ringsaturn), the author of `tzfpy`, which this paper compares against, has sponsored the project in the past. The sponsorship gave no influence on the software or on this paper beyond that of any other contributor.
+The development of `timezonefinder` is supported by the sponsors of the first author through GitHub Sponsors. Han Xiao (ringsaturn), the author of `tzfpy`, which this paper compares against, has sponsored the project in the past. The sponsorship gave no influence on the software or on this paper beyond that of any other contributor. The authors declare no other competing interests.
 
 <!--
-TODO(authors): JOSS requires every author to disclose potential conflicts of interest. Add an
-  explicit sentence such as "The authors declare no other competing interests." once each
-  author has confirmed it.
+TODO(authors): each co-author confirms the competing-interests sentence above for their own
+  part before submission.
 TRIM CANDIDATE: the contributor name list could point to the documentation's complete list.
 -->
 
