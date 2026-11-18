@@ -92,7 +92,7 @@ repos:
                 # scripts/configs.py): it belongs in the repository and in no sdist, and
                 # it appears only after a data update, so the ignore has to be here before
                 # the first one rather than added by it
-                args: [ "--no-build-isolation", "--ignore",  ".*,.*/**,docs/**,examples/**,scripts/**,benchmarks/**,packages/**,prototypes/**,paper/**,contributing/**,changelog.d/**,*.sh,CHANGELOG.rst,AGENTS.md,CLAUDE.md,CONTRIBUTING.md,Makefile,readthedocs.yml,uv.lock,tox.ini,DATA_BUILD_RUN" ]
+                args: [ "--no-build-isolation", "--ignore",  ".*,.*/**,docs/**,examples/**,scripts/**,benchmarks/**,packages/**,prototypes/**,paper/**,contributing/**,changelog.d/**,*.sh,CHANGELOG.rst,AGENTS.md,CLAUDE.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,Makefile,readthedocs.yml,uv.lock,tox.ini,DATA_BUILD_RUN" ]
                 additional_dependencies: [ numpy, uv, cffi ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
