@@ -35,13 +35,8 @@ OPEN QUESTION (archive authors): JOSS editors check that the archive deposited a
   differences need to be explained", editing.html, Post-review). #780 keeps the software's
   single author in CITATION.cff, which Zenodo uses for the archive. Either add the co-authors to
   the archive metadata or prepare the explanation.
-OPEN QUESTION (development history): #780 notes that most commits fall in 2026 and that the
-  paper has to show the long-term iteration explicitly. The paper says only "developed in the
-  open since 2016" (Summary) and "started in 2016" (State of the field). Consider a sentence on
-  the release history (number of releases, major versions and what they changed).
-TODO(authors): set `date` to the submission date.
-TODO(authors, trimming pass): the paper is about 4,450 words; JOSS asks for 750-1750 and "may
-  ask [authors] to reduce the length". Section sizes: Summary ~230, Statement of need ~810,
+TODO(authors, trimming pass): the paper is about 4,520 words; JOSS asks for 750-1750 and "may
+  ask [authors] to reduce the length". Section sizes: Summary ~280, Statement of need ~810,
   State of the field ~1,020, Software design ~1,580, Research impact ~400, AI disclosure ~260,
   Acknowledgements ~150. Candidates are marked with "TRIM CANDIDATE" comments below.
 -->
@@ -50,7 +45,7 @@ TODO(authors, trimming pass): the paper is about 4,450 words; JOSS asks for 750-
 
 The time shown on a clock depends on where it hangs. Each place belongs to a time zone, and the rules of that zone, its offset from Coordinated Universal Time (UTC) and when daylight saving time begins and ends, are recorded in the IANA Time Zone Database [@iana_tzdb] under names such as `Europe/Berlin`. Instruments, GPS receivers and computer models usually record when and where something happened as a UTC timestamp and a pair of coordinates. To recover the local time, such as the hour of day, the local date or whether it was dark, one first has to know which time zone contains each coordinate.
 
-`timezonefinder` is a Python package that answers this question without an internet connection. Given a latitude and a longitude, it returns the name of the time zone that contains the point. It reads the zone boundaries published by the timezone-boundary-builder project [@tzbb], which derives them from OpenStreetMap [@osm; @haklay2008osm], and it uses these boundaries exactly as published, without simplifying their shape. Because the data also covers the oceans, practically every coordinate on Earth receives an answer. The boundary data ships as a separately versioned package, so a lookup needs no online service, and pinning the data version makes its answers repeatable. One call can look up an entire array of coordinates, which suits whole datasets. The package has been developed in the open since 2016.
+`timezonefinder` is a Python package that answers this question without an internet connection. Given a latitude and a longitude, it returns the name of the time zone that contains the point. It reads the zone boundaries published by the timezone-boundary-builder project [@tzbb], which derives them from OpenStreetMap [@osm; @haklay2008osm], and it uses these boundaries exactly as published, without simplifying their shape. Because the data also covers the oceans, practically every coordinate on Earth receives an answer. The boundary data ships as a separately versioned package, so a lookup needs no online service, and pinning the data version makes its answers repeatable. One call can look up an entire array of coordinates, which suits whole datasets. The package has been developed in the open since 2016. Since its first release in April 2016 it has had 86 releases across nine major versions, at least two in every year, which added among other things the ocean zones (version 5, 2020), a separately versioned data package (version 8.3, 2026) and batch lookups (version 9, 2026).
 
 # Statement of need
 
