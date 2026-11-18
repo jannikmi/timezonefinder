@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795027947234,
+  "lastUpdate": 1795029281545,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "4578be790822b7f7b7730a79c1391dfe5e8fd085",
-          "message": "Build test distributions for the interpreter running the tests (#494)\n\n`uv build` was invoked without `--python`, so it targeted the newest\ninterpreter on the machine, while tests/test_integration.py creates its\nthrowaway venv from `sys.executable`. On a checkout whose `.venv` is older\nthan the newest installed Python the two disagree: `make testint` built a\ncp314 wheel and `test_install_from_artifacts[wheel]` died on pip's \"not a\nsupported wheel on this platform\", nowhere near the build that caused it.\n\nEvery tox environment offers a single interpreter, so the two agreed by\naccident in CI and this only ever hit developer machines, where the\nworkaround was pinning UV_PYTHON.\n\nPin the shared build command to `sys.executable` instead of teaching\nsetup_venv to guess which interpreter uv would have chosen - the target venv\nis the thing under test, so it is the build that should follow it. The sdist\nbuild takes the same pin: it carries no interpreter tag, but it keeps the two\nartefacts in dist/ from coming out of different interpreters.\n\ntest_build_commands_pin_the_running_interpreter guards the pin. It needs no\nbuild and so carries the `unit` marker, which matters because no CI\nenvironment can reproduce the mismatch - without it the next regression would\ngo unnoticed the same way.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-10T05:46:41+02:00",
-          "tree_id": "0d92c9940338e24d2a609c1ff776ff07ed5d1480",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/4578be790822b7f7b7730a79c1391dfe5e8fd085"
-        },
-        "date": 1786333676640,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 199866.88865217564,
-            "range": "± 10495",
-            "extra": "min of 56 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 653698.33756691,
-            "range": "± 10935",
-            "extra": "min of 214 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 64996.3573441478,
-            "range": "± 829",
-            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18810,6 +18765,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5026",
             "unit": "lookups/sec",
             "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.6005 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d63e458dbd0c030221d70b4a31aae8453d8f012",
+          "message": "paper: write the AI usage disclosure (#788)",
+          "timestamp": "2026-11-18T19:13:18Z",
+          "tree_id": "0f48afeb6d04ad01d21742cd0c468e30527b3521",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5d63e458dbd0c030221d70b4a31aae8453d8f012"
+        },
+        "date": 1795029278904,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 793616.5295679385,
+            "range": "± 22006",
+            "unit": "lookups/sec",
+            "extra": "min of 277 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 981280.696917435,
+            "range": "± 8884",
+            "unit": "lookups/sec",
+            "extra": "min of 351 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 168736.54663534605,
+            "range": "± 1550",
+            "unit": "lookups/sec",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4494713.318231234,
+            "range": "± 267876",
+            "unit": "lookups/sec",
+            "extra": "min of 1024 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 32807537.858836267,
+            "range": "± 2792537",
+            "unit": "lookups/sec",
+            "extra": "min of 6800 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 244422.45076874678,
+            "range": "± 1327",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4273482.358227359,
+            "range": "± 447551",
+            "unit": "lookups/sec",
+            "extra": "min of 1167 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23824045.135585684,
+            "range": "± 1924832",
+            "unit": "lookups/sec",
+            "extra": "min of 6104 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 241975.46446265836,
+            "range": "± 8295",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
           }
         ]
       }
