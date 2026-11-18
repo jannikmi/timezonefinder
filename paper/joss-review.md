@@ -38,7 +38,7 @@ Compiling locally with `pandoc --citeproc` produced no warnings, and none of the
 | Example usage, API documentation | Good | README, the Read the Docs usage and API pages, and `examples/`. |
 | Tests and CI | Good | pytest suite with property-based tests, run on GitHub Actions for every accelerator path, plus end-to-end wheel tests. |
 | Community guidelines | Good | `CONTRIBUTING.md` (Support and governance section), issue templates, a Discussions link for questions, and a link to the upstream tracker for boundary errors. |
-| Code of conduct | Not present | Not required by JOSS, but many reviewers expect one. Consider adding a `CODE_OF_CONDUCT.md`. |
+| Code of conduct | Good | `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), added in #791 after this review flagged it. JOSS does not require one, but many reviewers expect it. |
 
 ## Authorship
 
