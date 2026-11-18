@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794954234674,
+  "lastUpdate": 1795024850573,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "ed54d346e509d33850542929b19feef375293ff3",
-          "message": "Make the checks that cannot fail actually fail (#485)",
-          "timestamp": "2026-08-09T07:01:24+02:00",
-          "tree_id": "9ef73291fd7953132aeedb4a3fbf2764fd47e078",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/ed54d346e509d33850542929b19feef375293ff3"
-        },
-        "date": 1786251779019,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 182671.55690614515,
-            "range": "± 2376",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 578082.7999565394,
-            "range": "± 6109",
-            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 63537.98350209842,
-            "range": "± 573",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18684,6 +18639,93 @@ window.BENCHMARK_DATA = {
             "range": "± 14344",
             "unit": "lookups/sec",
             "extra": "min of 96 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5675 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3365dcaa9c1bde693fd539119569194a61906ef3",
+          "message": "paper: write the State of the field (#785)",
+          "timestamp": "2026-11-18T18:59:56+01:00",
+          "tree_id": "210cb404f795c996e6335a00e950c9d3244f6d69",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3365dcaa9c1bde693fd539119569194a61906ef3"
+        },
+        "date": 1795024846776,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 841832.7574619725,
+            "range": "± 69790",
+            "unit": "lookups/sec",
+            "extra": "min of 263 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1016339.8998343067,
+            "range": "± 35988",
+            "unit": "lookups/sec",
+            "extra": "min of 350 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 165604.99512364468,
+            "range": "± 3421",
+            "unit": "lookups/sec",
+            "extra": "min of 63 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4110293.9847088684,
+            "range": "± 245689",
+            "unit": "lookups/sec",
+            "extra": "min of 893 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33002428.97844101,
+            "range": "± 3555480",
+            "unit": "lookups/sec",
+            "extra": "min of 6286 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 214174.0194750783,
+            "range": "± 4112",
+            "unit": "lookups/sec",
+            "extra": "min of 74 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 3740762.187825579,
+            "range": "± 84082",
+            "unit": "lookups/sec",
+            "extra": "min of 954 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 23995776.743783884,
+            "range": "± 1709696",
+            "unit": "lookups/sec",
+            "extra": "min of 5622 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 205925.10783883266,
+            "range": "± 5898",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
           }
         ]
       }
