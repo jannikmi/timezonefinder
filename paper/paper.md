@@ -113,6 +113,8 @@ The problem framing, the architecture and every design decision were made by the
 
 # Acknowledgements
 
-<!-- Contributors from docs/5_contributing.rst, funding through GitHub Sponsors, and the statement on the sponsorship by the author of tzfpy. -->
+We thank Evan Siroky and the contributors of timezone-boundary-builder, and the OpenStreetMap contributors, whose boundary data `timezonefinder` is built on. We thank everyone who contributed code, reviews, issues and feedback to `timezonefinder`, in particular Adam Johnson, ringsaturn, Aryan Raj, Pratyush Kumar, Lu Yicheng, Marco Barbosa, sefiotonomo, joshuadavidthomas, badhope, Nice6042, MsfPablo, Pxli9130, Kristian Sloth Lauszus, Chase Horton, Dave Tapley, David Park, WestonReed, Tyler Huntley, Greg Meyer, Romain Girard, synapticarbors and zedrdave, as well as snowman2 and Xylar Asay-Davis for creating and maintaining the conda-forge packages. A complete list is kept in the documentation.
+
+The development of `timezonefinder` is supported by the sponsors of the first author through GitHub Sponsors. One sponsor, ringsaturn, is also the author of `tzfpy`, which this paper compares against. The sponsorship gave no influence on the software or on this paper beyond that of any other contributor.
 
 # References
