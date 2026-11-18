@@ -104,7 +104,7 @@ GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/d
 
 * industry: Google's [data-science-on-gcp](https://github.com/GoogleCloudPlatform/data-science-on-gcp), Posit's [Shiny for Python](https://github.com/posit-dev/py-shiny)
 * research and government: CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), the Barcelona Supercomputing Center's [HERMESv3](https://earth.bsc.es/gitlab/es/hermesv3_gr) emission model, Forschungszentrum Jülich's [ETHOS.TISED](https://github.com/FZJ-IEK3-VSA/ETHOS.TISED), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the National Laboratory of the Rockies' (formerly NREL) [HOPP](https://github.com/NatLabRockies/HOPP), the US EPA's [sensortoolkit](https://github.com/USEPA/sensortoolkit), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio), NASA JPL OPERA's [next_pass](https://github.com/OPERA-Cal-Val/next_pass)
-* open source: [LibrePhotos](https://github.com/LibrePhotos/librephotos), [RocketPy](https://github.com/RocketPy-Team/RocketPy), Bellingcat's [ShadowFinder](https://github.com/bellingcat/ShadowFinder), Catalyst Cooperative's [PUDL](https://github.com/catalyst-cooperative/pudl)
+* open source: [LibrePhotos](https://github.com/LibrePhotos/librephotos), [city2graph](https://github.com/c2g-dev/city2graph), [RocketPy](https://github.com/RocketPy-Team/RocketPy), Bellingcat's [ShadowFinder](https://github.com/bellingcat/ShadowFinder), Catalyst Cooperative's [PUDL](https://github.com/catalyst-cooperative/pudl)
 
 
 ## Contributing
