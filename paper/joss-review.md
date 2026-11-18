@@ -1,0 +1,51 @@
+# Internal review of the JOSS paper against the reviewer criteria
+
+An internal pre-submission review of `paper.md` and the repository against the [JOSS review criteria](https://joss.readthedocs.io/en/latest/review_criteria.html), done on 2026-11-18 at commit `a75e9ae`. The paper requirements (length, required sections, no API documentation) were checked against [paper.html](https://joss.readthedocs.io/en/latest/paper.html) and [submitting.html](https://joss.readthedocs.io/en/latest/submitting.html) on the same day. Claude Code (Claude Opus 5.5) drafted this review and the matching edits to `paper.md`, for the authors to check.
+
+Open questions and TODOs for the authors are left as HTML comments in `paper.md`. They do not appear in the compiled PDF. Search for `TODO(authors)` and `OPEN QUESTION`.
+
+**Overall assessment: minor revisions.** The software, its repository and its research use clear the JOSS bar comfortably. The paper had one problem a reviewer or editor would raise at once, its length, and several smaller ones about specific evidence and citations.
+
+## Paper
+
+| Item | Before this review | Status after this review |
+|---|---|---|
+| Length (750–1750 words) | About 4,360 words, 2.5 times the upper limit. The Software design section alone (about 1,570 words) was close to the limit. JOSS "may ask [authors] to reduce the length". | Condensed to about 2,700 words of body text. **Still over the limit.** Further cuts are an author decision (TODO at the top of `paper.md`). |
+| No API documentation | The paper named `TimezoneFinder.data_version`, `TimezoneFinderL`, the version string scheme (`4.2026.5`), cell sizes, 4 × 4 refinement, 128-vertex blocks, the wheel matrix and the test strategy. | Removed. The design reasons stay; the documentation pages already hold the detail. |
+| Authors and affiliations | Two affiliations "to be confirmed"; no ORCIDs for the co-authors; date set to the draft date. | TODO. |
+| Summary | Clear and written for a non-specialist audience. | Unchanged. |
+| Statement of need | Good: problem, audience and context are clear. It repeated the usage examples of the Research impact statement almost word for word. | Shortened. Examples now live in the Research impact statement only; `zoneinfo` is cited. |
+| State of the field | Good: four routes, a measured comparison with `tzfpy` and a build-vs-contribute paragraph. Weak spots: uncited online services and `tzf-rs`, an uncited count of "more than twenty libraries", and the comparison given in words ("order of magnitude", "small single-digit factor") rather than numbers. | Citations added for the online services, `tzf-rs` and the Zenodo archive. Border-accuracy figures stated from `docs/border_accuracy_vs_tzfpy.rst`. TODOs ask for the remaining numbers, the versions they were measured with and a URL to each harness report. |
+| Build vs. contribute | Argued from the 2016 state of `pytzwhere`. | An OPEN QUESTION asks whether contributing upstream was attempted. One sentence of evidence would make the justification stronger. |
+| Software design | Thoughtful: every choice is tied to a trade-off. But about 1,570 words, much of it documentation. | Cut to the decisions and their reasons. Douglas–Peucker and FlatBuffers are cited. |
+| Research impact statement | Strong and specific: 40 publications found by a documented search, 31 checked against the full text, all cited works at "full text read" grade. Weak spots: "thousands of repositories and hundreds of packages" with no numbers or date, and named downstream projects with no reference or URL. | TODOs added. |
+| AI usage disclosure | Complete and specific (tools, models, scope, verification, lower-bound caveat). One open point remained from `ai-usage-disclosure.md`: each author confirms the review statement for their own part. | One clause added saying this review and condensing used Claude Code too. Confirmation TODO kept. |
+| Acknowledgements, funding, conflicts of interest | Financial support and the sponsorship by the `tzfpy` author are disclosed, with a statement on the sponsor's involvement, as JOSS requires. No explicit competing-interests statement. | TODO to add one once every author has confirmed. |
+| References | All cited keys resolve; `hypothesis` was no longer cited after the cut and was removed from `paper.bib`. Repository paths (`paper/references/`, `contributing/...`) do not resolve in a PDF. | TODOs to replace the paths with URLs. |
+
+Compiling locally with `pandoc --citeproc` produced no warnings, and none of the review comments appear in the output. The `Paper draft` workflow builds the JOSS PDF on this pull request.
+
+## Repository
+
+| Criterion | Assessment | Evidence |
+|---|---|---|
+| License | Good | `LICENSE`: MIT (OSI approved), full text. The data package has its own `DATA_LICENSE` (ODbL boundary data). |
+| Scope and significance | Good | Research impact statement and `paper/references/`. Downstream research software depends on the package. |
+| Development timeline | Good | Public since 2016, continuous releases (currently 9.2.0, with the data package at 4.2026.6). |
+| Open development | Good | Public issues, pull requests, Discussions and tagged releases since the start. |
+| Collaborative effort | Good | Many outside contributors, credited in `CHANGELOG.rst` and `docs/5_contributing.rst`. The maintainer reviews and merges pull requests. |
+| Installation | Good | `pip install timezonefinder` installs the code and the data package. Checked in a fresh virtual environment: 9.2.0 with data 2026f returned `Europe/Berlin` for Berlin and `Etc/GMT+2` for a point in the Atlantic, in single and batch lookups. |
+| Example usage, API documentation | Good | README, the Read the Docs usage and API pages, and `examples/`. |
+| Tests and CI | Good | pytest suite with property-based tests, run on GitHub Actions for every accelerator path, plus end-to-end wheel tests. |
+| Community guidelines | Good | `CONTRIBUTING.md` (Support and governance section), issue templates, a Discussions link for questions, and a link to the upstream tracker for boundary errors. |
+| Code of conduct | Not present | Not required by JOSS, but many reviewers expect one. Consider adding a `CODE_OF_CONDUCT.md`. |
+
+## Authorship
+
+The first author made the large majority of the commits. The co-authors' contributions are documented in the repository: Evgenii Seliverstov (GitHub `theirix`) built the build and release pipeline, and Lucas Hemkemeier (`hemkdev`) built the automated data updates (PRs #429, #432, #434 and #436). A reviewer asked whether the author list is "appropriate and complete" will look for this, but the paper does not say it. The GitHub handle `theirix` is not linked to the name in the repository either; the authors should confirm that mapping. An OPEN QUESTION in `paper.md` suggests one sentence per co-author. Each co-author must also agree to be listed.
+
+## Not checked
+
+- The pre-cut wording of the `tzfpy` comparison relied on a statement by the `tzfpy` maintainer about a maximum simplification displacement of about 100 m. Its source was not found in the repository.
+- The `pytzwhere` memory and speed comparison was not re-run. It was removed from the paper pending a link to the measurement.
+- The dependency-graph counts and the downstream project list were not checked against GitHub.
