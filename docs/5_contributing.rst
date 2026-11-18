@@ -7,6 +7,8 @@ Contribution guidelines are documented in `CONTRIBUTING.md on GitHub <https://gi
 
 If you encounter a bug or have a suggestion, `open an issue <https://github.com/jannikmi/timezonefinder/issues/new/choose>`__ or a `pull request <https://github.com/jannikmi/timezonefinder/compare>`__ on GitHub.
 
+Participation in the project is governed by its `code of conduct <https://github.com/jannikmi/timezonefinder/blob/master/CODE_OF_CONDUCT.md>`__.
+
 
 Contact
 -------
