@@ -32,10 +32,6 @@ These comments do not appear in the compiled PDF. Search for TODO(authors) and O
 TODO(authors): fill in the affiliations of Evgenii Seliverstov and Lucas Hemkemeier, and add
   ORCIDs if they have them. JOSS requires an affiliation for every author.
 TODO(authors): set `date` to the submission date.
-OPEN QUESTION (authorship): reviewers are asked whether the author list is "appropriate and
-  complete". The co-authors' contributions (build and release pipeline; automated data updates)
-  are credited in docs/5_contributing.rst but nowhere in the paper. Consider one sentence naming
-  each co-author's part. Each co-author must also agree to be listed.
 TODO(authors, trimming pass): the paper is about 4,450 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~230, Statement of need ~810,
   State of the field ~1,020, Software design ~1,580, Research impact ~400, AI disclosure ~260,

@@ -42,7 +42,7 @@ Compiling locally with `pandoc --citeproc` produced no warnings, and none of the
 
 ## Authorship
 
-The first author made the large majority of the commits. The co-authors' contributions are documented in the repository: Evgenii Seliverstov (GitHub `theirix`) built the build and release pipeline, and Lucas Hemkemeier (`hemkdev`) built the automated data updates (PRs #429, #432, #434 and #436). A reviewer asked whether the author list is "appropriate and complete" will look for this, but the paper does not say it. The GitHub handle `theirix` is not linked to the name in the repository either; the authors should confirm that mapping. An OPEN QUESTION in `paper.md` suggests one sentence per co-author. Each co-author must also agree to be listed.
+The first author made the large majority of the commits. The co-authors' contributions are documented in the repository (`docs/5_contributing.rst` and `CHANGELOG.rst`): Evgenii Seliverstov (GitHub `theirix`, confirmed by the maintainer on 2026-11-18) built the build and release pipeline, and Lucas Hemkemeier (`hemkdev`) built the automated data updates (PRs #429, #432, #434 and #436). The maintainer considers this documentation sufficient, so the paper does not repeat it. Each co-author must agree to be listed.
 
 ## Not checked
 
