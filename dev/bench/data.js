@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795029283322,
+  "lastUpdate": 1795029777868,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "5a00273c87c2ef48bbbe800b6489c04f19deff8d",
-          "message": "Land the documentation visibility stack on master (#495)\n\n* Document how the package is tested and shipped (#488)\n\nSearching docs/, README.rst and CONTRIBUTING.md for abi3, cibuildwheel,\nmusllinux or manylinux returned nothing outside a single acknowledgement\nline: the release pipeline existed only as workflow YAML. The property-based\ntests and the tox matrix were likewise mentioned nowhere outside the\nchangelog.\n\narchitecture.rst gains a \"How it ships\" section covering the choices and the\nreason each was made - one abi3 wheel per target instead of one per Python\nversion, with abi3audit --strict guarding a claim whose failure mode is a\nruntime crash on an interpreter CI never ran; three libc targets so an Alpine\ncontainer still gets the compiled path; an end-to-end job that installs the\nbuilt wheel on four interpreters and asserts clang_extension_loaded, because\nan import-only smoke test passes on a wheel whose extension silently failed\nto build; a tag from outside master aborting the release; and the weekly data\npipeline that regenerates, opens a PR and tags on green.\n\nThe testing section gains the property-based suite and the tox matrix, plus\nthe reason the matrix is a matrix: the acceleration paths are bound at import\ntime, so a passing run describes one configuration only. It also states why\nthe correctness sampler is pole-biased and cross-references\nbenchmarking_methodology, where the opposite choice is made - previously only\none half of that contrast appeared on each page.\n\nBoth sections land on an existing page, so there is no new toctree entry and\nno orphan risk. The two new README bullets use absolute URLs; their anchor\nslugs were read out of the built architecture.html rather than guessed, and\nthe rendered README was checked with readme-renderer.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\n\n* Stop answering docs questions by naming a file to go open (#489)\n\nThe three hand-written pages a docs visitor reads first were the only prose\nin docs/ that read as unmaintained.\n\n7_performance.rst is what the README calls \"benchmark reports\", but it opened\nwith a vendor-style bullet list about the binary format (\"Zero-Copy Access\",\n\"Optimized Data Layout\") that said nothing data_format.rst does not say\nproperly. That list is gone and the Benchmark Results section moves to the\ntop, so a reader lands on the four reports and the trend chart. The C\nextension and Numba sections are cut to what a user acts on - the call that\nreports the active backend - and defer the explanation to architecture.rst,\nwhich already carried a more precise version of the same material; a\nduplicated explanation that has drifted once will drift again, and here the\nduplicate was the worse copy.\n\nBoth referenced anchors survive: `.. _performance:` (0_getting_started.rst,\n3_about.rst) and `.. _speed-tests:` (1_usage.rst, data_format.rst). Verified\nagainst the built HTML - every inbound href=\"7_performance.html#...\" resolves\nto an id that exists.\n\n0_getting_started.rst answered \"Dependencies\" with \"please confer to the\npyproject.toml\". It now names the four runtime dependencies and what each\none carries, and says why the list is short and why numba is an extra rather\nthan a dependency, keeping pyproject.toml as the authoritative source for\nversion ranges so the page cannot go stale on a bound. Both \":ref:`HERE`\"\nlinks get descriptive text.\n\n2_use_cases.rst answered two of its four use cases with \"check out the\nexample script\". Each now has a runnable snippet, with the example script as\nthe follow-up. The snippets use the standard library's zoneinfo rather than\npytz, so neither requires an optional dependency; the pytz example scripts\nare still named for users already on pytz. Nothing under examples/ is\ntouched - tests/test_example_scripts.py executes those.\n\nEvery coordinate/zone pair in the new snippets was verified with an actual\nlookup rather than assumed.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\n\n* Say what the two root-level artifacts are (#490)\n\n* Say what the two root-level artifacts are\n\nBoth are read wrong by someone skimming the repository root.\n\npotential-improvements.md is a triaged register of internal quality debt,\nranked by expected value per line of review, with the judgement recorded for\nevery entry including the ones judged not worth doing. Its first paragraph\nopened on the machinery instead - how an automated pass consumes the file and\nwrites it back - so a reader met tooling exhaust rather than the triage. The\nheader now leads with what the file is and what the ranking rule is, states\nthat the findings are internal quality with the Behaviour defects section as\nthe one deliberate exception, and moves the maintenance mechanics to the end\nunder its own subheading. No entry changes.\n\nThe file stays at the repository root. docs/ is a Sphinx source tree with\nsource_suffix = \".rst\", so a .md placed there is invisible to the build\nrather than a documented page, and MANIFEST.in plus thirteen references in\n.claude/skills/code-quality-pass/SKILL.md all name the current path.\n\nprototypes/ had three scripts and no index, one of which is the study that\nchose H3 resolution 3 - the central algorithmic parameter of the package,\nalready cited from docs/data_format.rst. prototypes/README.md now states what\nthe directory is (exploratory studies behind committed decisions, run by\nhand, outside the package and the test suite) and what each script\nestablished, including the hierarchical-index idea that was measured and\ndropped.\n\ncheck-manifest failed on the new file as expected, since MANIFEST.in excluded\nonly prototypes/*.py from the sdist. The exclude is broadened to the whole\ndirectory rather than adding an ignore, since nothing in prototypes/ belongs\nin a distribution.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record what the new documentation can go stale against\n\nThe preceding four commits added prose that paraphrases files elsewhere in\nthe repo, and duplicated the lookup summary across two front doors on\npurpose. Each of those is a place where the source changes and nothing\nre-reads the prose, so the discipline has to be written down where it is read\nbefore the edit rather than discovered after it.\n\nCLAUDE.md, Documentation Files - amended in place rather than opened as a new\nsection:\n\n- the badge-block bullet now covers both deliberate duplications, naming the\n  three files the How it works summary lives in and what kind of change has to\n  land in all of them\n- README.rst now deep-links into docs/ by anchor, and Sphinx derives an anchor\n  from the heading text. Renaming a heading breaks those links silently: the\n  page still loads at the top, rstcheck does not resolve targets and make docs\n  does not know README.rst exists. Says what to grep, and to read a new slug\n  out of the built HTML rather than deriving it\n- a zone name in a snippet is example output, not a constant - with how the\n  reduced timezones-now answer for Berlin came to annotate the default\n  dataset's running example\n- the three prose/source pairs that now exist: the dependency list against\n  pyproject.toml, How it ships against build.yml and the cibuildwheel config,\n  prototypes/README.md against its directory\n- the toctree bullet names the four captioned groups and the exactly-one rule\n\nCONTRIBUTING.md gets the reverse index instead: a changed-this / re-read-that\ntable for contributors, which is the direction a human needs it in, pointing\nat CLAUDE.md for what each one breaks rather than restating it.\n\nAlso corrects the PR checklist, which asked for a rebase onto `main`; this\nrepository's default branch is `master`.\n\nNo changelog entry - CLAUDE.md explicitly exempts edits confined to itself and\nCONTRIBUTING.md.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-10T05:50:27+02:00",
-          "tree_id": "72053eccc52a497a421423c919e9c2e419ae12f3",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/5a00273c87c2ef48bbbe800b6489c04f19deff8d"
-        },
-        "date": 1786333900492,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 174262.31971843072,
-            "range": "± 2471",
-            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 582205.0200041267,
-            "range": "± 21634",
-            "extra": "min of 194 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62476.15285247096,
-            "range": "± 536",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18852,6 +18807,93 @@ window.BENCHMARK_DATA = {
             "range": "± 8295",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0956 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a75e9aea83785c6fc03a94a314118328658a47d4",
+          "message": "paper: write the Acknowledgements (#789)",
+          "timestamp": "2026-11-18T19:22:06Z",
+          "tree_id": "bea862fc595cc8f7eb6397df3fb7e6eda18aa915",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a75e9aea83785c6fc03a94a314118328658a47d4"
+        },
+        "date": 1795029775650,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1054618.7026065355,
+            "range": "± 27726",
+            "unit": "lookups/sec",
+            "extra": "min of 328 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1301010.6771358503,
+            "range": "± 13372",
+            "unit": "lookups/sec",
+            "extra": "min of 471 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 237279.3361493666,
+            "range": "± 8111",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6272140.656358006,
+            "range": "± 316425",
+            "unit": "lookups/sec",
+            "extra": "min of 1084 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48062134.72968488,
+            "range": "± 3130855",
+            "unit": "lookups/sec",
+            "extra": "min of 7028 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 317385.8778776212,
+            "range": "± 8473",
+            "unit": "lookups/sec",
+            "extra": "min of 97 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5962062.205790358,
+            "range": "± 217052",
+            "unit": "lookups/sec",
+            "extra": "min of 1232 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 34060873.58769486,
+            "range": "± 1662309",
+            "unit": "lookups/sec",
+            "extra": "min of 5914 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 315803.54190040735,
+            "range": "± 13259",
+            "unit": "lookups/sec",
+            "extra": "min of 94 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7004 GHz"
           }
         ]
       }
