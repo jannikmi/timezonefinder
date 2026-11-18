@@ -43,7 +43,7 @@ The 273 commits with a Claude trailer touched these areas (a commit can touch se
 
 ### Share of the history
 
-- All development before September 2025 was done without generative AI, as the maintainer confirms. The history agrees: before then it has no AI trailers, branches or reviewers.
+- All development before September 2025 was done without generative AI, as the maintainer confirms. A spatial index existed before then; its current optimised implementation was enabled by AI assistance (maintainer, 2026-11-18). The history agrees: before then it has no AI trailers, branches or reviewers.
 - 273 of the 940 human-authored commits on `master` carry a Claude trailer, all from 2026-08-01 on. Of the 381 human-authored commits since then, 273 carry one.
 - The trailers undercount AI use: some squash merges dropped them. For example, #772 was produced with Claude Code but its commit on `master` has no trailer, and 25 of the trailerless commits since 2026-08 came from `codex/` branches. The figures above are lower bounds.
 
@@ -51,8 +51,8 @@ The 273 commits with a Claude trailer touched these areas (a commit can touch se
 
 These cannot be read from the repository and must be settled before the statement goes into `paper.md`:
 
-- [ ] **Tool versions:** whether to name Claude Code and Codex client versions, or the model versions only.
-- [ ] **GitHub Copilot model:** which model or models Copilot used.
-- [ ] **Co-authors' contributions:** whether Evgenii Seliverstov's and Lucas Hemkemeier's contributions used generative AI. Their commits carry no AI trailer.
-- [ ] **Paper text:** the final statement must name the tools used for drafting and editing `paper.md` itself.
+- [x] **Tool versions:** the maintainer decided on 2026-11-18 to name the model versions only.
+- [x] **GitHub Copilot model:** the models changed over the months and were not recorded (maintainer, 2026-11-18). The statement says so.
+- [x] **Co-authors' contributions:** both co-authors used AI assistants for their contributions; Lucas Hemkemeier used Claude Code, models unknown (maintainer, 2026-11-18). Their commits carry no AI trailer.
+- [x] **Paper text:** only Claude Code (Claude Opus 5.5) was used for `paper.md` (maintainer, 2026-11-18).
 - [ ] **Review confirmation:** each author confirms the closing sentence of the statement for their own part. This is the authors' assertion and cannot be drafted on their behalf.
