@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795024852618,
+  "lastUpdate": 1795027416914,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b",
-          "message": "Make the docs landing page state what the package does (#487)\n\ndocs/index.rst is the second front door - the docs badge, the PyPI project\nlinks and search results all land there - but carried three sentences and a\nflat 17-entry table of contents in which Architecture sat between Memory\nBenchmarks and Data Format. Nothing on it said how a lookup works or what\nthe package trades away to be accurate.\n\nIt now carries the same \"How it works\" summary as the README, adapted to use\n:doc: roles where the README needs absolute URLs, plus the no-simplification\ntrade-off and the ocean-zone consequence for timezone_at() - the single most\ncommon source of user confusion, which until now appeared only in the README\nand the architecture page.\n\nThe toctree is split into four captioned groups (Using it, Design,\nPerformance, Project). All 17 entries are preserved, each in exactly one\ngroup, so Sphinx warns about neither an orphaned document nor a duplicate\nentry.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-10T04:56:49+02:00",
-          "tree_id": "6e1f3ff865ead2c5b1519d53121a626793a6ab00",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b"
-        },
-        "date": 1786330684889,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 185197.037795603,
-            "range": "± 2485",
-            "extra": "min of 62 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 593860.9035236915,
-            "range": "± 28675",
-            "extra": "min of 198 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 63968.581089369225,
-            "range": "± 2452",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18726,6 +18681,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5898",
             "unit": "lookups/sec",
             "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2413 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eebcafd3e9343d3a54240d8acb8eac0e60caacaa",
+          "message": "paper: write the Software design section (#786)",
+          "timestamp": "2026-11-18T18:42:33Z",
+          "tree_id": "00e4ad9f8850ebcbb0f2e45d781ad7b3d46c9a1b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/eebcafd3e9343d3a54240d8acb8eac0e60caacaa"
+        },
+        "date": 1795027413903,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1010308.7867359482,
+            "range": "± 18461",
+            "unit": "lookups/sec",
+            "extra": "min of 317 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1218707.847943015,
+            "range": "± 45334",
+            "unit": "lookups/sec",
+            "extra": "min of 427 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 204905.08345725448,
+            "range": "± 2818",
+            "unit": "lookups/sec",
+            "extra": "min of 70 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 5771872.510954307,
+            "range": "± 327654",
+            "unit": "lookups/sec",
+            "extra": "min of 985 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 45414910.62922468,
+            "range": "± 3803547",
+            "unit": "lookups/sec",
+            "extra": "min of 5839 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 275238.3674355241,
+            "range": "± 5306",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5517107.446717302,
+            "range": "± 187390",
+            "unit": "lookups/sec",
+            "extra": "min of 1123 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 33077533.738760043,
+            "range": "± 2430498",
+            "unit": "lookups/sec",
+            "extra": "min of 5330 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 274991.71449978306,
+            "range": "± 3343",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1038 GHz"
           }
         ]
       }
