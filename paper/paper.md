@@ -107,16 +107,9 @@ These figures are a lower bound. Most publications name the package only in the 
 
 # AI usage disclosure
 
-Generative AI has been used in the development of `timezonefinder` since September 2025. All earlier development, including the original design of the package, its data format and its spatial index, was done without it.
+Generative AI has been used in the development of `timezonefinder` since September 2025. All earlier development, including the original design of the package, its data format and its spatial index, was done without it. The tools used were Anthropic's Claude Code with the models Claude Opus 5, Claude Opus 5.5 and Claude Sonnet 5, OpenAI Codex with GPT-5.6 Terra, and GitHub Copilot, whose underlying models changed over the period of use and were not recorded. The assistance covered code generation and refactoring, tests, benchmark and report scripts, continuous-integration configuration, documentation, the contributor guide, pull-request review and the survey of publications that reference the package. The co-authors also used AI assistants, including Claude Code, for their contributions. This paper was drafted with Claude Code and Claude Opus 5.5 and edited by the authors; no other AI tool was used for it.
 
-- **Anthropic Claude Code**, with the models Claude Opus 5, Claude Opus 5.5 and, for a few small changes, Claude Sonnet 5, was used from August 2026 for most changes: code generation and refactoring, tests, benchmark and report scripts, continuous-integration configuration, documentation, the contributor guide and decision records, and the survey of publications that reference the package.
-- **OpenAI Codex**, with the model GPT-5.6 Terra, generated pull requests and reviewed pull requests between September 2025 and October 2026, and was also used outside pull requests.
-- **GitHub Copilot** <!-- TODO: model --> reviewed a few pull requests, applied review suggestions, resolved one merge conflict and was also used outside pull requests.
-- **This paper** was drafted section by section with Claude Code and Claude Opus 5.5, from the project documentation and the publication survey, and edited by the authors. <!-- TODO: name any further tools used for editing the paper. -->
-
-The co-authors also used generative AI for their contributions to the build and release pipeline and the automated data updates. <!-- TODO: name their tools and models. -->
-
-The problem framing, the architecture and every design decision were made by the human authors, who reviewed, edited and validated all AI-assisted output before it was merged. The design decisions, with the measurements and reasoning behind them, are recorded in the repository's contributor guide. The commits with AI assistance are marked by co-author trailers in the version history. The evidence for this statement, compiled from the history and the pull requests, is kept in the repository under `paper/ai-usage-disclosure.md`.
+The problem framing, the architecture and every design decision were made by the human authors, who reviewed, edited and validated all AI-assisted output before it was merged. Each change entered the repository through a reviewed pull request with continuous integration, and the design decisions, with the measurements and reasoning behind them, are recorded in the repository's contributor guide. Commits made with AI assistance carry co-author trailers in the version history. These trailers are a lower bound on AI use, since not every tool or merge records one. A detailed account compiled from the history is kept in the repository under `paper/ai-usage-disclosure.md`.
 
 # Acknowledgements
 
