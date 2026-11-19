@@ -35,12 +35,12 @@ NOTE (archive authors): JOSS editors check that the archive deposited after acce
   differences need to be explained", editing.html, Post-review). Decided in #780: the archive
   keeps the single author from CITATION.cff, and the maintainer explains the difference to the
   editor in person (reason and fallback recorded in #780). Nothing to change in this paper.
-TODO(authors, trimming pass): the paper is about 3,200 words; JOSS asks for 750-1750 and "may
-  ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~670,
+TODO(authors, trimming pass): the paper is about 2,960 words; JOSS asks for 750-1750 and "may
+  ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~430,
   State of the field ~690, Software design ~770, Research impact ~440, AI disclosure ~260,
-  Acknowledgements ~160. The text that repeated other sections is cut, and Software design and
-  State of the field are trimmed; the remaining candidates are marked with "TRIM CANDIDATE"
-  comments below.
+  Acknowledgements ~160. The text that repeated other sections is cut, and Statement of need,
+  State of the field and Software design are trimmed; the remaining candidates are marked with
+  "TRIM CANDIDATE" comments below.
 -->
 
 # Summary
@@ -51,19 +51,17 @@ The time shown on a clock depends on where it hangs. Each place belongs to a tim
 
 # Statement of need
 
-Research data often records *when* and *where* something happened as a UTC timestamp and a pair of coordinates: measurements at monitoring stations, GPS tracks from wearables and phones, geotagged social-media posts, the points of a model grid. Many research questions, however, depend on local time rather than on UTC: the hour of the day at which an exposure occurred, the date in the local calendar, whether an event happened after dark, whether daylight saving time applied, or how many working hours two places share. Recovering local time needs the IANA time zone at each coordinate. Once the zone is known, standard libraries such as Python's `zoneinfo` [@pep615] apply its rules, including historical changes and daylight saving time. Finding the zone is the step those libraries leave open. It cannot be approximated from the longitude alone, because zone borders follow political boundaries rather than meridians: China spans about 60 degrees of longitude but uses a single zone, and much of western Europe keeps a zone an hour ahead of its solar time.
+Research data often records *when* and *where* something happened as a UTC timestamp and a pair of coordinates: measurements at monitoring stations, GPS tracks, geotagged posts, the points of a model grid. Many research questions depend on local time instead: the hour of the day at which an exposure occurred, the local date, whether an event happened after dark, or how many working hours two places share. Once the IANA time zone of a coordinate is known, standard libraries such as Python's `zoneinfo` [@pep615] apply its rules, including daylight saving time and historical changes. Finding the zone is the step those libraries leave open.
 
-`timezonefinder` closes this gap. Its target audience is researchers who need local time at recorded coordinates, and the developers of research software that offers this to its own users. The Research impact statement below describes its use in published work, in fields from atmospheric chemistry to the economics of innovation, and in research software that depends on it.
+`timezonefinder` closes this gap for researchers who need local time at recorded coordinates, and for the developers of research software that offers this to its own users. The Research impact statement describes this use. It sets four requirements, and the package is designed around them.
 
-This use sets four requirements, and the package is designed around them.
+**Accuracy at zone borders.** In several published studies, the zone feeds directly into the main variable: the hour at which a forecast input is taken [@worsnop2021fire], whether a walk counts as a night walk [@vellimana2023walking], the time difference between two places [@bahar2023innovation]. A tool that simplifies the zone polygons makes its errors along borders and coastlines, which biases exactly the analyses that compare regions across a border. `timezonefinder` uses the polygons without simplification, so its accuracy is limited only by the source data. The guarantee is fidelity to that data, not ground truth: where OpenStreetMap places a border wrongly, `timezonefinder` answers wrongly in the same way.
 
-**Accuracy at zone borders.** In several published studies, the zone feeds directly into the main variable: the hour at which a forecast input is taken [@worsnop2021fire], whether a walk counts as a night walk [@vellimana2023walking], the time difference between two places [@bahar2023innovation]. A wrong zone near a border therefore changes a published result. Lookup errors are not random noise either. A tool that simplifies the zone polygons to save space or time makes its errors along borders and coastlines, which biases exactly the analyses that compare regions across a border. `timezonefinder` uses the boundary polygons without simplification, so its accuracy is limited only by the source data. The guarantee is fidelity to that data, not ground truth: where OpenStreetMap places a border wrongly, `timezonefinder` answers wrongly in the same way, and such errors are corrected upstream. The State of the field section quantifies how far a simplifying alternative departs from the source near borders.
+**Offline and reproducible lookups.** Compute nodes of research clusters often have no internet access, and a web service can fail, impose quotas or change its answers without notice; one study chose `timezonefinder` over a web API for this reason [@perezparedes2023athletics]. A lookup in `timezonefinder` is a pure function of the coordinates and the installed boundary data, which ships as a separately versioned package and reports the timezone-boundary-builder release it comes from. A study that pins and reports both versions can repeat its lookups exactly.
 
-**Offline and reproducible lookups.** Web services such as the Google Maps Time Zone API [@google_tz_api] answer the same question, but they need network access and an account, impose quotas and costs, and can change their answers without notice. Compute nodes of research clusters often have no internet access at all. A study that chose `timezonefinder` over a web API names this reason: an offline lookup cannot fail because an external service does [@perezparedes2023athletics]. A lookup in `timezonefinder` is a pure function of the coordinates and the installed boundary data. The data ships as the separately versioned `timezonefinder-data` package, and the installed package reports the timezone-boundary-builder release the answers come from. A study that pins both packages and reports these versions can repeat its lookups exactly, and readers can tell which boundary release a result is based on.
+**Coverage of the whole globe.** Buoys, ships, aircraft and remote stations need an answer too. The boundary data includes the nautical zones over the oceans, so every coordinate receives a zone, and researchers who need to tell land from sea can ask for land zones only.
 
-**Coverage of the whole globe.** Instruments are not confined to land. Buoys, ships, aircraft, offshore platforms and remote stations need an answer too. The boundary data includes the nautical zones (`Etc/GMT±N`) over the oceans, so every coordinate receives a zone. Researchers who need to tell land from sea can ask for land zones only.
-
-**Whole datasets at once.** Research datasets often contain millions of points. One call takes an array of longitudes and an array of latitudes and returns the zone of every point, which fits the column-oriented workflows of NumPy [@numpy] and pandas [@pandas]. Optional compiled backends make such batch lookups fast, but they are not required: on a machine without a compiler the package falls back to pure Python and returns identical answers, so a result does not depend on which backend happened to be installed.
+**Whole datasets at once.** Research datasets often contain millions of points. One call returns the zones of whole arrays of coordinates, which fits the column-oriented workflows of NumPy [@numpy] and pandas [@pandas], and the answers are identical whether or not an optional compiled backend is installed.
 
 # State of the field
 
