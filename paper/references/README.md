@@ -28,8 +28,8 @@ This directory records scientific publications that name the `timezonefinder` Py
 
 Each hit was then checked against the full text for a literal mention of the package. The notes record the evidence in one of three grades:
 
-- **full text read** (38): the passage was read in the publication itself, or for `ramirez2023betting` in the thesis chapter with the same text, or for `steinertthrelkeld2018twitter` in the author-hosted copy of the Cambridge Core PDF. The maintainer downloaded the SSRN PDFs of `kolluri2025panchang`, `babar2026franchising` and `talafha2026sharjah`. Open-access repository PDFs (UDC, Charles University, Carleton, UNLP, Reading, Politecnico di Milano, UPC, Utrecht, NIST, CMAS, the Siberian journal, Concordia, CUNY, UT Austin, Oklahoma State, LMU, Brno) made most theses verifiable, and the maintainer supplied the publisher PDFs of `worsnop2021fire`, `bahar2023innovation` and `chakraborty2026pynasonde` and the published texts of `omoyele2026ethos`, `manchin2025collaboration` and `carey2027darkness`. Some repository PDFs could only be read in the browser, with pdf.js, because the repository refuses command-line downloads;
-- **quoted search snippet** (2): the passage is quoted from a search-engine or Google Scholar extract because the publisher blocked access (ScienceDirect and SSRN refuse the browser too, and ACM and ProQuest are paywalled). These are `benetka2019context` and `srijon2021covid`;
+- **full text read** (39): the passage was read in the publication itself, or for `ramirez2023betting` in the thesis chapter with the same text, or for `steinertthrelkeld2018twitter` in the author-hosted copy of the Cambridge Core PDF. The maintainer downloaded the SSRN PDFs of `kolluri2025panchang`, `babar2026franchising` and `talafha2026sharjah`, and `benetka2019context` was read in the authors' copy on the Microsoft Research site. Open-access repository PDFs (UDC, Charles University, Carleton, UNLP, Reading, Politecnico di Milano, UPC, Utrecht, NIST, CMAS, the Siberian journal, Concordia, CUNY, UT Austin, Oklahoma State, LMU, Brno) made most theses verifiable, and the maintainer supplied the publisher PDFs of `worsnop2021fire`, `bahar2023innovation` and `chakraborty2026pynasonde` and the published texts of `omoyele2026ethos`, `manchin2025collaboration` and `carey2027darkness`. Some repository PDFs could only be read in the browser, with pdf.js, because the repository refuses command-line downloads;
+- **quoted search snippet** (1): the passage is quoted from a Google Scholar extract because no open copy was found (ProQuest is paywalled). This is `srijon2021covid`;
 - **index match only** (0): Google Scholar's full-text index matches the term, but the passage has not been seen. The four entries once at this grade (`steinertthrelkeld2018twitter`, `kolluri2025panchang`, `babar2026franchising`, `talafha2026sharjah`) were all read on 2026-11-19, and each names the package, so none was a false match.
 
 Check the snippet grade against the full text before quoting it.
@@ -51,7 +51,7 @@ Check the snippet grade against the full text before quoting it.
 
 Candidates and gaps that were not fully checked, with what blocked them.
 
-- **Recorded entries without full text.** Snippet grade: `benetka2019context` (ACM, paywalled, no open copy known) and `srijon2021covid` (ProQuest; institution not identified).
+- **Recorded entries without full text.** Snippet grade: `srijon2021covid` (a Lamar University master's thesis, ProQuest no. 28867502; no open copy, so it needs a library with ProQuest access or an ordered copy).
 - **Parts of recorded entries not read.** The online appendix of `bahar2023innovation` (how "time zone difference from GMT" in Table 8 was computed), and the code archive `appendix-1.zip` of `barton2024uwc` (how the zone is used).
 - **Searches not completed.** Paging through the full relevance-sorted Google Scholar list for `"timezonefinder"` once more, to catch records added after the maintainer's two result lists (Scholar rate-limited the browser). Semantic Scholar snippet search and OpenAlex full-text search (both refused with rate limits). Scholar searches for the method names `"timezone_at_land"`, `"certain_timezone_at"` and `"TimezoneFinder()"`, which, like `"timezone_at"`, would surface code listings.
 - **Excluded but reversible.** McDonnell et al. (bioRxiv 2020 / Biological Rhythm Research 2021): the full text was not searched for the package.
@@ -65,14 +65,14 @@ Forty publications reference timezonefinder (2018–2027): 20 journal articles, 
 | [`vilardell2018hermes`](vilardell2018hermes.md) | 2018 | CMAS Conference (abstract) | emission modelling | dependency, local-time emission profiles | full text |
 | [`steinertthrelkeld2018twitter`](steinertthrelkeld2018twitter.md) | 2018 | Cambridge Elements (book) | social-science methods | tweet coordinates → local time; code listing calling `timezone_at` | full text |
 | [`guevara2019hermes`](guevara2019hermes.md) | 2019 | Geosci. Model Dev. | emission modelling | dependency (>= 2.1.0) | full text |
-| [`benetka2019context`](benetka2019context.md) | 2019 | CHIIR '19 (ACM) | information retrieval | tweet coordinates → local time | snippet |
+| [`benetka2019context`](benetka2019context.md) | 2019 | CHIIR '19 (ACM) | information retrieval | tweet coordinates → local time, for time-of-day activity profiles | full text |
 | [`guevara2020hermes`](guevara2020hermes.md) | 2020 | Geosci. Model Dev. | emission modelling | dependency (> 2.1.0) | full text |
 | [`dinsmore2021griti`](dinsmore2021griti.md) | 2021 | MethodsX | ionospheric physics | building block of research code (acknowledgement) | full text |
 | [`hosseinabad2021twitter`](hosseinabad2021twitter.md) | 2021 | medRxiv → JMIR Public Health Surveill. | digital public health | tweet location → local time features | full text + snippet |
 | [`worsnop2021fire`](worsnop2021fire.md) | 2021 | Weather and Forecasting | fire-weather forecasting | grid point → UTC hour of local noon for all index inputs; inline PyPI URL | full text |
 | [`john2021thermostat`](john2021thermostat.md) | 2021 | Concordia University (M.A.Sc.) | building energy | home location → local sunrise/sunset to select night periods | full text |
 | [`josephs2021pbl`](josephs2021pbl.md) | 2021 | CUNY (M.S.) | atmospheric science | profiler site → local time (code appendix only) | full text |
-| [`srijon2021covid`](srijon2021covid.md) | 2021 | thesis (ProQuest) | social-media analysis | tweet timestamps → local time (`in_memory=True`) | snippet |
+| [`srijon2021covid`](srijon2021covid.md) | 2021 | thesis (Lamar University) | social-media analysis | tweet timestamps → local time (`in_memory=True`) | snippet |
 | [`romero2022runners`](romero2022runners.md) | 2022 | IJERPH | public health, wearables | GPS start point → local time | full text |
 | [`ramirez2023betting`](ramirez2023betting.md) | 2023 | Int. J. Forecasting | sports economics | match city → time zone | full text (thesis) + snippet |
 | [`bahar2023innovation`](bahar2023innovation.md) | 2023 | Management Science | economics of innovation | airport → zone for temporal distance (moderator); footnote URL | full text |
@@ -119,4 +119,4 @@ Forty publications reference timezonefinder (2018–2027): 20 journal articles, 
   - The LMU code takes the UTC offset of the current moment rather than of the date it computes, and the CUNY script keeps only the whole hours of the offset. Both are mistakes in handling the zone after the lookup, which a short example of converting a timestamp correctly could prevent.
   - The PUDL changelog (excluded above) moved an "expensive TimezoneFinder" call.
   - The athletics thesis is the one source that explains why it picked the package: offline lookups are not exposed to failures of an external service.
-- **Coverage is still a lower bound.** Paywalled full text not indexed by Scholar, and code-only artefacts, remain uncovered. Two entries rest on a search snippet; their publishers or SSRN refused access from here.
+- **Coverage is still a lower bound.** Paywalled full text not indexed by Scholar, and code-only artefacts, remain uncovered. One entry rests on a search snippet: a thesis available only through ProQuest.
