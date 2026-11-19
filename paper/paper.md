@@ -35,8 +35,8 @@ NOTE (archive authors): JOSS editors check that the archive deposited after acce
   differences need to be explained", editing.html, Post-review). Decided in #780: the archive
   keeps the single author from CITATION.cff, and the maintainer explains the difference to the
   editor in person (reason and fallback recorded in #780). Nothing to change in this paper.
-TODO(authors, trimming pass): the paper is about 2,990 words; JOSS asks for 750-1750 and "may
-  ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~460,
+TODO(authors, trimming pass): the paper is about 2,960 words; JOSS asks for 750-1750 and "may
+  ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~430,
   State of the field ~690, Software design ~770, Research impact ~440, AI disclosure ~260,
   Acknowledgements ~160. The text that repeated other sections is cut, and Statement of need,
   State of the field and Software design are trimmed; the remaining candidates are marked with
@@ -51,7 +51,7 @@ The time shown on a clock depends on where it hangs. Each place belongs to a tim
 
 # Statement of need
 
-Research data often records *when* and *where* something happened as a UTC timestamp and a pair of coordinates: measurements at monitoring stations, GPS tracks, geotagged posts, the points of a model grid. Many research questions depend on local time instead: the hour of the day at which an exposure occurred, the local date, whether an event happened after dark, or how many working hours two places share. Once the IANA time zone of a coordinate is known, standard libraries such as Python's `zoneinfo` [@pep615] apply its rules, including daylight saving time and historical changes. Finding the zone is the step those libraries leave open, and the longitude alone does not answer it, because zone borders follow political boundaries rather than meridians: China spans about 60 degrees of longitude but uses a single zone.
+Research data often records *when* and *where* something happened as a UTC timestamp and a pair of coordinates: measurements at monitoring stations, GPS tracks, geotagged posts, the points of a model grid. Many research questions depend on local time instead: the hour of the day at which an exposure occurred, the local date, whether an event happened after dark, or how many working hours two places share. Once the IANA time zone of a coordinate is known, standard libraries such as Python's `zoneinfo` [@pep615] apply its rules, including daylight saving time and historical changes. Finding the zone is the step those libraries leave open.
 
 `timezonefinder` closes this gap for researchers who need local time at recorded coordinates, and for the developers of research software that offers this to its own users. The Research impact statement describes this use. It sets four requirements, and the package is designed around them.
 
