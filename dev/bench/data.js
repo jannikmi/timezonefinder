@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795101245830,
+  "lastUpdate": 1795102180009,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "8ceae1d6262131895b0055180fe95a0a14e6bdfe",
-          "message": "Add a cut-release skill, and give the quality pass a diff budget (#512)\n\n* Make the quality pass work its ranking down to a diff budget\n\nThe pass took one coherent theme and stopped; it now takes the ledger's\nhighest-priority findings one at a time until ~400 changed lines are spent,\nso the ranking rather than a common story is what holds the PR together.\nEach item lands as its own commit naming its ledger entry, the budget is\nmeasured against the merge base with the ledger excluded and checked between\nitems rather than mid-item, and a ranking that runs dry ends the pass as\nlegitimately as a spent budget. The branch claim in §2.1 follows: it claims\nonly what it already holds, so a pass re-pushes after every finished item.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Add a cut-release skill that proposes the bump and stops\n\nTurns the accumulated `X.X.X (unreleased)` changelog section into a released\nversion, in two halves split by the maintainer's merge. Prepare checks the\nsection is release-ready and complete against every commit since the last tag,\nproposes patch/minor/major as three concrete version numbers with the bullets\nbehind each, stops for the decision, then lands the bump as a release PR. Tag\nruns only after that PR is merged and asks again, since the tag is the publish\nand PyPI will not let a version take it back.\n\nRecords what the pipeline makes non-obvious: the tag-push run re-reads\npyproject.toml at the tagged commit; the release commit is the bump and the\nchangelog and nothing else, so `make reports` must not run in it; and the tag\nhas to be pushed promptly after the merge, because the master push run's own\nrelease job creates the GitHub Release and with it the tag, after which\npushing that tag is a no-op that fires no webhook.\n\nCLAUDE.md's claim that regenerating data warrants a minor bump is corrected:\nupdate_data.sh bumps patch and the last four data releases were patches.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-14T07:22:26+02:00",
-          "tree_id": "ec4e3362dff760a796f4bf4facd476336473ca75",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/8ceae1d6262131895b0055180fe95a0a14e6bdfe"
-        },
-        "date": 1786685017923,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 184793.34117158473,
-            "range": "± 13250",
-            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 575439.5495000401,
-            "range": "± 20963",
-            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 63736.74785538878,
-            "range": "± 1150",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19104,6 +19059,93 @@ window.BENCHMARK_DATA = {
             "range": "± 5680",
             "unit": "lookups/sec",
             "extra": "min of 96 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "246bc9661274a55591d9766a2460cab107b5ebe6",
+          "message": "paper: condense the State of the field section (#796)\n\nThe four routes become one short paragraph each. The tzfpy comparison keeps\nevery measured figure, the versions measured, the source of the 111 m bound,\nthe unmeasured unsimplified variant and the links to the reports and to the\ncases where tzfpy is the better choice; the list of further feature\ndifferences (land-only answers, all zones at an overlap, integer identifiers,\ntimestamp conversion) is cut as documentation-level detail. The overlap and\npackaging details of the GIS route point to Software design instead of\nrepeating it. Build vs. contribute keeps the #34, #36 and #42 evidence and the\npytzwhere measurement in fewer sentences. Every citation is kept.\n\nThe section shrinks from about 1,070 to about 690 words, the body to about\n3,200.\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T16:28:43+01:00",
+          "tree_id": "318575b67d070ac51826d8a66d2565997e5be017",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/246bc9661274a55591d9766a2460cab107b5ebe6"
+        },
+        "date": 1795102177323,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 810926.3568613959,
+            "range": "± 24723",
+            "unit": "lookups/sec",
+            "extra": "min of 254 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1030395.4286670025,
+            "range": "± 68495",
+            "unit": "lookups/sec",
+            "extra": "min of 375 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 177078.6178775501,
+            "range": "± 4896",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4935697.730030025,
+            "range": "± 187178",
+            "unit": "lookups/sec",
+            "extra": "min of 890 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 37480697.451952524,
+            "range": "± 2453750",
+            "unit": "lookups/sec",
+            "extra": "min of 5346 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 244202.74884338022,
+            "range": "± 5031",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4672661.379847934,
+            "range": "± 209544",
+            "unit": "lookups/sec",
+            "extra": "min of 929 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 26668942.41925998,
+            "range": "± 1384985",
+            "unit": "lookups/sec",
+            "extra": "min of 4158 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 238512.65796231292,
+            "range": "± 7541",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           }
         ]
       }
