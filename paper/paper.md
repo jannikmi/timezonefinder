@@ -35,9 +35,9 @@ NOTE (archive authors): JOSS editors check that the archive deposited after acce
   differences need to be explained", editing.html, Post-review). Decided in #780: the archive
   keeps the single author from CITATION.cff, and the maintainer explains the difference to the
   editor in person (reason and fallback recorded in #780). Nothing to change in this paper.
-TODO(authors, trimming pass): the paper is about 2,880 words; JOSS asks for 750-1750 and "may
+TODO(authors, trimming pass): the paper is about 2,870 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~430,
-  State of the field ~690, Software design ~770, Research impact ~370, AI disclosure ~260,
+  State of the field ~690, Software design ~770, Research impact ~360, AI disclosure ~260,
   Acknowledgements ~160. The text that repeated other sections is cut, and Statement of need,
   State of the field, Software design and Research impact are trimmed; the remaining
   candidates are marked with "TRIM CANDIDATE" comments below.
@@ -129,11 +129,21 @@ A literature search across full-text indexes, publisher sites and institutional 
 
 The publications span atmospheric emission modelling [@guevara2019hermes] and atmospheric chemistry [@bowdalo2024ghost; @patel2023lightning], fire-weather forecasting [@worsnop2021fire], ionospheric physics [@dinsmore2021griti; @chakraborty2026pynasonde], ocean remote sensing [@macchi2025milky], solar and building energy [@agyeiagyemang2026solar; @omoyele2026ethos; @john2021thermostat], public health [@romero2022runners], transport safety [@vellimana2023walking; @carey2027darkness], economics and management [@bahar2023innovation; @ramirez2023essays], scientometrics [@manchin2025collaboration], computational social science [@dellanegra2026reddit] and radio-spectrum measurement [@sanders2026cbrs]. Every described use maps coordinates to a zone, which then serves to convert timestamps between UTC and local time, to compute the position of the sun or the times of twilight in local time, or to take the time difference between places. Besides the studies named in the Statement of need, the zone enters the main variable of the analysis in deciding whether a fatal pedestrian crash took place at night [@carey2027darkness], in the time-zone difference between the co-authors of about 20 million articles [@manchin2025collaboration], and in the reference against which a method is evaluated [@dellanegra2026reddit].
 
-Research software depends on `timezonefinder` too, so its users rely on the answers without calling the package themselves: among others the HERMESv3 emission model [@guevara2019hermes], the solar-irradiance downscaling package ETHOS.TISED [@omoyele2026ethos], the ionosonde library pynasonde [@chakraborty2026pynasonde] and the measurement tooling of a NIST technical note [@sanders2026cbrs]. GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/dependents) listed about 5,000 repositories and 260 published packages that depend on `timezonefinder` on 18 November 2026, among them CERN's [CAiMIRA](https://gitlab.cern.ch/caimira/caimira), Sandia National Laboratories' [pvOps](https://github.com/sandialabs/pvOps), the [HOPP](https://github.com/NatLabRockies/HOPP) model of the US National Laboratory of the Rockies (formerly NREL), NOAA's [monetio](https://github.com/noaa-oar-arl/monetio) and the [next_pass](https://github.com/OPERA-Cal-Val/next_pass) tool of NASA JPL's OPERA project.
+Research software depends on `timezonefinder` too, so its users rely on the answers without calling the package themselves: among others the HERMESv3 emission model [@guevara2019hermes], the solar-irradiance downscaling package ETHOS.TISED [@omoyele2026ethos], the ionosonde library pynasonde [@chakraborty2026pynasonde] and the measurement tooling of a NIST technical note [@sanders2026cbrs]. GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/dependents) listed about 5,000 repositories and 260 published packages that depend on `timezonefinder` on 18 November 2026, among them projects of CERN, Sandia National Laboratories, the US National Laboratory of the Rockies (formerly NREL), the US EPA, NOAA and NASA JPL ([list](https://github.com/jannikmi/timezonefinder#used-by)).
 
 <!--
 TODO(authors): refresh the dependency-graph counts and the access date at submission (GitHub
   states that the counts are approximate).
+OPEN QUESTION: the government and research projects are named by institution only, with the
+  projects behind the README's "Used by" list, to save words. A reviewer may ask for each
+  project to be cited. If so, add a paper.bib entry per project (title, owning institution as
+  author, repository URL, year of the version checked) and cite it after the institution:
+  CERN's CAiMIRA (gitlab.cern.ch/caimira/caimira), Sandia National Laboratories' pvOps
+  (github.com/sandialabs/pvOps), the National Laboratory of the Rockies' HOPP
+  (github.com/NatLabRockies/HOPP), the US EPA's sensortoolkit (github.com/USEPA/sensortoolkit),
+  NOAA's monetio (github.com/noaa-oar-arl/monetio) and NASA JPL OPERA's next_pass
+  (github.com/OPERA-Cal-Val/next_pass). The README link points to master; pin it with the other
+  repository links at submission.
 -->
 
 These figures are a lower bound. Only three of the publications list the package in their references, so citation databases miss nearly all of them, and theses and paywalled full texts are only partly indexed. The project provides a Zenodo DOI [@tzf_zenodo] and a citation file, and this paper adds a peer-reviewed reference.
