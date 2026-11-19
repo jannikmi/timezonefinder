@@ -98,12 +98,13 @@ Beyond border accuracy, the two packages differ in ways that matter for research
 **Why a separate package.** `timezonefinder` started in 2016 from `pytzwhere`. At that time, `pytzwhere` parsed a large text file into memory and rebuilt its search structures at every start, which cost hundreds of megabytes of memory before the first answer. Making lookups cheap needed a different data layer and lookup algorithm: polygons stored in binary files with 32-bit integer coordinates, read on demand, and a spatial index precomputed when the data is built. These changes replaced the data format and the lookup as a whole, rather than amending them, so they were released as a new package. Contributions upstream went on in parallel: the first author reported wrong results near nested polygons to `pytzwhere` ([#34](https://github.com/pegler/pytzwhere/issues/34), April 2016), which its maintainers traced and fixed, and proposed updated boundary data ([#36](https://github.com/pegler/pytzwhere/pull/36)), which was not merged. Its data was never updated ([#42](https://github.com/pegler/pytzwhere/issues/42)), and it has had no commit since 2018. A [side-by-side measurement](https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere) of its last release, 3.0.3, against `timezonefinder` today shows an order of magnitude less memory and faster start-up and single lookups, and an answer for every point, where `pytzwhere` answers for under a third of the globe. `tzfpy` appeared six years later with a Rust core and a deliberately different trade-off. Neither design can absorb the other without giving up the property it is built around, so the two packages coexist, and the maintainer of `tzfpy` has contributed to `timezonefinder`.
 
 <!--
-TODO(authors): the upstream-contribution sentence rests on the public pytzwhere tracker and
-  history, checked 2026-11-19: #34 (opened 2016-04-13 by jannikmi; cstich reported a fix in the
+NOTE: the upstream-contribution sentence rests on the public pytzwhere tracker and history,
+  checked 2026-11-19: #34 (opened 2016-04-13 by jannikmi; cstich reported a fix in the
   development branch on 2016-05-16; still open), PR #36 (opened 2016-04-27, closed unmerged by its
   author 2016-06-08, no review), #42 (2017-05-25; cstich: "We are still using the old data"),
-  releases 2.3 (2016-03) to 3.0.3 (2017-08), last commit 2018-02. Add any private contact with
-  the pytzwhere maintainers that the record does not show.
+  releases 2.3 (2016-03) to 3.0.3 (2017-08), last commit 2018-02. There was no other contact
+  with the pytzwhere maintainers (confirmed by the maintainer, 2026-11-19), so the public record
+  is complete.
 TRIM CANDIDATE: the issue links could be cut to the single sentence of evidence.
 -->
 
