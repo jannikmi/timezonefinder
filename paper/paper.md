@@ -35,12 +35,12 @@ NOTE (archive authors): JOSS editors check that the archive deposited after acce
   differences need to be explained", editing.html, Post-review). Decided in #780: the archive
   keeps the single author from CITATION.cff, and the maintainer explains the difference to the
   editor in person (reason and fallback recorded in #780). Nothing to change in this paper.
-TODO(authors, trimming pass): the paper is about 2,960 words; JOSS asks for 750-1750 and "may
+TODO(authors, trimming pass): the paper is about 2,870 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~210, Statement of need ~430,
-  State of the field ~690, Software design ~770, Research impact ~440, AI disclosure ~260,
+  State of the field ~690, Software design ~770, Research impact ~350, AI disclosure ~260,
   Acknowledgements ~160. The text that repeated other sections is cut, and Statement of need,
-  State of the field and Software design are trimmed; the remaining candidates are marked with
-  "TRIM CANDIDATE" comments below.
+  State of the field, Software design and Research impact are trimmed; the remaining
+  candidates are marked with "TRIM CANDIDATE" comments below.
 -->
 
 # Summary
