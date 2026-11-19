@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795101243805,
+  "lastUpdate": 1795101245830,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19122,72 +19122,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "8f59f5e5ac0a89596365280315fd30e6290820c1",
-          "message": "Stop two tests leaking numpy's global state, and give three silent drifts a failure mode (#511)\n\n* TEST-4: stop two tests leaking numpy's global error state\n\n`np.seterr` and the warning filters are process-global. `test_overflow`\n(tests/main_test.py) and `test_inside_polygon` (tests/utils_test.py, six\nparametrisations) each set them and never restored them, so every test\ncollected afterwards ran with `under` promoted from `ignore` to `warn` -\nand which module pytest collected first decided the state the other ran\nunder. The filters were undone only incidentally, by pytest's per-test\n`catch_warnings()`, not by the tests themselves.\n\nbenchmarks/conftest.py already had the correct pattern. Split it into a\n`strict_numpy_errors` context manager plus the thin `strict_numpy_warnings`\nfixture, both in tests/auxiliaries.py where the other shared helpers live,\nre-exported through the conftest of each suite. Both call sites now request\nthe fixture. The context manager form is what makes the seam directly\ntestable: two tests assert the promotion and the restore, the latter against\na deliberately distinct starting state so it cannot pass by coincidence.\n\n* DEAD-3: drop the negative-zone-id guard the dtype check makes unreachable\n\n`ZoneCollection.validate_structure` rejects any `poly_zone_ids` whose\n`dtype.kind != \"u\"` a dozen lines before taking `.min()`, so the array is\nunsigned by then and `if min_zone_id < 0` cannot fire. Left in, it reads as\nthe guard against negative zone ids - which matters because the real\nnegative-id exposure is elsewhere and still open (`zone_id_of` /\n`zone_name_from_id` index directly, BUG-1 in the ledger).\n\nThe validators had no tests at all, so what the class actually promises is now\npinned: the unsigned-dtype rejection that makes a negative id unrepresentable,\nthe ordering and max-id rules, and the shape zone_positions() returns.\n\n* DUP-3: enforce the zone-id ordering rule in one place\n\n`validate_structure` and `zone_positions` each walked `poly_zone_ids`\nelement by element checking it was non-decreasing, and each raised the same\nmessage built from its own locals - two places to edit if the rule changes,\nand two Python-level passes over every polygon during data generation.\n\nThe validator's scan moves into `_validate_non_decreasing`, beside the other\nmodule-level `_validate_*` helpers. `zone_positions` drops its copy: the\nvalidator is a pydantic `model_validator(mode=\"after\")`, so it runs at\nconstruction, and `poly_zone_ids` is only ever read afterwards - the copy\ncould fire only if a caller mutated the array in place, which nothing does.\nIts docstring now says what it is entitled to assume.\n\n* TEST-9: declare the out-of-range coordinate table once\n\nThe same seven (lng, lat) tuples - each one representable step outside the\nvalid WGS84 range - were written out verbatim in tests/main_test.py and again\nin the parametrize list of tests/utils_test.py, and only the first copy\ncarried the comment explaining what makes them interesting. Adding a corner\nto one left the other testing a smaller set, with nothing to notice.\n\nThe table moves to tests/locations.py, which already holds the shared\ncoordinate tables, and both modules import it. Collection count is unchanged\nat 551 across the two modules.\n\n* TYPE-1: annotate the shortcut compilation chain for what it is actually passed\n\nBoth annotations in the chain were the wrong way round.\n`check_shortcut_sorting(polygon_ids: np.ndarray, ...)` is only ever called by\n`process_single_hex` with the `list[int]` that `optimise_shortcut_ordering`\nreturns, and it in turn passes the `np.ndarray` produced by `all_zone_ids[\npolygon_ids]` to `has_coherent_sequences(lst: list[int])`.\n\nWidened rather than swapped: tests/shortcut_test.py calls\n`has_coherent_sequences` with real lists, so both forms are live. Also gives\n`check_shortcut_sorting` the `-> None` its siblings have. mypy reports the\nsame four pre-existing errors on this file as before (scripts/ is outside the\npre-commit mypy hook's scope).\n\n* CI-1: fail when the five declarations of the supported Python versions drift\n\npyproject.toml (requires-python plus one classifier per minor version),\ntox.ini (the py{...} envlist factors), build.yml (the test matrix and\nCIBW_BUILD_VERSIONS) and setup.py (py_limited_api) all state the same fact and\nnone can read the others. Two \"must match\" comments already said so and\nnothing enforced them.\n\nThe failure is silent in both directions: a classifier added without a matrix\nentry ships a version the package claims and CI never runs, and a\nrequires-python raised without the abi3 base moved builds wheels tagged for an\ninterpreter no longer supported.\n\nFive assertions, each verified to fail against the specific one-sided edit it\ntargets. Both existing comments now name the test. Same shape and reasoning as\ntests/test_benchmark_workflows.py.\n\n* Record this quality pass in the changelog\n\n* Record pass 7 in the findings ledger\n\nDeleted as shipped: TEST-4, TEST-9, DEAD-3, DUP-3, TYPE-1. Deleted as fixed\nby unrelated work: TEST-7 (the wheel/venv interpreter mismatch, closed by\nPR #494 pinning `uv build --python sys.executable`).\n\nAdded DEAD-4 (an unreachable None guard in `Hex.poly_candidates`) and REND-4\n(three cosmetic leftovers in scripts/reporting.py). Coverage log gains pass 7;\n.github/workflows/ is no longer an unswept area, leaving only docs/ prose.",
-          "timestamp": "2026-08-14T07:12:18+02:00",
-          "tree_id": "04c11d0d7f692961b0ba808524358524af99181f",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/8f59f5e5ac0a89596365280315fd30e6290820c1"
-        },
-        "date": 1786684427108,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466689109802246,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466852188110352,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.529267311096191,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.538006782531738,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 67.84986782073975,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 67.8586368560791,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "8ceae1d6262131895b0055180fe95a0a14e6bdfe",
           "message": "Add a cut-release skill, and give the quality pass a diff budget (#512)\n\n* Make the quality pass work its ranking down to a diff budget\n\nThe pass took one coherent theme and stopped; it now takes the ledger's\nhighest-priority findings one at a time until ~400 changed lines are spent,\nso the ranking rather than a common story is what holds the PR together.\nEach item lands as its own commit naming its ledger entry, the budget is\nmeasured against the merge base with the ledger excluded and checked between\nitems rather than mid-item, and a ranking that runs dry ends the pass as\nlegitimately as a spent budget. The branch claim in §2.1 follows: it claims\nonly what it already holds, so a pass re-pushes after every finished item.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Add a cut-release skill that proposes the bump and stops\n\nTurns the accumulated `X.X.X (unreleased)` changelog section into a released\nversion, in two halves split by the maintainer's merge. Prepare checks the\nsection is release-ready and complete against every commit since the last tag,\nproposes patch/minor/major as three concrete version numbers with the bullets\nbehind each, stops for the decision, then lands the bump as a release PR. Tag\nruns only after that PR is merged and asks again, since the tag is the publish\nand PyPI will not let a version take it back.\n\nRecords what the pipeline makes non-obvious: the tag-push run re-reads\npyproject.toml at the tagged commit; the release commit is the bump and the\nchangelog and nothing else, so `make reports` must not run in it; and the tag\nhas to be pushed promptly after the merge, because the master push run's own\nrelease job creates the GitHub Release and with it the tag, after which\npushing that tag is a no-op that fires no webhook.\n\nCLAUDE.md's claim that regenerating data warrants a minor bump is corrected:\nupdate_data.sh bumps patch and the last four data releases were patches.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-14T07:22:26+02:00",
@@ -35606,6 +35540,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0970 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58fe8ed79ea0c3398b906edc2fbb8fcc168e8466",
+          "message": "paper: cut the Software design section to its trade-offs (#795)\n\n* paper: cut the Software design section to its trade-offs\n\nSoftware design keeps each decision, its reason and the alternative it rejected,\nand links the architecture documentation for the implementation. Cut: the\nindex parameters (cell size, refinement, vertex blocks, candidate ordering),\nthe version-string example, the per-file format marker, the wheel and ABI\nmatrix, and the separate test-strategy paragraph. Batch lookups fold into the\nindex paragraph and the automated data updates into the data-package paragraph.\nEvery citation is kept; Hypothesis is now cited from the backends paragraph.\nThe section shrinks from about 1,555 to about 780 words.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n* paper: drop the Ürümqi example from the overlap paragraph\n\nRequested by the maintainer in review.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T15:13:00Z",
+          "tree_id": "427881829203f2d4dfac05c97e05d8d7cec11329",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/58fe8ed79ea0c3398b906edc2fbb8fcc168e8466"
+        },
+        "date": 1795101245407,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.961390495300293,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9621076583862305,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.697237968444824,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.698004722595215,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8485 GHz"
           }
         ]
       }
