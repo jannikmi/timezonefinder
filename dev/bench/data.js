@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795103628464,
+  "lastUpdate": 1795104880371,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "97a8e34180daced9c2efb9b0e7867db2b613169f",
-          "message": "Make the file converter runnable again, and type-check the directory it lives in (#515)",
-          "timestamp": "2026-08-15T08:41:03+02:00",
-          "tree_id": "3c1e49cbbf892fdea7bf267f5291b9c9aaf45ebe",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/97a8e34180daced9c2efb9b0e7867db2b613169f"
-        },
-        "date": 1786776139651,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 182004.1039741699,
-            "range": "± 19972",
-            "extra": "min of 57 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 570024.2921534372,
-            "range": "± 6722",
-            "extra": "min of 185 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61140.50569997655,
-            "range": "± 1160",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19230,6 +19185,93 @@ window.BENCHMARK_DATA = {
             "range": "± 10620",
             "unit": "lookups/sec",
             "extra": "min of 94 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7109 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5463c613e4be02610859ee0ac4b47eccd7118016",
+          "message": "paper: condense the Research impact statement (#799)\n\n* paper: condense the Research impact statement\n\nKeeps the documented search and its counts, every field citation, the research\nsoftware that depends on the package and the dependency-graph counts with\ntheir date. The main-variable examples are now the three the Statement of need\ndoes not already give (pedestrian crashes, co-author time differences, a\nmethod's reference). Four of the six named government projects remain;\nHOPP, whose lab naming could not be verified, and sensortoolkit are dropped.\nThe ETHOS.TISED link and description give way to its citation.\n\nThe section shrinks from about 440 to about 350 words.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n* Merge master and update the paper's word counts\n\nMerges master after #798. The section-size note in paper.md and the Length row\nof joss-review.md now give the combined state: about 2,870 words.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n* paper: keep HOPP among the named dependents\n\nRequested by the maintainer, who confirmed the National Laboratory of the\nRockies (nlr.gov) as NREL's current name; the review's \"Not checked\" note on\nthat naming is removed and the confirmation recorded in the Research impact\nrow.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n* paper: name the dependent institutions and link their projects\n\nAt the maintainer's choice, the research impact statement names the six\ngovernment and research institutions whose projects depend on the package\n(CERN, Sandia, the National Laboratory of the Rockies, the US EPA, NOAA,\nNASA JPL) and links the README's \"Used by\" list for the projects, instead of\nnaming five projects inline. This keeps the EPA's sensortoolkit, which the\nearlier cut dropped, for fewer words. An OPEN QUESTION comment lists each\nproject and repository so that per-project citations can be added if a\nreviewer asks for them.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T16:13:54Z",
+          "tree_id": "1aa01ed43848c447326680e0bd2a51279581f541",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5463c613e4be02610859ee0ac4b47eccd7118016"
+        },
+        "date": 1795104877489,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1070445.1381901172,
+            "range": "± 17543",
+            "unit": "lookups/sec",
+            "extra": "min of 330 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1303780.2848643558,
+            "range": "± 32122",
+            "unit": "lookups/sec",
+            "extra": "min of 431 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 232223.32750217264,
+            "range": "± 8015",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6374672.660527404,
+            "range": "± 197307",
+            "unit": "lookups/sec",
+            "extra": "min of 1098 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48376485.15960185,
+            "range": "± 4479325",
+            "unit": "lookups/sec",
+            "extra": "min of 7274 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 323611.7766724703,
+            "range": "± 7792",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6104514.166095596,
+            "range": "± 482740",
+            "unit": "lookups/sec",
+            "extra": "min of 1234 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 34157671.81549822,
+            "range": "± 2285807",
+            "unit": "lookups/sec",
+            "extra": "min of 6570 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 324323.49686120934,
+            "range": "± 9719",
+            "unit": "lookups/sec",
+            "extra": "min of 101 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7076 GHz"
           }
         ]
       }
