@@ -30,11 +30,11 @@ These comments do not appear in the compiled PDF. Search for TODO(authors) and O
 
 TODO(authors): fill in the affiliation of Evgenii Seliverstov (waiting on his employer's
   approval, #780) and his ORCID if he has one. JOSS requires an affiliation for every author.
-OPEN QUESTION (archive authors): JOSS editors check that the archive deposited after acceptance
-  lists the paper's authors ("In most situations, the two author lists should match ... any
-  differences need to be explained", editing.html, Post-review). #780 keeps the software's
-  single author in CITATION.cff, which Zenodo uses for the archive. Either add the co-authors to
-  the archive metadata or prepare the explanation.
+NOTE (archive authors): JOSS editors check that the archive deposited after acceptance lists
+  the paper's authors ("In most situations, the two author lists should match ... any
+  differences need to be explained", editing.html, Post-review). Decided in #780: the archive
+  keeps the single author from CITATION.cff, and the maintainer explains the difference to the
+  editor in person (reason and fallback recorded in #780). Nothing to change in this paper.
 TODO(authors, trimming pass): the paper is about 4,560 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~280, Statement of need ~810,
   State of the field ~1,070, Software design ~1,560, Research impact ~400, AI disclosure ~260,
