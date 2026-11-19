@@ -35,9 +35,9 @@ OPEN QUESTION (archive authors): JOSS editors check that the archive deposited a
   differences need to be explained", editing.html, Post-review). #780 keeps the software's
   single author in CITATION.cff, which Zenodo uses for the archive. Either add the co-authors to
   the archive metadata or prepare the explanation.
-TODO(authors, trimming pass): the paper is about 4,510 words; JOSS asks for 750-1750 and "may
+TODO(authors, trimming pass): the paper is about 4,560 words; JOSS asks for 750-1750 and "may
   ask [authors] to reduce the length". Section sizes: Summary ~280, Statement of need ~810,
-  State of the field ~1,020, Software design ~1,560, Research impact ~400, AI disclosure ~260,
+  State of the field ~1,070, Software design ~1,560, Research impact ~400, AI disclosure ~260,
   Acknowledgements ~150. Candidates are marked with "TRIM CANDIDATE" comments below.
 -->
 
@@ -95,12 +95,16 @@ OPEN QUESTION: a reviewer may ask for a measurement against the unsimplified tzf
 
 Beyond border accuracy, the two packages differ in ways that matter for research use. `timezonefinder` ships its boundary data as a separately versioned PyPI package, so a study can pin and report the boundary release independently of the lookup code. It looks up whole NumPy arrays in one call, which outpaces a loop of single `tzfpy` calls on a representative mix of points (2.05 times per point over uniformly random points), since `tzfpy` has no batch interface. It can restrict answers to land zones, return every zone at a point in an overlap, return integer zone identifiers, and convert timestamps with the zone it finds. Finally, it can be built and run without a compiler at all, falling back to pure Python with identical answers, while a source build of `tzfpy` needs a Rust toolchain. All comparisons above come from harnesses in the repository that run both packages on the same points, in the same process and on the same machine. Their generated reports are part of the documentation ([border accuracy](https://timezonefinder.readthedocs.io/en/latest/border_accuracy_vs_tzfpy.html), [speed](https://timezonefinder.readthedocs.io/en/latest/benchmark_results_vs_tzfpy.html)), which also [lists the use cases](https://timezonefinder.readthedocs.io/en/latest/alternatives.html) for which `tzfpy` is the better choice.
 
-**Why a separate package.** `timezonefinder` started in 2016 from `pytzwhere`. At that time, `pytzwhere` parsed a large text file into memory and rebuilt its search structures at every start, which cost hundreds of megabytes of memory before the first answer. Making lookups cheap needed a different data layer and lookup algorithm: polygons stored in binary files with 32-bit integer coordinates, read on demand, and a spatial index precomputed when the data is built. These changes replaced the data format and the lookup as a whole, rather than amending them, so they were released as a new package. `pytzwhere` has had no release since. A [side-by-side measurement](https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere) of its last release, 3.0.3, against `timezonefinder` today shows an order of magnitude less memory and faster start-up and single lookups, and an answer for every point, where `pytzwhere` answers for under a third of the globe. `tzfpy` appeared six years later with a Rust core and a deliberately different trade-off. Neither design can absorb the other without giving up the property it is built around, so the two packages coexist, and the maintainer of `tzfpy` has contributed to `timezonefinder`.
+**Why a separate package.** `timezonefinder` started in 2016 from `pytzwhere`. At that time, `pytzwhere` parsed a large text file into memory and rebuilt its search structures at every start, which cost hundreds of megabytes of memory before the first answer. Making lookups cheap needed a different data layer and lookup algorithm: polygons stored in binary files with 32-bit integer coordinates, read on demand, and a spatial index precomputed when the data is built. These changes replaced the data format and the lookup as a whole, rather than amending them, so they were released as a new package. Contributions upstream went on in parallel: the first author reported wrong results near nested polygons to `pytzwhere` ([#34](https://github.com/pegler/pytzwhere/issues/34), April 2016), which its maintainers traced and fixed, and proposed updated boundary data ([#36](https://github.com/pegler/pytzwhere/pull/36)), which was not merged. Its data was never updated ([#42](https://github.com/pegler/pytzwhere/issues/42)), and it has had no commit since 2018. A [side-by-side measurement](https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere) of its last release, 3.0.3, against `timezonefinder` today shows an order of magnitude less memory and faster start-up and single lookups, and an answer for every point, where `pytzwhere` answers for under a third of the globe. `tzfpy` appeared six years later with a Rust core and a deliberately different trade-off. Neither design can absorb the other without giving up the property it is built around, so the two packages coexist, and the maintainer of `tzfpy` has contributed to `timezonefinder`.
 
 <!--
-OPEN QUESTION: was contributing upstream to pytzwhere attempted or discussed in 2016 (issue,
-  PR, contact with its maintainer)? JOSS asks for an explicit "build vs. contribute"
-  justification; one sentence of evidence would strengthen it.
+TODO(authors): the upstream-contribution sentence rests on the public pytzwhere tracker and
+  history, checked 2026-11-19: #34 (opened 2016-04-13 by jannikmi; cstich reported a fix in the
+  development branch on 2016-05-16; still open), PR #36 (opened 2016-04-27, closed unmerged by its
+  author 2016-06-08, no review), #42 (2017-05-25; cstich: "We are still using the old data"),
+  releases 2.3 (2016-03) to 3.0.3 (2017-08), last commit 2018-02. Add any private contact with
+  the pytzwhere maintainers that the record does not show.
+TRIM CANDIDATE: the issue links could be cut to the single sentence of evidence.
 -->
 
 # Software design
