@@ -1,18 +1,21 @@
 # Franchising defrosts: ownership structure and service availability (Babar et al., 2026)
 
 - **BibTeX key:** `babar2026franchising`
-- **Venue:** SSRN preprint 6504158, 2026
+- **Venue:** SSRN preprint 6504158, 2026 (PDF built 31 March 2026; Reject and Resubmit at *Management Science*, according to the authors' pages)
 - **DOI:** [10.2139/ssrn.6504158](https://doi.org/10.2139/ssrn.6504158)
 - **Field:** operations management / economics
-- **Verification:** Google Scholar index match only. SSRN blocks automated access.
-- **Access attempts (2026-11-19):** the SSRN abstract and PDF URLs return a Cloudflare challenge (HTTP 403) to command-line requests. OpenAlex lists SSRN and a Tilburg University research-portal record, and that record only links back to SSRN. Florian Pethig's site and Xabier Barriola's research page list the paper (Reject and Resubmit, *Management Science*) and link only to SSRN. No other copy and no replication repository was found. Reading it needs a person in a browser on SSRN, or a copy from the authors.
+- **Verification:** full text read on 2026-11-19, in the SSRN PDF the maintainer downloaded (44 pages). One mention, in Appendix B, "McBroken Data Collection" (PDF page 44). SSRN refuses command-line access, and OpenAlex, the Tilburg research portal and the authors' pages led back to SSRN only, so the copy came from the maintainer's browser.
 
 ## How timezonefinder is referenced
 
-Passage not seen.
+> To accurately determine the precise local time of each status check, we first identified the local time zone for every restaurant. This was achieved using the Python package timezonefinder, which converted the restaurant's geographical coordinates into its corresponding time zone. Following this, for each UTC commit timestamp, we converted it to the restaurant's local time zone. From this newly localized commit time, we then subtracted the "minutes ago" value of the "last check" to derive the exact local time at which the check was performed.
 
-Cited as: not seen.
+Cited as: inline name, in the data appendix. No reference-list entry.
 
 ## Role of timezonefinder
 
-The SSRN abstract, as quoted by search results, says the study combines McBroken.com outage data, McDonald's franchise disclosure documents, hiring records and Advan (SafeGraph) visit data for over 11,000 US restaurants. McBroken polls each restaurant's ice-cream machine every thirty minutes, so the package most likely localises those UTC polls to each restaurant's time zone, for example to keep only opening hours. This is an inference.
+The study measures ice-cream machine availability at about 11,900 US McDonald's restaurants from 2021 to 2025, using the McBroken archive on GitHub. The archive commits a JSON snapshot every 30 minutes with UTC commit times and relative "last check" times. The package gives each restaurant's zone, and each check is converted to the restaurant's local time. Section 3.2.1 then keeps only checks within each restaurant's opening hours, to remove machine status carried over from closing. So every observation behind the two outcomes, the share of unavailable checks and the duration of unavailability, passes through the local time the lookup supplies.
+
+## Notes
+
+- The appendix's worked example is a restaurant in Trotwood, OH (UTC−4): a commit at 15:01 UTC with a check 16 minutes earlier gives a local check time of 10:45.
