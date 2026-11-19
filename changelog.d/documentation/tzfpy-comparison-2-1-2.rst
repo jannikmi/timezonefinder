@@ -1,0 +1,1 @@
+The comparison against ``tzfpy`` is re-measured with ``tzfpy`` 2.1.2 on boundary release 2026f: both `Border Accuracy against tzfpy <https://timezonefinder.readthedocs.io/en/latest/border_accuracy_vs_tzfpy.html>`__ and `Speed and Startup against tzfpy <https://timezonefinder.readthedocs.io/en/latest/benchmark_results_vs_tzfpy.html>`__ now report the current release.

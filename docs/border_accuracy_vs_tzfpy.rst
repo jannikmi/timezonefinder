@@ -25,8 +25,8 @@ How often this package and the PyPI build of `tzfpy <https://github.com/ringsatu
 
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3 (the PyPI build, with simplified
-   polygons), 20,000 paired border locations and 20,000 individual points per distance, 2026-08-30.
+   Boundary release 2026f on both sides, ``tzfpy`` 2.1.2 (the PyPI build, with simplified
+   polygons), 20,000 paired border locations and 20,000 individual points per distance, 2026-11-19.
 
    **Primary: border locations affected.** A location counts once when either of its two verified
    probes has an attributable disagreement. Its ceiling is 100 %, even when simplification moves a
@@ -44,57 +44,57 @@ How often this package and the PyPI build of `tzfpy <https://github.com/ringsatu
         - Both sides
         - Not attributed
       * - 1 cm
-        - 71.8 %
-        - 89.6 %
-        - 69.0 %
-        - 2.79 %
-        - 19
+        - 71.9 %
+        - 90.0 %
+        - 68.8 %
+        - 3.08 %
+        - 14
       * - 5 cm
         - 69.1 %
-        - 90.5 %
-        - 69.0 %
-        - 0.045 %
+        - 91.2 %
+        - 69.1 %
+        - 0
         - 0
       * - 10 cm
-        - 66.9 %
-        - 87.7 %
-        - 66.9 %
-        - 0.035 %
+        - 66.6 %
+        - 87.2 %
+        - 66.6 %
+        - 0
         - 0
       * - 50 cm
-        - 54.4 %
-        - 71.4 %
-        - 54.4 %
-        - 0.025 %
+        - 53.8 %
+        - 71.0 %
+        - 53.8 %
+        - 0
         - 0
       * - 1 m
-        - 50.8 %
-        - 67.1 %
-        - 50.8 %
-        - 0.015 %
+        - 52.3 %
+        - 68.6 %
+        - 52.3 %
+        - 0
         - 0
       * - 5 m
-        - 43.0 %
-        - 56.2 %
-        - 43.0 %
-        - 0.010 %
+        - 43.2 %
+        - 56.7 %
+        - 43.2 %
+        - 0.005 %
         - 0
       * - 10 m
-        - 36.0 %
-        - 47.5 %
-        - 36.0 %
+        - 36.4 %
+        - 47.8 %
+        - 36.4 %
         - 0
         - 0
       * - 50 m
-        - 8.63 %
-        - 11.6 %
-        - 8.63 %
+        - 8.70 %
+        - 11.5 %
+        - 8.70 %
         - 0
         - 0
       * - 100 m
-        - 0.20 %
         - 0.27 %
-        - 0.20 %
+        - 0.36 %
+        - 0.27 %
         - 0
         - 0
       * - 500 m
@@ -111,15 +111,15 @@ How often this package and the PyPI build of `tzfpy <https://github.com/ringsatu
         - 0
 
    **The near-border effect is now stated on a 0-100 % scale.** At 5 cm the packages differ on at
-   least one side of 90.5 % of sampled land-zone border locations; two thirds remain affected at a
+   least one side of 91.2 % of sampled land-zone border locations; two thirds remain affected at a
    metre and almost half at ten metres. Almost every affected location differs on one side, which
    is the expected signature of a displaced boundary. The 1 cm row is retained for completeness,
-   but sits just below this package's stored coordinate step and is not the clean headline: 2.79 %
-   differ on both sides and 19 pairs cannot be attributed there; by 5 cm those figures fall to
-   0.045 % and zero.
+   but sits just below this package's stored coordinate step and is not the clean headline: 3.08 %
+   differ on both sides and 14 pairs cannot be attributed there; by 5 cm both figures fall to
+   zero.
 
    **The knee is between 10 m and 100 m, and past it the curve stops.** One in nine land-zone
-   border locations is still affected at fifty metres and about one in 370 at a hundred. Beyond that,
+   border locations is still affected at fifty metres and about one in 280 at a hundred. Beyond that,
    across 40,000 paired locations, **not one disagreement is attributable to** ``tzfpy``. That is
    the ~111 m maximum displacement its maintainer states for the simplification, holding as stated.
 
@@ -154,40 +154,40 @@ How often this package and the PyPI build of `tzfpy <https://github.com/ringsatu
         - Border of a land zone
         - Not attributed
       * - 1 cm
-        - 37.5 %
-        - 47.0 %
-        - 15
+        - 36.8 %
+        - 46.3 %
+        - 10
       * - 5 cm
-        - 34.2 %
-        - 45.2 %
+        - 34.6 %
+        - 45.7 %
         - 0
       * - 10 cm
-        - 32.9 %
-        - 43.4 %
+        - 32.6 %
+        - 43.0 %
         - 0
       * - 50 cm
-        - 26.9 %
-        - 35.3 %
+        - 26.4 %
+        - 34.9 %
         - 0
       * - 1 m
-        - 25.2 %
-        - 33.3 %
+        - 25.3 %
+        - 33.5 %
         - 0
       * - 5 m
-        - 21.3 %
-        - 28.2 %
+        - 21.1 %
+        - 27.8 %
         - 0
       * - 10 m
-        - 17.6 %
-        - 23.0 %
+        - 17.9 %
+        - 23.5 %
         - 0
       * - 50 m
-        - 4.3 %
-        - 5.7 %
+        - 4.2 %
+        - 5.6 %
         - 0
       * - 100 m
-        - 0.12 %
-        - 0.15 %
+        - 0.08 %
+        - 0.11 %
         - 0
       * - 500 m
         - 0 of 20,000
@@ -208,9 +208,9 @@ quantized point; it does not prove why. A missing shortcut candidate can cause i
 an attributable disagreement and at least one side fails that containment check; the individual
 table counts the probes themselves.
 
-The current run leaves 19 paired locations and 15 individual probes in those columns, all at 1 cm -
-just below this package's roughly 1.1 cm coordinate grid. For the 15 named individual probes,
-exhaustive point-in-polygon checks over all 1,322 packaged polygons find no containing polygon,
+The current run leaves 14 paired locations and 10 individual probes in those columns, all at 1 cm -
+just below this package's roughly 1.1 cm coordinate grid. For the 10 named individual probes,
+exhaustive point-in-polygon checks over all 1,356 packaged polygons find no containing polygon,
 while the shortcut already lists the neighbouring zones. They are therefore boundary-grid
 ambiguity, not timezonefinder errors and not evidence against ``tzfpy``. The earlier run also
 exposed real missing-candidate defects; after the shortcut index was corrected, every one of those
@@ -221,39 +221,28 @@ Every disagreement 100 m or more from a border
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Listed in full rather than sampled, so the figures above can be checked rather than taken on trust.
-The 32 KiB ``docs/tzfpy_agreement.json`` also records every count and named sparse case; it is the
+The 28 KiB ``docs/tzfpy_agreement.json`` also records every count and named sparse case; it is the
 measured source for the SVG and lets the chart be regenerated without repeating the external sweep.
 Each coordinate was re-queried against both packages afterwards and its distance to the nearest
 border re-measured; the ``border`` column is that measurement, not the distance the point was drawn
-at. Boundary release 2026c on both sides, ``tzfpy`` 1.3.3.
+at. Boundary release 2026f on both sides, ``tzfpy`` 2.1.2.
 
-**Attributable to** ``tzfpy`` — all 24, and all at 100 m. Beyond that there are none::
+**Attributable to** ``tzfpy`` — all 16, and all drawn at 100 m. Beyond that there are none::
 
      border    latitude    longitude   timezonefinder        tzfpy
-      100 m    63.50486    106.56825   Asia/Krasnoyarsk      Asia/Irkutsk
-      100 m    10.96478    115.95923   Asia/Manila           Etc/GMT-8
-      100 m    11.34167    -63.99829   America/Caracas       Etc/GMT+4
-      100 m    32.94443    133.72220   Etc/GMT-9             Asia/Tokyo
-      100 m    69.05734   -165.71935   America/Nome          Etc/GMT+11
-      100 m     9.82826    112.88880   Asia/Shanghai         Etc/GMT-8
-      100 m    16.06440    -82.33148   America/Tegucigalpa   (no zone at all)
-      100 m     3.67614    -59.71563   America/Guyana        America/Boa_Vista
-      100 m   -10.98399    179.53451   Pacific/Funafuti      Etc/GMT-12
-      100 m     7.30759    -60.60160   America/Guyana        America/Caracas
-      100 m    10.29734    113.87220   Asia/Ho_Chi_Minh      Etc/GMT-8
-      100 m    58.08210     -8.48906   Europe/London         Etc/GMT+1
-      100 m   -38.11690    -73.94919   America/Santiago      Etc/GMT+5
-      100 m    44.58485     35.08544   Europe/Simferopol     Etc/GMT-2
-      100 m   -16.57720   -144.73338   Pacific/Tahiti        Etc/GMT+10
-      100 m    39.07428    124.77606   Asia/Pyongyang        Etc/GMT-8
-      100 m   -22.98745    151.97899   Australia/Brisbane    Etc/GMT-10
-      100 m    11.76343     51.48246   Africa/Mogadishu      Etc/GMT-3
-      100 m     8.01813    -58.83736   Etc/GMT+4             America/Guyana
-      100 m   -15.56637   -142.00834   Pacific/Tahiti        Etc/GMT+9
-      100 m    13.54474     13.13853   Africa/Niamey         Africa/Lagos
-      100 m    44.47805    -62.74375   America/Halifax       Etc/GMT+4
-      100 m    28.20837   -112.48333   America/Hermosillo    Etc/GMT+7
-      100 m     1.73097    -69.62412   America/Manaus        America/Bogota
-
-The ``America/Tegucigalpa`` line is not a wrong zone but *no* zone: ``tzfpy`` returns an empty
-result there.
+      100 m   -17.37815   -143.22951   Pacific/Tahiti        Etc/GMT+10
+      100 m    65.22034     61.30873   Europe/Moscow         Asia/Yekaterinburg
+       99 m     0.64935    -77.54633   America/Guayaquil     America/Bogota
+      100 m    -3.89907     55.30436   Indian/Mahe           Etc/GMT-4
+      100 m    45.41872     29.49809   Europe/Bucharest      Europe/Kyiv
+      100 m    -9.62382    -70.78800   America/Rio_Branco    America/Lima
+      100 m   -24.51380   -124.92503   Pacific/Pitcairn      Etc/GMT+8
+      100 m   -18.26980    121.70734   Australia/Perth       Etc/GMT-8
+      100 m    -3.70243     55.40935   Indian/Mahe           Etc/GMT-4
+      100 m    50.60851     48.75227   Asia/Oral             Europe/Saratov
+      100 m    28.66919    -95.34234   America/Chicago       Etc/GMT+6
+      100 m    12.90717     99.18263   Asia/Bangkok          Asia/Yangon
+      100 m     8.98356    114.81054   Asia/Ho_Chi_Minh      Etc/GMT-8
+      100 m    19.75981   -154.77873   Pacific/Honolulu      Etc/GMT+10
+      100 m    40.43072     50.98266   Asia/Baku             Etc/GMT-3
+      100 m    -3.46199   -174.27655   Pacific/Kanton        Etc/GMT+12

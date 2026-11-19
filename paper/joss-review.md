@@ -53,7 +53,7 @@ The first author made the large majority of the commits. The co-authors' contrib
 
 ## Not checked
 
-- The `tzfpy` comparison was not re-run against the current `tzfpy` 2.1.2. The figures in the paper come from the generated documentation reports, measured with 1.3.3.
+- The `tzfpy` comparison is re-run against `tzfpy` 2.1.2 on boundary release 2026f. The paper states speed qualitatively, since the factors depend on the machine; the documentation reports carry them with the machine they were measured on.
 - The `pytzwhere` memory and speed comparison was not re-run. The paper now links its documentation page.
 - Whether each linked downstream project still depends on `timezonefinder` was not checked. The links are the ones from the README.
 - The National Laboratory of the Rockies naming was checked only against its GitHub organisation, which hosts HOPP under that name; `nrel.gov` was not reachable from here.
