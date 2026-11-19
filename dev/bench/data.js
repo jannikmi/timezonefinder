@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795096984386,
+  "lastUpdate": 1795100549199,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3c4253bd19a412d884b0b1012983b9f91ecdb857",
-          "message": "Add roadmap-pass agent skill for advancing issue #506 (#508)\n\n* Add roadmap-pass agent skill for advancing issue #506\n\nAdvances the structural work tracked by roadmap issue #506 one pass at a\ntime: select an eligible item, check the sequencing preconditions #506\nrecords, put the item's open design decisions to the maintainer as\nconcrete choices, and only then implement one releasable slice.\n\nUnlike its code-quality-pass sibling it deliberately asks rather than\ndeciding alone, because a roadmap item's design choices outlive the pass.\nState is derived from the tracker rather than a progress file, so repeated\nand concurrent passes are idempotent.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Quote the skill description so YAML keeps all of it\n\nAn unquoted `#` preceded by a space starts a comment in a plain YAML\nscalar, so the roadmap-pass description was stored as \"Advances the\nstructural work tracked by roadmap issue\" - 53 of 831 characters, with\nevery trigger phrase discarded. The skill still loaded; it just stopped\nbeing discoverable by anything but its name.\n\ntests/test_agent_skills.py parses the frontmatter of every skill under\n.claude/skills/ and fails when the value a YAML parser stores ends before\nthe value the file writes.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-13T12:12:48+02:00",
-          "tree_id": "a565630af02e262ec724dd7f8b3ee41f8969414e",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/3c4253bd19a412d884b0b1012983b9f91ecdb857"
-        },
-        "date": 1786616043287,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 179338.60067537028,
-            "range": "± 2065",
-            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 548980.5979276107,
-            "range": "± 4523",
-            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61117.769688402885,
-            "range": "± 717",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19020,6 +18975,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7174",
             "unit": "lookups/sec",
             "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b01c8d16fc999108037ed31e5a68c351d214aa24",
+          "message": "paper: cut the text that repeats other sections (#794)\n\nThe Summary no longer restates the offline, versioned-data, ocean and batch\nproperties that the Statement of need sets out as its four requirements, and\nthe Statement of need points to the Research impact statement instead of\nrepeating its usage examples. The border-accuracy requirement now cites the\nthree studies it refers to, since the examples it pointed back to are gone.\nNo citation is lost: every removed key is still cited elsewhere. The body\nshrinks from about 4,570 to about 4,370 words (JOSS asks for 750-1750).\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T15:01:31Z",
+          "tree_id": "d30054154a1517aac426c63852050e94e37e94e4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b01c8d16fc999108037ed31e5a68c351d214aa24"
+        },
+        "date": 1795100546552,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 988004.8309453166,
+            "range": "± 14292",
+            "unit": "lookups/sec",
+            "extra": "min of 303 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1199121.859059728,
+            "range": "± 15937",
+            "unit": "lookups/sec",
+            "extra": "min of 416 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 203250.5453212702,
+            "range": "± 21473",
+            "unit": "lookups/sec",
+            "extra": "min of 70 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 5755395.683485774,
+            "range": "± 820974",
+            "unit": "lookups/sec",
+            "extra": "min of 963 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 45806002.41531934,
+            "range": "± 3524482",
+            "unit": "lookups/sec",
+            "extra": "min of 6355 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 272285.3288855794,
+            "range": "± 23541",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5472806.71854727,
+            "range": "± 175063",
+            "unit": "lookups/sec",
+            "extra": "min of 1097 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 32958050.99796043,
+            "range": "± 5418999",
+            "unit": "lookups/sec",
+            "extra": "min of 5554 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 270199.2589841387,
+            "range": "± 9381",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
           }
         ]
       }
