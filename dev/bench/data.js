@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795100551168,
+  "lastUpdate": 1795101243805,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "8f59f5e5ac0a89596365280315fd30e6290820c1",
-          "message": "Stop two tests leaking numpy's global state, and give three silent drifts a failure mode (#511)\n\n* TEST-4: stop two tests leaking numpy's global error state\n\n`np.seterr` and the warning filters are process-global. `test_overflow`\n(tests/main_test.py) and `test_inside_polygon` (tests/utils_test.py, six\nparametrisations) each set them and never restored them, so every test\ncollected afterwards ran with `under` promoted from `ignore` to `warn` -\nand which module pytest collected first decided the state the other ran\nunder. The filters were undone only incidentally, by pytest's per-test\n`catch_warnings()`, not by the tests themselves.\n\nbenchmarks/conftest.py already had the correct pattern. Split it into a\n`strict_numpy_errors` context manager plus the thin `strict_numpy_warnings`\nfixture, both in tests/auxiliaries.py where the other shared helpers live,\nre-exported through the conftest of each suite. Both call sites now request\nthe fixture. The context manager form is what makes the seam directly\ntestable: two tests assert the promotion and the restore, the latter against\na deliberately distinct starting state so it cannot pass by coincidence.\n\n* DEAD-3: drop the negative-zone-id guard the dtype check makes unreachable\n\n`ZoneCollection.validate_structure` rejects any `poly_zone_ids` whose\n`dtype.kind != \"u\"` a dozen lines before taking `.min()`, so the array is\nunsigned by then and `if min_zone_id < 0` cannot fire. Left in, it reads as\nthe guard against negative zone ids - which matters because the real\nnegative-id exposure is elsewhere and still open (`zone_id_of` /\n`zone_name_from_id` index directly, BUG-1 in the ledger).\n\nThe validators had no tests at all, so what the class actually promises is now\npinned: the unsigned-dtype rejection that makes a negative id unrepresentable,\nthe ordering and max-id rules, and the shape zone_positions() returns.\n\n* DUP-3: enforce the zone-id ordering rule in one place\n\n`validate_structure` and `zone_positions` each walked `poly_zone_ids`\nelement by element checking it was non-decreasing, and each raised the same\nmessage built from its own locals - two places to edit if the rule changes,\nand two Python-level passes over every polygon during data generation.\n\nThe validator's scan moves into `_validate_non_decreasing`, beside the other\nmodule-level `_validate_*` helpers. `zone_positions` drops its copy: the\nvalidator is a pydantic `model_validator(mode=\"after\")`, so it runs at\nconstruction, and `poly_zone_ids` is only ever read afterwards - the copy\ncould fire only if a caller mutated the array in place, which nothing does.\nIts docstring now says what it is entitled to assume.\n\n* TEST-9: declare the out-of-range coordinate table once\n\nThe same seven (lng, lat) tuples - each one representable step outside the\nvalid WGS84 range - were written out verbatim in tests/main_test.py and again\nin the parametrize list of tests/utils_test.py, and only the first copy\ncarried the comment explaining what makes them interesting. Adding a corner\nto one left the other testing a smaller set, with nothing to notice.\n\nThe table moves to tests/locations.py, which already holds the shared\ncoordinate tables, and both modules import it. Collection count is unchanged\nat 551 across the two modules.\n\n* TYPE-1: annotate the shortcut compilation chain for what it is actually passed\n\nBoth annotations in the chain were the wrong way round.\n`check_shortcut_sorting(polygon_ids: np.ndarray, ...)` is only ever called by\n`process_single_hex` with the `list[int]` that `optimise_shortcut_ordering`\nreturns, and it in turn passes the `np.ndarray` produced by `all_zone_ids[\npolygon_ids]` to `has_coherent_sequences(lst: list[int])`.\n\nWidened rather than swapped: tests/shortcut_test.py calls\n`has_coherent_sequences` with real lists, so both forms are live. Also gives\n`check_shortcut_sorting` the `-> None` its siblings have. mypy reports the\nsame four pre-existing errors on this file as before (scripts/ is outside the\npre-commit mypy hook's scope).\n\n* CI-1: fail when the five declarations of the supported Python versions drift\n\npyproject.toml (requires-python plus one classifier per minor version),\ntox.ini (the py{...} envlist factors), build.yml (the test matrix and\nCIBW_BUILD_VERSIONS) and setup.py (py_limited_api) all state the same fact and\nnone can read the others. Two \"must match\" comments already said so and\nnothing enforced them.\n\nThe failure is silent in both directions: a classifier added without a matrix\nentry ships a version the package claims and CI never runs, and a\nrequires-python raised without the abi3 base moved builds wheels tagged for an\ninterpreter no longer supported.\n\nFive assertions, each verified to fail against the specific one-sided edit it\ntargets. Both existing comments now name the test. Same shape and reasoning as\ntests/test_benchmark_workflows.py.\n\n* Record this quality pass in the changelog\n\n* Record pass 7 in the findings ledger\n\nDeleted as shipped: TEST-4, TEST-9, DEAD-3, DUP-3, TYPE-1. Deleted as fixed\nby unrelated work: TEST-7 (the wheel/venv interpreter mismatch, closed by\nPR #494 pinning `uv build --python sys.executable`).\n\nAdded DEAD-4 (an unreachable None guard in `Hex.poly_candidates`) and REND-4\n(three cosmetic leftovers in scripts/reporting.py). Coverage log gains pass 7;\n.github/workflows/ is no longer an unswept area, leaving only docs/ prose.",
-          "timestamp": "2026-08-14T07:12:18+02:00",
-          "tree_id": "04c11d0d7f692961b0ba808524358524af99181f",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/8f59f5e5ac0a89596365280315fd30e6290820c1"
-        },
-        "date": 1786684423782,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 235254.72770239876,
-            "range": "± 10923",
-            "extra": "min of 66 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 755167.2317827041,
-            "range": "± 38459",
-            "extra": "min of 235 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 76479.66898129195,
-            "range": "± 1765",
-            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19062,6 +19017,93 @@ window.BENCHMARK_DATA = {
             "range": "± 9381",
             "unit": "lookups/sec",
             "extra": "min of 84 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0177 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58fe8ed79ea0c3398b906edc2fbb8fcc168e8466",
+          "message": "paper: cut the Software design section to its trade-offs (#795)\n\n* paper: cut the Software design section to its trade-offs\n\nSoftware design keeps each decision, its reason and the alternative it rejected,\nand links the architecture documentation for the implementation. Cut: the\nindex parameters (cell size, refinement, vertex blocks, candidate ordering),\nthe version-string example, the per-file format marker, the wheel and ABI\nmatrix, and the separate test-strategy paragraph. Batch lookups fold into the\nindex paragraph and the automated data updates into the data-package paragraph.\nEvery citation is kept; Hypothesis is now cited from the backends paragraph.\nThe section shrinks from about 1,555 to about 780 words.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n* paper: drop the Ürümqi example from the overlap paragraph\n\nRequested by the maintainer in review.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T15:13:00Z",
+          "tree_id": "427881829203f2d4dfac05c97e05d8d7cec11329",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/58fe8ed79ea0c3398b906edc2fbb8fcc168e8466"
+        },
+        "date": 1795101241335,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1301246.3337401322,
+            "range": "± 30052",
+            "unit": "lookups/sec",
+            "extra": "min of 415 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1588291.8746805089,
+            "range": "± 23375",
+            "unit": "lookups/sec",
+            "extra": "min of 560 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 271543.0881313046,
+            "range": "± 2675",
+            "unit": "lookups/sec",
+            "extra": "min of 87 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7429994.59094364,
+            "range": "± 235077",
+            "unit": "lookups/sec",
+            "extra": "min of 1305 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 60516569.43095526,
+            "range": "± 4432234",
+            "unit": "lookups/sec",
+            "extra": "min of 6810 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 355524.66125247034,
+            "range": "± 5327",
+            "unit": "lookups/sec",
+            "extra": "min of 103 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6947725.314855113,
+            "range": "± 219199",
+            "unit": "lookups/sec",
+            "extra": "min of 1387 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 43421623.969047286,
+            "range": "± 2546489",
+            "unit": "lookups/sec",
+            "extra": "min of 7797 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 349018.8939283975,
+            "range": "± 5680",
+            "unit": "lookups/sec",
+            "extra": "min of 96 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.7984 GHz"
           }
         ]
       }
