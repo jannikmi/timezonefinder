@@ -5,6 +5,7 @@
 - **DOI:** [10.2139/ssrn.5347331](https://doi.org/10.2139/ssrn.5347331)
 - **Field:** calendar computation / applied astronomy software
 - **Verification:** weak. Google Scholar returns it for "timezonefinder" and for the method name "timezone_at", which means its indexed full text contains both, most likely in code. Neither the snippet nor any text read here shows the passage, because SSRN blocks automated access. Crossref has no reference list or abstract for it. Confirm before quoting.
+- **Access attempts (2026-11-19):** the SSRN abstract and PDF URLs return a Cloudflare challenge (HTTP 403) to command-line requests. OpenAlex lists SSRN as the only location, Semantic Scholar has no record, and web searches found no other copy and no code repository by the author. The SSRN author page lists two further panchang papers by him. Reading it needs a person in a browser on SSRN.
 
 ## How timezonefinder is referenced
 
