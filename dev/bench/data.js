@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795102765555,
+  "lastUpdate": 1795102767889,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19206,72 +19206,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "4f6da3f39e30939ceb6079a1049efab0e7f0d36a",
-          "message": "Store holes that duplicate a boundary polygon as a reference (#509)\n\n* store holes that duplicate a boundary polygon as a reference\n\nAlmost every hole is an enclave: the upstream builder cuts it into the\nsurrounding zone using exactly the ring it also emits as the enclosed\nzone's own boundary polygon. Measured against release 2026c, 729 of 756\nhole rings trace the same closed path as some boundary polygon - the\nsame geometry stored under two IDs.\n\nThe hole coordinate file now holds only the 27 rings without a twin, and\nholes/poly_ref.npy records per hole id which boundary polygon to read\ninstead (v >= 0), or where its own ring sits (v < 0, at -(v + 1)). Hole\nids stay dense, so the hole registry and every caller above coords_of()\nis untouched, and the bbox vectors stay valid verbatim - a referenced\nring is identical, so its bbox already equals the boundary's. The bbox\nrejection test keeps reading a flat array with no indirection.\n\nHole data drops from ~2.0 MiB to ~0.16 MiB, on disk and in RAM alike.\n\nMatching compares integer coordinates in a canonical form (rotated to\nthe lexicographically smallest vertex, both winding directions tried),\nwith bbox and vertex count as a prefilter only - no tolerance, so two\nrings either trace the same path or they do not. Verified equivalent to\nthe all-inline data over both point-in-polygon backends, including every\nvertex and edge midpoint of the rings whose stored form changed.\n\nPOLYGON_LAYOUT_VERSION becomes 2 so a released version rejects this data\ninstead of resolving hole ids against the compacted file and returning\nplausible wrong answers; layout 1 stays readable, so a bin_file_location\ndirectory compiled by an older release still works.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* record the broken parse targets, and replace a test that could not fail\n\ntest_packaged_references_resolve_to_the_same_ring compared\nholes.coords_of(id) against boundaries.coords_of(ref), but resolving a\nreference *is* returning the boundary ring, so it asserted an expression\nagainst itself. Removed rather than repaired: the property it was\nreaching for is decided at build time, and on packaged data the bbox\nvectors are the only independent evidence - they are computed from the\noriginal hole rings before deduplication and never rewritten, so a\nreference pointing at the wrong polygon resolves to a ring whose extent\ndisagrees. Mutation-checked: an off-by-one in one reference fails it.\n\nAdded test_packaged_dedup_ratio_meets_the_floor, so the shipped data is\nheld to the bar the converter enforces even when the converter did not\nproduce it.\n\npotential-improvements.md gains TOOL-3: `make parse` and `make testparse`\nboth fail immediately with ModuleNotFoundError on master, since they\ninvoke the converter by path and its own `from scripts...` imports\ncannot resolve.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* move hole data integrity off the runtime path\n\nHoleArray._validate_refs ran on every construction, re-deriving in each\nuser's process something the build had already established - and paying\nfor it on an init path that latency-sensitive services carry per thread.\n\nThe checks now live in scripts/data_integrity.py and run in the two\nplaces where they mean something: the converter, over the files it just\nwrote, and the test suite, over the files the repository ships. One\nimplementation, so the two cannot drift into asserting different things.\n\nOff the init path the check can afford to be thorough rather than cheap,\nso it now does what the runtime version could not: resolve every hole\nring and compare its extent against the bounding box stored for that\nhole. Those bboxes are computed from the original rings before\ndeduplication and never rewritten, which makes them evidence independent\nof the references - a reference pointing at the wrong polygon resolves\nto a real, valid ring and is caught only here.\n\nThe deduplication ratio floor is split into its own check: it is a claim\nabout the upstream dataset, not about file consistency, and a small\ncustom region can legitimately have few enclaves while being perfectly\nwell formed.\n\nCLAUDE.md and CONTRIBUTING.md record the general rule, since the\ntempting version of this - a defensive check at load time - is both\nslower and, being forced to stay cheap, shallower.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* do not refuse to compile custom data with few enclave-shaped holes\n\nThe deduplication floor aborted the converter for any dataset below it,\nbut scripts/file_converter.py is documented for \"any other data in this\nformat\" (docs/2_use_cases.rst), and a dataset whose holes are ordinary\ninterior rings rather than enclaves is perfectly valid: those rings take\nthe inline path and answer correctly, the output is merely larger. Such\na user got an abort quoting \"the upstream dataset\", which is not their\ndataset, for data the fallback would have compiled correctly.\n\nThe floor is a claim about the packaged dataset specifically - the same\nreason validate_hole_dedup_ratio is already separate from the structural\ncheck - so it is enforced there and only there, by the test suite over\nthe packaged binaries. A real upstream regression still blocks the\nweekly data-update PR, which merges only once CI passes. The converter\nnow reports the ratio instead, naming both readings of a low value.\n\nReported by Codex review on #509.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* keep one polygon layout version instead of bumping it\n\nPOLYGON_LAYOUT_VERSION went to 2 so that a released version would reject\ndeduplicated hole data rather than resolve hole ids against a compacted\nfile. But layout 1 has never been released - it arrived with the\nper-axis coordinate encoding in 5947b1b, which is not an ancestor of\n8.2.5 - so no version in the wild reads or writes it, and there was\nnothing for version 2 to protect against. The same fact voids the other\nhalf of the justification: no earlier release wrote layout 1 either, so\nthe READABLE_LAYOUT_VERSIONS set was keeping open a compatibility path\nwith data that cannot exist.\n\nLayout 1 now simply describes what ships: per-axis coordinates and, for\na hole collection, only the rings that are not references. Both changes\nland in the same unreleased version, so they need one marker between\nthem, not two.\n\nThis takes boundaries/coordinates.fbs out of the diff. It had been\nrewritten for a single byte - the version stamp, at offset 22 - with all\n1322 polygons and 7,925,313 vertices identical either way. Regenerated\nfrom the pinned 2026c source; the file is now byte-identical to master\nand only the hole files change.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* require poly_ref.npy instead of falling back to inline rings\n\nThe fallback read a hole directory without poly_ref.npy as one where\nevery ring is stored inline. That was justified as compatibility with\ndata compiled by an older release - but this layout has never been\nreleased, so no such directory exists. What the branch actually covered\nwas data compiled from an intermediate master checkout, which per\nCLAUDE.md needs no compatibility.\n\nWorse, the interpretation it guessed at is unverifiable: the coordinate\nfile of a deduplicated directory holds only the inline rings, so hole\nids do not index it, and reading it that way returns wrong rings rather\nthan failing. Requiring the file means a missing one raises naming\nitself.\n\nAlso drops the `is None` branch from coords_of, which ran per hole\npoint-in-polygon test, and the corresponding branches from the two\nintegrity checks.\n\nThe equivalence test built its all-inline reference dataset by deleting\npoly_ref.npy; it now writes an all-negative vector instead, which is the\nsame directory expressed in the layout that ships.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* add the hole-removal experiment to prototypes/\n\nDropping holes is the obvious next step after storing them as\nreferences, and it looks safe on the coverage evidence: every hole is\nfully covered by other zones. The experiment shows it is not, and that\nis worth keeping runnable rather than describing.\n\nprototypes/hole_removal_impact.py rewrites the hole files of a mirrored\ndata directory - symlinking the rest, since the boundary coordinates\nalone are ~63 MB - and diffs timezone_at over interior points of every\nhole plus a uniform global sample. Dropping only the 27 holes with no\nboundary twin changes 160 of 6,048 hole-interior answers; dropping all\nof them changes 1,703, and 16 of 20,000 uniform points. The changes are\nwrong, not merely different: Asia/Hebron -> Asia/Jerusalem,\nAmerica/Argentina/Cordoba -> America/Asuncion.\n\nIts FINDINGS block records why the coverage argument is insufficient:\ncoverage puts the right zone among the shortcut candidates, ordering\ndecides whether it is reached first. Filed as #513.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* record the check that makes the no-internal-compatibility rule work\n\nBoth files already say internal code, data formats and binary assets\nneed no backward compatibility - CONTRIBUTING.md emphatically. The rule\nwas there and still did not prevent a fallback for \"a data directory\ncompiled by an older release\", because the step it depends on was\nunwritten: confirming that the older release exists.\n\nOn master an unreleased format marker is indistinguishable from a\nshipped one. POLYGON_LAYOUT_VERSION = 1 read as a settled fact while\nbeing unreleased, so a compatibility branch for it looked load-bearing,\nand guarding it cost a version bump that rewrote the 63 MB coordinate\nbinary for one changed byte.\n\nAmended into the existing bullets in both files rather than added as new\nguidance, so neither restates the rule it qualifies.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-14T10:01:44+02:00",
-          "tree_id": "379ac95ce1740aec9b6862bb28d85c75d7b725d5",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/4f6da3f39e30939ceb6079a1049efab0e7f0d36a"
-        },
-        "date": 1786694594892,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466736793518066,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466899871826172,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.5323076248168945,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.541051864624023,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69976902008057,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.7084379196167,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "76f63966e5d6b2a8fb933b4b8d41a3c91bc644b3",
           "message": "Make the data report generator derive its figures and describe its own types (#514)\n\n* REP-2: take the H3 cell count from h3 instead of a ladder of literals\n\n`calculate_shortcut_index_stats` derived `possible_cells` - the denominator\nof every coverage figure in docs/data_report.rst - from hard-coded constants\nfor resolutions 0 to 4, and fell through to `possible_cells = total_entries`\nfor anything else. That fallback makes `coverage_ratio` exactly 1.0, so an\nuntabulated resolution reports complete H3 coverage rather than failing.\n\nThe surrounding `except ImportError` could not fire at all: h3 is a runtime\ndependency of the package, not an optional one, and its fallback was the same\nsilent full-coverage value.\n\n`h3.get_num_cells` returns exactly the tabulated numbers (122, 842, 5882,\n41162, 288122), so the committed report regenerates byte-identically.\nThe h3 and SHORTCUT_H3_RES imports move to module level, matching every other\nmodule in scripts/ - neither guarded a cycle, and the resolution being a\nmodule attribute is what lets the new tests parametrize over it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-2/REND-4: stop round-tripping the polygon count through its own label\n\n`print_polygon_distribution_table` built `distribution_items` as\n(count, frequency) pairs, rebound the same name to (label, frequency) by\nformatting the count into \"N polygon(s)\", then recovered the count with\n`int(category.split()[0])` to look up the example timezone. The label's\nwording was load-bearing for a lookup that had the number all along.\n\nThe function is also annotated `-> list[list[str]]` and documents a return\nvalue, while having no return statement at all; its one caller discards the\nresult. Both now say `None`.\n\nNeither changes the report: docs/data_report.rst regenerates byte-identically.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TYPE-3/TYPE-2: make scripts/reporting.py's annotations describe its code\n\nmypy is not run over scripts/ by the pre-commit hook, and the module had\ndrifted 17 errors away from its own signatures. Running it by hand:\n\n- `calculate_shortcut_index_stats` claimed `dict[str, int | float]` while\n  returning two `list[int]` distributions, which the two `print_frequencies`\n  calls consume as lists. It and `load_binary_data`'s nine-key bag are now\n  `ShortcutIndexStats` / `BinaryData` TypedDicts in scripts/configs.py, where\n  this repo keeps its script-side types.\n- `redirect_output_to_file` declared `str` and is passed `DATA_REPORT_FILE`,\n  a Path, at all three call sites - its context-manager sibling already said\n  `str | Path`.\n- `main` was annotated `-> None` while returning 0 and 1 to `exit()`.\n- `print_rst_table` / `compute_column_widths` declared `list[list[str]]` rows\n  but render every cell through `str()`, and are handed ints and floats. They\n  take `TableRows` (a covariant Sequence, since list is invariant).\n- `generate_polygon_statistics_table`'s implicit-Optional `additional_rows`.\n- `generate_metrics_rows` took a `metric_type` its body never read; all four\n  call sites passed a label that went nowhere.\n\n`generate_metrics_rows`'s values are `Mapping[str, object]` rather than a\nnumeric type, so its non-numeric fallback stays reachable rather than being\ndeleted to satisfy an annotation.\n\nSince CI cannot check any of this, two tests assert each TypedDict's keys\nagainst the dict actually returned. docs/data_report.rst regenerates\nbyte-identically.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* REND-2/REND-4: look values up where they are declared\n\n`_memory_mode_label` spelled out \"in-memory\"/\"file-based\", which\n`PARAM_LABELS` - the module's declared display vocabulary, used by every other\nlabel - already maps from `in_memory`/`file_based`. Renaming a label there\nwould have left the comparison bullets on the old wording while the tables\nabove them moved to the new one.\n\nIn scripts/reporting.py the shortcut index's field widths were a local named\n`ENTRY_KEY_SIZE_BYTES` (so it read as a module constant while being rebound\nper call) plus two bare literals explained only by trailing comments. All\nthree are now named module constants. The median-polygons entry dropped a\n`list()` inside `sorted()`.\n\nRendering both report families against the same inputs before and after gives\nbyte-identical output.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-1: delete five definitions nothing references\n\n- `scripts/utils.py`: `load_json`, `load_pickle` and `write_pickle`. The\n  pickle pair was the only thing keeping `import pickle` in a data-generation\n  path.\n- `timezonefinder/_numba_replacements.py`: `i8`. The shim exists to mirror the\n  numba names the package imports when numba is absent, and that import line\n  asks for `njit, boolean, Array, i4, f8` - an extra class is an unexercised\n  claim about the fallback. Verified by blocking `import numba` and taking the\n  fallback branch end to end.\n- `tests/auxiliaries.py`: `convert_to_reduced_timezone`, self-documented as\n  \"unused, but kept for future reference\", along with the commented-out call\n  in `single_location_test` and the now-unused import.\n\n`REDUCED_TIMEZONE_MAPPING` in tests/locations.py is left in place, now with no\nconsumer; it is reference data rather than code, and it goes to the ledger.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-4: drop a guard against a None Hex._init_candidates cannot leave behind\n\n`poly_candidates` called `_init_candidates()`, re-read `_poly_candidates`,\nand returned an empty set if it were still `None`. No path through\n`_init_candidates` leaves it unset - it early-returns when already\ninitialised, assigns `set(range(nr_of_polygons))` at resolution 0, and\notherwise assigns the accumulated set - so the branch could not fire. It read\nas a guard against an uninitialised cache while meaning \"no candidate\npolygons\", which would have turned a converter bug into silently missing\nshortcuts instead of a failure.\n\n`_init_candidates` now returns the set it initialises, so the property does\nnot re-read the attribute and needs no guard. Its local accumulator was also\nannotated `HexIdSet` while holding polygon ids; both aliases are `set[int]`,\nso nothing could catch it.\n\nThe property had no direct test - it is reached only through `polys_in_cell`\nduring shortcut generation - so it gains one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record this quality pass in the changelog\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record pass 8 in the findings ledger\n\nDeletes the five entries this pass shipped (DEAD-1, DEAD-4, TYPE-3, REND-2,\nREND-4) and narrows TYPE-2 to the two sites still open.\n\nCorrects BIG-2: its title claimed 13 branches / 57 statements, over ruff's\nPLR0912/PLR0915 defaults. Replacing the hard-coded H3 ladder removed six\nbranches, so it now trips neither and the entry is readability only.\n\nAdds DEAD-5 (REDUCED_TIMEZONE_MAPPING, orphaned by DEAD-1 and annotated as a\nset while being a dict), BIG-4 and TOOL-4.\n\nBoth new entries are stated as they look after rebasing onto #509, which\nlanded mid-pass: it rewrote load_binary_data through PolygonArray/HoleArray,\nso BIG-4 keeps only the hole branch that silently yields empty lists rather\nthan the size complaint it was written about. #509 also took the id TOOL-3\nfor a separate finding, so the mypy-exclusion entry is TOOL-4.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-14T10:31:41+02:00",
@@ -35690,6 +35624,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8675 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b72fa8dc031d1d509896ba37b0326a73790e52c9",
+          "message": "docs: re-measure the tzfpy comparison against tzfpy 2.1.2 (#797)\n\n* Lock tzfpy 2.1.2 for the comparison measurements\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* docs: re-measure the tzfpy comparison against tzfpy 2.1.2\n\nBorder accuracy re-run locally on boundary release 2026f; the speed page\nrendered on CI. The paper states speed qualitatively, since the factors\ndepend on the machine.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T16:38:31+01:00",
+          "tree_id": "fb27c3e3f7d3b59fd494a9e373da336dceaf6d07",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b72fa8dc031d1d509896ba37b0326a73790e52c9"
+        },
+        "date": 1795102767298,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947298049926758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948652267456055,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.961294174194336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9621028900146484,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69751167297363,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.698320388793945,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6924 GHz"
           }
         ]
       }
