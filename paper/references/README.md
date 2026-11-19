@@ -28,8 +28,8 @@ This directory records scientific publications that name the `timezonefinder` Py
 
 Each hit was then checked against the full text for a literal mention of the package. The notes record the evidence in one of three grades:
 
-- **full text read** (33): the passage was read in the publication itself, or for `ramirez2023betting` in the thesis chapter with the same text. Open-access repository PDFs (UDC, Charles University, Carleton, UNLP, Reading, Politecnico di Milano, UPC, Utrecht, NIST, CMAS, the Siberian journal, Concordia, CUNY, UT Austin, Oklahoma State, LMU, Brno) made most theses verifiable, and the maintainer supplied the publisher PDFs of `worsnop2021fire`, `bahar2023innovation` and `chakraborty2026pynasonde` and the published texts of `omoyele2026ethos` and `manchin2025collaboration`. Some repository PDFs could only be read in the browser, with pdf.js, because the repository refuses command-line downloads;
-- **quoted search snippet** (3): the passage is quoted from a search-engine or Google Scholar extract because the publisher blocked access (ScienceDirect and SSRN refuse the browser too, and ACM and ProQuest are paywalled). These are `benetka2019context`, `carey2027darkness` and `srijon2021covid`;
+- **full text read** (34): the passage was read in the publication itself, or for `ramirez2023betting` in the thesis chapter with the same text. Open-access repository PDFs (UDC, Charles University, Carleton, UNLP, Reading, Politecnico di Milano, UPC, Utrecht, NIST, CMAS, the Siberian journal, Concordia, CUNY, UT Austin, Oklahoma State, LMU, Brno) made most theses verifiable, and the maintainer supplied the publisher PDFs of `worsnop2021fire`, `bahar2023innovation` and `chakraborty2026pynasonde` and the published texts of `omoyele2026ethos`, `manchin2025collaboration` and `carey2027darkness`. Some repository PDFs could only be read in the browser, with pdf.js, because the repository refuses command-line downloads;
+- **quoted search snippet** (2): the passage is quoted from a search-engine or Google Scholar extract because the publisher blocked access (ScienceDirect and SSRN refuse the browser too, and ACM and ProQuest are paywalled). These are `benetka2019context` and `srijon2021covid`;
 - **index match only** (4): Google Scholar's full-text index matches the term, but the passage has not been seen. These are `kolluri2025panchang`, `talafha2026sharjah` and `babar2026franchising` (SSRN) and `steinertthrelkeld2018twitter` (paywalled book); the first and the last also match `"timezone_at"`, so they most likely show code.
 
 Check the last two grades against the full text before quoting them.
@@ -51,7 +51,7 @@ Check the last two grades against the full text before quoting them.
 
 Candidates and gaps that were not fully checked, with what blocked them.
 
-- **Recorded entries without full text.** Snippet grade: `carey2027darkness` (ScienceDirect refuses the browser with HTTP 403), `benetka2019context` (ACM, paywalled, no open copy known) and `srijon2021covid` (ProQuest; institution not identified). Index-match grade: `kolluri2025panchang`, `talafha2026sharjah` and `babar2026franchising` (SSRN bot check) and `steinertthrelkeld2018twitter` (paywalled book; its accompanying code, if public, would settle it).
+- **Recorded entries without full text.** Snippet grade: `benetka2019context` (ACM, paywalled, no open copy known) and `srijon2021covid` (ProQuest; institution not identified). Index-match grade: `kolluri2025panchang`, `talafha2026sharjah` and `babar2026franchising` (SSRN bot check) and `steinertthrelkeld2018twitter` (paywalled book; its accompanying code, if public, would settle it).
 - **Parts of recorded entries not read.** The online appendix of `bahar2023innovation` (how "time zone difference from GMT" in Table 8 was computed), and the code archive `appendix-1.zip` of `barton2024uwc` (how the zone is used).
 - **Searches not completed.** Paging through the full relevance-sorted Google Scholar list for `"timezonefinder"` once more, to catch records added after the maintainer's two result lists (Scholar rate-limited the browser). Semantic Scholar snippet search and OpenAlex full-text search (both refused with rate limits). Scholar searches for the method names `"timezone_at_land"`, `"certain_timezone_at"` and `"TimezoneFinder()"`, which, like `"timezone_at"`, would surface code listings.
 - **Excluded but reversible.** McDonnell et al. (bioRxiv 2020 / Biological Rhythm Research 2021): the full text was not searched for the package.
@@ -101,7 +101,7 @@ Forty publications reference timezonefinder (2018–2027): 20 journal articles, 
 | [`chakraborty2026pynasonde`](chakraborty2026pynasonde.md) | 2026 | SoftwareX | ionospheric software | required dependency (v1.0.0); reference list, wrong author | full text |
 | [`babar2026franchising`](babar2026franchising.md) | 2026 | SSRN | operations management | not seen | index |
 | [`varjassy2026oss`](varjassy2026oss.md) | 2026 | Utrecht University (M.Sc.) | innovation studies | country time-zone difference (fixed reference date) | full text |
-| [`carey2027darkness`](carey2027darkness.md) | 2027 | J. Transport & Health | transport safety | crash → local time vs. civil dusk | snippet |
+| [`carey2027darkness`](carey2027darkness.md) | 2027 | J. Transport & Health | transport safety | crash → local time vs. civil dusk (darkness outcome); named in the text only | full text |
 
 ### Observations
 
@@ -118,4 +118,4 @@ Forty publications reference timezonefinder (2018–2027): 20 journal articles, 
   - The LMU code takes the UTC offset of the current moment rather than of the date it computes, and the CUNY script keeps only the whole hours of the offset. Both are mistakes in handling the zone after the lookup, which a short example of converting a timestamp correctly could prevent.
   - The PUDL changelog (excluded above) moved an "expensive TimezoneFinder" call.
   - The athletics thesis is the one source that explains why it picked the package: offline lookups are not exposed to failures of an external service.
-- **Coverage is still a lower bound.** Paywalled full text not indexed by Scholar, and code-only artefacts, remain uncovered. Three entries rest on a search snippet and four on an index match only; their publishers or SSRN refused access from here.
+- **Coverage is still a lower bound.** Paywalled full text not indexed by Scholar, and code-only artefacts, remain uncovered. Two entries rest on a search snippet and four on an index match only; their publishers or SSRN refused access from here.
