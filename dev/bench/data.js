@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795042448421,
+  "lastUpdate": 1795096982049,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "9e3ac2c272dcc1a24c306b18e77e522cfcd7e0d6",
-          "message": "make names and docstrings describe what the code does (#507)\n\nShips three ledger entries (TEST-6, TEST-8, TEST-10) plus one finding from a\nwide-angle review, all on one theme: code whose name or docstring contradicts\nwhat it does. No behaviour change.\n\n- TimezoneFinder.timezone_at documents that the last remaining zone is returned\n  without a point in polygon test, and that this is correct only where the data\n  covers every point - certain_timezone_at is the method that tests every\n  candidate. The optimisation was explained in comments but not where\n  help(TimezoneFinder) and the API page show it.\n- test_rectify_coords_valid/_invalid were named for a rectify_coords that does\n  not exist; both call validate_coordinates. The first is deleted as subsumed by\n  test_validate_coordinates_accepts_finite_values, which covers all four of its\n  distinct corners and asserts the return value; the second is renamed\n  test_validate_coordinates_rejects_out_of_range.\n- test_single_element_arrays_should_not_occur asserted that they do occur. Its\n  triple-quoted string sat after the first statement, so it was a discarded\n  expression rather than a docstring and reached neither --collect-only nor a\n  failure report - leaving the contradicting name as the only thing a reader saw.\n  Renamed test_single_element_arrays_round_trip, string moved above the body.\n- Dropped a stale comment duplicated across the last two lines of main_test.py,\n  reading as a to-do for what TestTimezonefinderClassTestMEM already does.\n\nLedger: TEST-6/8/10 deleted as shipped; TEST-9's anchor updated for the rename.\nAdds API-2 (every submodule reachable as a package attribute, so the public API\nis wider than __all__ says) and PERF-1 (is_ocean_timezone runs a regex on the\ntimezone_at_land path), both open and both blocked - one on a maintainer\ndecision, one on a measurement. A scope note now points structural work at the\nroadmap (#506) and states the test for what belongs in the ledger at all.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-13T03:16:45+02:00",
-          "tree_id": "bd97e60b0cfabb9979b72646b1b64235a1add4f9",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/9e3ac2c272dcc1a24c306b18e77e522cfcd7e0d6"
-        },
-        "date": 1786583886816,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 181940.9621954415,
-            "range": "± 7311",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 581878.0369668934,
-            "range": "± 25261",
-            "extra": "min of 192 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62079.44281464827,
-            "range": "± 931",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -18978,6 +18933,93 @@ window.BENCHMARK_DATA = {
             "range": "± 8207",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2474 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3225df975fccd214d7d30cb944a3dac1a69ff789",
+          "message": "paper: review the draft against the JOSS criteria (#790)",
+          "timestamp": "2026-11-19T14:01:59Z",
+          "tree_id": "e9732033630a09a7b6da3a98b170cf851de4f450",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3225df975fccd214d7d30cb944a3dac1a69ff789"
+        },
+        "date": 1795096979274,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1324228.292710749,
+            "range": "± 15474",
+            "unit": "lookups/sec",
+            "extra": "min of 421 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1601737.5649136065,
+            "range": "± 25264",
+            "unit": "lookups/sec",
+            "extra": "min of 569 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 265961.6625834624,
+            "range": "± 2909",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7562260.087607475,
+            "range": "± 365396",
+            "unit": "lookups/sec",
+            "extra": "min of 1351 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 59735729.14606255,
+            "range": "± 4357101",
+            "unit": "lookups/sec",
+            "extra": "min of 9421 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 351349.7028559298,
+            "range": "± 4855",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 7156577.324199669,
+            "range": "± 607322",
+            "unit": "lookups/sec",
+            "extra": "min of 1438 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 43522161.474435516,
+            "range": "± 2706124",
+            "unit": "lookups/sec",
+            "extra": "min of 7982 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 353863.8034829575,
+            "range": "± 7174",
+            "unit": "lookups/sec",
+            "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5071 GHz"
           }
         ]
       }
