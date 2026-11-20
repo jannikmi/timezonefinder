@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795188860201,
+  "lastUpdate": 1795189322918,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "d6af064e46ce18d60f41a07b7d6a5e3a0ad788de",
-          "message": "Give the shortcut binaries a file identifier and a layout version (#526)\n\nThe hybrid shortcut files finished their buffer bare and the reader picked a\nschema by substring-matching \"uint8\"/\"uint16\" in the file name, so a renamed or\nmispaired file was caught by nothing: the two schemas differ only in the width\nof UniqueZone.zone_id, and either width parses cleanly under the other and hands\nback wrong zone ids.\n\nBoth schemas now declare a file_identifier - TZS1 for uint8, TZS2 for uint16,\ndistinct on purpose - and a layout_version field mirroring PolygonCollection's.\nThe reader dispatches on the identifier stamped inside the buffer and then\nchecks the version, so the file name carries no meaning any more and\n_schema_for_file_name is gone. polygons.py's rejection message moves to\ntimezonefinder/flatbuf/io/layout.py so both binary kinds fail the same way.\n\nThe packaged hybrid_shortcuts_uint16.fbs is regenerated to carry the markers;\nits decoded mapping is unchanged entry for entry, and coordinates.fbs is\nuntouched.\n\nCloses #458\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-18T23:34:30+02:00",
-          "tree_id": "3be670d0d81111510337ee9e4822c6294832d070",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/d6af064e46ce18d60f41a07b7d6a5e3a0ad788de"
-        },
-        "date": 1787088942149,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 200720.95756438034,
-            "range": "± 3492",
-            "extra": "min of 60 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 648130.4805908808,
-            "range": "± 6264",
-            "extra": "min of 210 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 66934.28242219899,
-            "range": "± 906",
-            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19440,6 +19395,93 @@ window.BENCHMARK_DATA = {
             "range": "± 31004",
             "unit": "lookups/sec",
             "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d80dc94d13c630bc80a7d8fa119cce5e81905477",
+          "message": "paper: tighten the tzfpy comparison and the build-vs-contribute paragraph (#804)\n\nThe tzfpy comparison keeps every measured figure, the versions, the 111 m\nbound, the unmeasured unsimplified variant and the links to both reports and\nto the cases for which tzfpy is the better choice. Cut: the sentence repeating\nSoftware design (batch lookups, versioned data, no compiler needed) and the\ndescription of the measurement set-up, which the reports carry.\n\n\"Why a separate package\" keeps the 2016 memory problem, the first author's\nupstream bug report (#34), the unmerged data update (#36), the never-updated\ndata (#42), the memory and coverage comparison and the coexistence with\ntzfpy. Cut: the 2018 last-commit date and the start-up and lookup speed.\n\npaper.md goes from 2,595 to 2,512 words (wc -w, as the JOSS bot counts).\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-20T16:41:19+01:00",
+          "tree_id": "be9bf0d04f1f8cc2de0c12ee49f2233c28370e43",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d80dc94d13c630bc80a7d8fa119cce5e81905477"
+        },
+        "date": 1795189319741,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1659662.8892917896,
+            "range": "± 38426",
+            "unit": "lookups/sec",
+            "extra": "min of 514 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 2027775.6598850668,
+            "range": "± 34744",
+            "unit": "lookups/sec",
+            "extra": "min of 745 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 338696.15798056,
+            "range": "± 6545",
+            "unit": "lookups/sec",
+            "extra": "min of 113 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 8985081.171796499,
+            "range": "± 197185",
+            "unit": "lookups/sec",
+            "extra": "min of 1414 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 69727227.08061251,
+            "range": "± 4299735",
+            "unit": "lookups/sec",
+            "extra": "min of 9108 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 458737.90193355887,
+            "range": "± 16075",
+            "unit": "lookups/sec",
+            "extra": "min of 123 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 8594343.546471862,
+            "range": "± 276307",
+            "unit": "lookups/sec",
+            "extra": "min of 1716 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 50613434.82885312,
+            "range": "± 2814118",
+            "unit": "lookups/sec",
+            "extra": "min of 8694 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 456979.2429068678,
+            "range": "± 23675",
+            "unit": "lookups/sec",
+            "extra": "min of 132 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           }
         ]
       }
