@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795169292286,
+  "lastUpdate": 1795188857884,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "1d98d8849adee5808605ac0f5a27a34fb1c4abb5",
-          "message": "Expose the packaged dataset version at runtime (#523)\n\n* Expose the packaged dataset version at runtime (#498)\n\nAn installed timezonefinder could not state which timezone-boundary-builder\nrelease it was answering from: the dataset version lived only in the repo-root\nDATA_VERSION file, which is not packaged, and the package had no __version__\nattribute. As a side effect, every generated benchmark report carried\ntimezonefinder_version: \"Unknown\" because benchmark_utils.py read a\nnon-existent __version__ attribute on a __slots__ class.\n\nImplementation follows the 5-step plan in issue #498:\n\n1. scripts/file_converter.py writes a data_version.txt stamp into the data\n   directory it generates, mirroring the repo-root DATA_VERSION the parse was\n   built from. update_data.sh re-stamps both together after a successful\n   upstream release.\n2. timezonefinder/configs.py declares DATA_VERSION_FILENAME so the runtime\n   and build sides share one filename; AbstractTimezoneFinder.data_version\n   reads it from the packaged data directory at runtime.\n3. timezonefinder.__version__ is exposed via importlib.metadata.\n4. scripts/benchmark_utils.py reads timezonefinder.__version__ from the\n   package instead of getattr(tf_instance, \"__version__\", \"Unknown\").\n5. The new file is covered by the existing MANIFEST.in recursive-include\n   *.txt and [tool.setuptools.package-data] **/*.txt globs, and\n   tests/test_package_contents.py asserts it ships in both wheel and sdist.\n\nVerified locally: full pytest suite green (2994 passed), ruff check + ruff\nformat --check pass, built wheel and sdist both contain\ntimezonefinder/data/data_version.txt.\n\n* Stamp a parse with the release it came from, not the repo's\n\nThe converter wrote data_version.txt from the repo-root DATA_VERSION\nwhatever it had just parsed, so compiling your own GeoJSON - a supported\nuse case - produced a directory whose data_version claimed a\ntimezone-boundary-builder release the data never came from. Silently:\nnothing errors, warns, or has any way to notice.\n\nWhich release an input came from is the caller's to state, so parse_data\ntakes it (`--data-version`, which update_data.sh will pass from the tag\nit records at download time). Unstated, it falls back to DATA_VERSION\nfor the one input that file does describe - the packaged\nDEFAULT_INPUT_PATH - and to \"unknown\" for anything else.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Say what to do when a data directory carries no version stamp\n\nEvery other file of a directory compiled before the stamp existed still\nloads, and lookups still answer, so `data_version` was the one thing that\nfailed - with a bare FileNotFoundError naming a path and nothing else.\nThe sibling check added this release (the coordinate file identifier)\nnames the file and the fix; this one now does too.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Let the parse write the stamp update_data.sh was copying over it\n\nThe script re-typed timezonefinder/data/data_version.txt to repair a\nstamp the converter had just written from the previous DATA_VERSION - a\nsecond spelling of a path the runtime and the converter share a constant\nfor, and one that a rename would leave writing to the old name. The tag\nrecorded at download time is now handed to the parse instead, so the\nstamp is right when it is written and there is nothing to copy over it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Point the stamp-drift failure at the fix that applies\n\nIt told the reader to re-run scripts/file_converter, which needs a\ngitignored several-hundred-MB download and the full parse the data-update\njob budgets three hours for - to rewrite one line of text. The drift it\nreports is between two copies of a tag, so the fix is a copy; regenerating\nis only the answer when the binaries themselves are the wrong ones, which\nthe message now says instead of assuming.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* List the version stamp in the data directory reference\n\nThe page is what someone reads to build a compatible data directory, so a\nfile missing from it is a file they will not write - and the one thing\nthat then fails, data_version, fails at the point of use rather than at\nload. Its description of update_data.sh also predates the stamp.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Pin the stamp as an essential file instead of rebuilding for it\n\ntest_packaged_data_version_file_in_distribution asserted, over two freshly\nbuilt distributions, exactly what test_essential_files_in_distribution\nalready asserts for this file: ESSENTIAL_SOURCE_PATTERNS matches it via\n`*.txt`, and matches_pattern fnmatches the whole relative path. What that\nleaves unguarded is the pattern set narrowing, which is a statement about\nthe checkout and needs no build - so it is a unit test now, and the third\nhand-typed copy of the stamp's path goes with it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Hold __version__ to the version pyproject declares\n\nAsserting only that it is not the literal \"unknown\" passes on the failure\nit exists to catch: __version__ reads the *installed* distribution's\nmetadata, so an environment left behind by a version bump answers with\nthe previous release - not the fallback, indistinguishable from a real\nanswer, and exactly what get_system_status() would then record in every\nbenchmark report. The pyproject path moves next to the repository's other\ntooling paths, since a second test already had its own copy.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Let the downloaded file carry the release it came from\n\nNothing inside a timezone-boundary-builder GeoJSON says which release it\nis, so the release could only be re-stated alongside the file - as a\nshell variable, true for one invocation of one script, and as a fallback\nthat read the repository's own DATA_VERSION for the input it recognised.\n\nupdate_data.sh now resolves the tag first and names the download after\nit, which also makes one answer govern the download URL, the file names\nand DATA_VERSION: fetching `releases/latest/download/` while separately\nasking the API what `latest` was were two questions, and a release\nlanding between them attributed one release's data to the other. Naming\nthe archive and the GeoJSON per release and variant additionally stops a\nleftover file satisfying the \"already downloaded\" checks.\n\nThe converter reads the tag back off the name, and refuses an unpacked\narchive that lacks one instead of stamping data that could never say\nwhere it came from - before creating the output directory, so a refusal\nleaves nothing behind. Data that is not a release stays \"unknown\", and\n--data-version remains for an input that cannot be renamed. No rule can\nnow produce a release tag the data did not come from.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Describe how a parse learns which release it compiled\n\nThe pipeline steps skipped the naming step, and the use-cases page still\ndescribed a default input (`combined.json` next to the package) that has\nnot been one for some time - both now say where the release comes from,\nand that data which is not a release needs no name.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Update CLAUDE.md\n\n---------\n\nCo-authored-by: MsfPablo <129399053+MsfPablo@users.noreply.github.com>\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-18T22:13:26+02:00",
-          "tree_id": "9e0befe4adac781beba799845bd8c32ba3adce40",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/1d98d8849adee5808605ac0f5a27a34fb1c4abb5"
-        },
-        "date": 1787084097082,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 185129.6462913725,
-            "range": "± 1966",
-            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 578836.4877221219,
-            "range": "± 5724",
-            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 63576.91505939054,
-            "range": "± 2552",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19398,6 +19353,93 @@ window.BENCHMARK_DATA = {
             "range": "± 6609",
             "unit": "lookups/sec",
             "extra": "min of 101 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "69dc216980ce234702065d316922097642ab1068",
+          "message": "paper: stop Software design restating the requirements (#803)\n\nSoftware design now refers to the four requirements of the Statement of need\ninstead of arguing them again: the \"No simplification\" paragraph keeps only\nwhy the simplification bound fails for a lookup, the index paragraph drops\nthe batch-workflow restatement, and the data-package paragraph drops the\npinning rationale the offline requirement gives. The recorded-decisions\nparagraph folds into the section introduction. The Statement of need leaves\nthe compiled-backend fallback to Software design.\n\npaper.md goes from 2,703 to 2,595 words (wc -w, as the JOSS bot counts).\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV79E6ZxDktgaEsVDxzf\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-20T16:33:20+01:00",
+          "tree_id": "4a17f58e1d42a1f898f0bdcba1a017cf7e9cf08e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/69dc216980ce234702065d316922097642ab1068"
+        },
+        "date": 1795188854207,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1058986.8376419945,
+            "range": "± 13969",
+            "unit": "lookups/sec",
+            "extra": "min of 335 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1334158.7328681261,
+            "range": "± 35806",
+            "unit": "lookups/sec",
+            "extra": "min of 439 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 245182.21844404013,
+            "range": "± 11953",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6428387.760277715,
+            "range": "± 1034285",
+            "unit": "lookups/sec",
+            "extra": "min of 1133 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48746246.53760738,
+            "range": "± 10270769",
+            "unit": "lookups/sec",
+            "extra": "min of 7952 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 324033.6538762042,
+            "range": "± 20955",
+            "unit": "lookups/sec",
+            "extra": "min of 98 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6055218.7509158775,
+            "range": "± 279637",
+            "unit": "lookups/sec",
+            "extra": "min of 1268 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 34265820.52905933,
+            "range": "± 2097656",
+            "unit": "lookups/sec",
+            "extra": "min of 6034 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 321122.8716297511,
+            "range": "± 31004",
+            "unit": "lookups/sec",
+            "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7117 GHz"
           }
         ]
       }
