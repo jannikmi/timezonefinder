@@ -2,7 +2,7 @@
 
 JOSS requires every paper to carry an AI usage disclosure that names the tools and models (with versions) and where they were used, describes the nature and scope of the assistance, and confirms that the human authors reviewed, edited and validated all AI-assisted output and made the core design decisions ([submission guidelines](https://joss.readthedocs.io/en/latest/submitting.html#ai-usage-policy)). An incomplete disclosure is treated as an ethical breach.
 
-This file holds the draft statement for `paper.md` and the evidence it rests on, compiled from the git history and the pull requests of `jannikmi/timezonefinder` up to commit `1337c67`. The statement goes into `paper.md` once the [open points](#open-points-for-the-authors) are settled. This file and the draft statement were themselves drafted with Claude Code (Claude Opus 5.5) and reviewed by the maintainer.
+This file holds the draft statement for `paper.md` and the evidence it rests on, compiled from the git history and the pull requests of `jannikmi/timezonefinder` up to commit `1337c67`. The statement goes into `paper.md` once the [open points](#open-points-for-the-authors) are settled. To fit the JOSS length limit, `paper.md` carries a shorter version that keeps only what the JOSS AI policy requires; this file keeps the full statement and the evidence. This file and the draft statement were themselves drafted with Claude Code (Claude Opus 5.5) and reviewed by the maintainer.
 
 ## Draft statement for `paper.md`
 
