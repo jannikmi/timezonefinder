@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795165263145,
+  "lastUpdate": 1795169290562,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "e3a43ae189dd7f21a2fe4c038f71e354d0fc4af3",
-          "message": "Retire the release stop for a state that can no longer arise (#520)\n\nThe cut-release skill stopped when a dated section sat above\n`X.X.X (unreleased)`, and explained it by `update_data.sh` splicing its\nentry under the file header. Since #519 it inserts below the unreleased\nsection and `release_data_update.yml` withholds the merge while anything\nis pending, so the automation cannot leave the file out of order - and\n`validate_changelog_order` fails the test suite over the committed file\nif anything else does, which the skill's green-master precondition\nalready stops on.\n\nThe skill's own maintenance section named this as its removal condition.\nThat entry is spent and goes with it; what replaces it is the record of\nwhy the row is absent, so it is not re-added on the next read.\n\nCloses #510\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-18T01:05:12+02:00",
-          "tree_id": "ed8566bcda4190f94f5d93002510a7fd5f6bd83d",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/e3a43ae189dd7f21a2fe4c038f71e354d0fc4af3"
-        },
-        "date": 1787007994645,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 181765.3839313172,
-            "range": "± 1650",
-            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 557791.9293309473,
-            "range": "± 6925",
-            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61395.686530614534,
-            "range": "± 2128",
-            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19356,6 +19311,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4756",
             "unit": "lookups/sec",
             "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2412 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ada45395da6f18d28a0f83008e371716b4c25dbb",
+          "message": "paper: trim the Summary and the Acknowledgements (#802)",
+          "timestamp": "2026-11-20T10:07:04Z",
+          "tree_id": "187c592e92c6529fc43af6ba09975fd61da7f739",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ada45395da6f18d28a0f83008e371716b4c25dbb"
+        },
+        "date": 1795169288187,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1307976.7221924204,
+            "range": "± 26795",
+            "unit": "lookups/sec",
+            "extra": "min of 416 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1585928.1231982436,
+            "range": "± 42619",
+            "unit": "lookups/sec",
+            "extra": "min of 559 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 268678.35825948743,
+            "range": "± 3959",
+            "unit": "lookups/sec",
+            "extra": "min of 87 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7379420.272900935,
+            "range": "± 193622",
+            "unit": "lookups/sec",
+            "extra": "min of 1317 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 60171368.05815015,
+            "range": "± 5287679",
+            "unit": "lookups/sec",
+            "extra": "min of 7668 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 348755.9248395337,
+            "range": "± 5063",
+            "unit": "lookups/sec",
+            "extra": "min of 103 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 6987749.07823226,
+            "range": "± 287232",
+            "unit": "lookups/sec",
+            "extra": "min of 1505 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 43183113.67180994,
+            "range": "± 2404674",
+            "unit": "lookups/sec",
+            "extra": "min of 7239 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 346478.9286765763,
+            "range": "± 6609",
+            "unit": "lookups/sec",
+            "extra": "min of 101 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.5170 GHz"
           }
         ]
       }
