@@ -52,7 +52,7 @@ Researchers who need the time zone at a coordinate take one of four routes.
 
 **Online services** such as the Google Maps Time Zone API [@google_tz_api], TimeZoneDB [@timezonedb] or GeoNames [@geonames] need network access, accounts and quotas, and they neither state nor fix the boundary data behind an answer, so a result cannot be repeated later.
 
-**General-purpose GIS tools** such as GeoPandas [@geopandas] or the spatial database PostGIS [@postgis] can join points against the published boundaries [@tzbb] exactly. They leave the researcher to obtain the data and record its version, to load and index hundreds of megabytes of geometry, and to decide what happens where zones overlap, where a spatial join returns every match or an arbitrary one. `timezonefinder` packages these steps.
+**General-purpose GIS tools** such as GeoPandas [@geopandas] or PostGIS [@postgis] can join points against the published boundaries [@tzbb] exactly, but leave the researcher to obtain and version the data, to load and index hundreds of megabytes of geometry, and to resolve overlapping zones, where a spatial join returns every match or an arbitrary one. `timezonefinder` packages these steps.
 
 **Dedicated lookup libraries** answer the question from the timezone-boundary-builder data: 26 libraries in 15 programming languages [@tzbb_libs]. In Python, `pytzwhere` [@pytzwhere] reads the outdated `tz_world` dataset [@tz_world], which has no ocean zones, and has had no release since 2017. `tzfpy` [@tzfpy], a binding of the Rust crate `tzf-rs` [@tzfrs] first released in 2022, is today the main alternative to `timezonefinder`.
 
