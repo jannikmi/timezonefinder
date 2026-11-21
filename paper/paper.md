@@ -46,8 +46,6 @@ Research data often records *when* and *where* something happened as a UTC times
 
 # State of the field
 
-Researchers who need the time zone at a coordinate take one of four routes.
-
 **Approximations**, one hour per 15 degrees of longitude or one zone per country, fail where zone borders leave the meridians and in countries that span several zones.
 
 **Online services** such as the Google Maps Time Zone API [@google_tz_api], TimeZoneDB [@timezonedb] or GeoNames [@geonames] need network access, accounts and quotas, and neither state nor fix their boundary data, so results cannot be repeated.
