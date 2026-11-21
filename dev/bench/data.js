@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795260351433,
+  "lastUpdate": 1795260353839,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19584,72 +19584,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "a52225c2b8babd9674412b0c5c3c60c741e2be5b",
-          "message": "Name the packaged FlatBuffers binaries .bin, not .fbs (#528)\n\n* Move the packaged data and its licence into packages/timezonefinder-data\n\nTree-only: the binaries and DATA_LICENSE are renamed, not rewritten, and the\nnew distribution's pyproject/README/__init__ are added alongside them. Nothing\nimports the new package yet - the wiring follows separately, so that the 62 MB\nrename can be reviewed apart from it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Publish the boundary data as a separate distribution\n\n`timezonefinder-data` is now its own distribution, built from the same\nworkspace. `pip install timezonefinder` is unchanged - the dependency is hard -\nbut a dataset can be pinned without pinning old code, and a data update no\nlonger costs a `timezonefinder` release carrying ~65 MB across three platform\nwheels plus an sdist.\n\nThe version carries two facts, because two things drive a data release: the\ndata distribution's major *is* `DATA_FORMAT_VERSION`, and the root requires\n`timezonefinder-data>=1.2026.3,<2`. No ceiling on the data axis, so an ordinary\nupdate still needs no code release; a hard one on the format axis, so old code\npaired with a new format fails when resolving rather than at the first lookup.\nThe in-file identifier and layout_version markers stay: `bin_file_location`\ndirectories have no metadata to read, and only a per-file marker catches a\nmixed directory.\n\nThe two tag namespaces share a branch, so the separation is enforced rather\nthan conventional - build.yml excludes `data-v*` at its trigger and again on\nthe job creating the GitHub Release, since `release: types: [published]`\nconsults no tag filter, and each stream publishes with its own token.\nRetiring the pending-work guard follows from the split: a data tag now\npublishes a distribution containing no code, so unreleased code work has\nnothing to do with it.\n\nAlso: DATA_LICENSE moves with the database it covers, a compiled data\ndirectory carries a copy of the schemas its binaries were written by, and\ntest_package_contents.py asserts neither distribution carries the other's\npayload.\n\nRefs #446\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Point the improvement ledger at the data's new location\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Publish the data distribution by Trusted Publishing\n\nPyPI trusts the publish_data.yml workflow directly, gated on the `pypi-data`\ndeployment environment, so the job exchanges an OIDC identity for a\nshort-lived upload token instead of holding one. No long-lived credential\nexists that could upload `timezonefinder`, and the pending publisher covers\nthe very first upload - which a project-scoped token could not, since the\nproject does not exist yet.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Fix the tox bootstrap and drop issue references from code\n\ntox installs the package with bare pip, which resolved the new\n`timezonefinder-data` requirement from PyPI - where this checkout's version\nneed not exist, and does not at all before the first data release. Every tox\nenv now installs the workspace member from the source tree, which also keeps\nthem testing the data this checkout carries rather than a published one.\n\nSeparately: an issue number in a comment is an indirection to a tracker the\nreader may not be able to open, and one that gets retitled and re-scoped\nindependently of the code, so the reason stops being where the code is. The\nreasoning is now written out at each site. CLAUDE.md records the rule, with\nCHANGELOG.rst as the stated exception.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Name the packaged FlatBuffers binaries .bin, not .fbs\n\n`.fbs` is the FlatBuffers *schema* extension, and since the data directory\nstarted shipping actual schemas next to the buffers, one extension named two\nunrelated kinds of file - which is why the schema copies needed a subdirectory\nto avoid the collision. Each buffer already states what it is through the file\nidentifier in its first bytes, which a rename cannot forge; the name never\ncarried that meaning.\n\nThe bytes are unchanged, so this is a `git mv` of identical blobs and adds\nnothing to history. No layout version moves and DATA_FORMAT_VERSION stays 1:\nno `timezonefinder-data` has been published yet, and no released\n`timezonefinder` reads a data distribution at all, so there is no pairing to\nprotect against. That is only true while this lands before the first `data-v`\ntag - afterwards it would be a format bump and an ordered two-distribution\nrelease.\n\nCustom `bin_file_location` directories must be regenerated, which this release\ncycle already required for the coordinate layout, the hole storage and the\nshortcut container; the changelog states the file names alongside those rather\nthan as a second obligation.\n\nAlso drops the pointer to a gitignored plans/ file from CLAUDE.md - the\nreasoning it pointed at is now stated where it can actually refuse the next\nproposal - and records the rule against citing anything outside the repository\nas a reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
-          "timestamp": "2026-08-19T02:15:12+02:00",
-          "tree_id": "9b3104e62db704f6982605a83f4f3f54701fe8a1",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/a52225c2b8babd9674412b0c5c3c60c741e2be5b"
-        },
-        "date": 1787098587486,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466641426086426,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466748237609863,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.532382965087891,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.541144371032715,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69963836669922,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.70833206176758,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "42696172134b385922d487b33773321cb7f2d99d",
           "message": "Refuse to publish the code before the data it requires exists (#529)\n\n* Refuse to publish the code before the data it requires exists\n\nThe two distributions release independently, and on a data format change the\norder is fixed: the data first, then the code requiring it. Backwards, the\nwheel is uninstallable for everyone until the data lands - and PyPI never\naccepts a version number twice, so the fix is a whole new release rather than\na re-upload. Until now that ordering was a checklist item with nothing\nenforcing it.\n\nThe guard runs in the publishing job, ahead of the upload, and reads the\nrequirement out of the wheel about to be published rather than out of\npyproject.toml: the wheel is what a user's resolver will read. It then asks\nthe index the same question that resolver will ask, instead of reimplementing\nthe answer - so a release whose files are all yanked does not count as one\nthat satisfies the bound.\n\n\"Nothing satisfies it\" and \"the check could not run\" exit differently. A\nrelease blocked because PyPI was unreachable is a retry; one blocked because\nthe data is genuinely missing needs the data published first, and collapsing\nthe two loses the only thing the operator needs to know. A wheel declaring no\ndata dependency at all is the second kind, not a pass - that would be the\nguard succeeding for the wrong reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Guard release on data dependency: require data published before code\n\nEnsure code releases cannot be published until the separate timezonefinder-data distribution is published. Update CI workflows, release scripts, documentation and tests to check and enforce the data dependency.\\n\\nFiles changed include workflow YAMLs, release helper scripts, docs, and tests to make the data dependency explicit and to prevent accidental code-only releases.\\n\\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>\n\n* Finish the release guard and assert what each distribution ships\n\nCompletes three items left open on this branch.\n\nThe data-dependency check ran twice: the move ahead of the GitHub Release\nlanded, but the copy next to the PyPI upload survived the merge. Drop it -\n`publish-pypi` needs `release`, so one placement covers both - and widen its\ntest from \"before the upload\" to \"before any publishing step\", satisfied\nin-job or through a dependency. The old test passed with the guard sitting\nafter the GitHub Release, which is the earlier irreversible step.\n\nAssert each distribution's build contents. setuptools copies package data\ninto build/lib and never prunes it, so the .fbs -> .bin rename left a 63 MB\ncoordinates.fbs shipping next to its replacement in every wheel built from a\ndeveloper checkout - 99 MiB instead of 50. Nothing caught it: the\nunwanted-file scan only knows .gitignore patterns, which cannot match a path\ninside an archive, and the essential-file checks only ask whether expected\nfiles are present. Compare the wheel's payload to the committed dataset as a\nset, and clear build/ before building so a local build matches CI's fresh\ncheckout.\n\nRestore the code sdist's assertions for the test fixtures it grafts. Dropping\n*.npy/*.json when the dataset moved out also dropped the only checks that\ntests/fixtures/benchmarks/ and tests/test_input.json still ship.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Let cut-release decide the bump level, reviewed on the release PR\n\nThe skill stopped twice: once to put patch/minor/major to the maintainer,\nonce before pushing the tag. The first stop asked them to answer, from §4's\ntable and with no diff attached, a question the release PR then asked again\nwith both attached. Drop it: §4 derives the level from the table, and §7's\n\"Why this level\" is the review surface instead.\n\nThat only works if the justification is checkable, so it now has a required\nshape - the one bullet that drove the level, quoted, the table row it matches,\nand the level ruled out with the reason. \"minor, not major: no exported\nsignature changed\" can be checked in seconds; \"minor\" cannot.\n\nThe tag stop stays and is different in kind: nothing reviews it afterwards,\nbuild.yml publishes on the push, and PyPI will not take a version twice. The\nmaintenance section records both directions so the next pass neither re-adds\nthe bump gate nor removes the tag one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-19T07:35:03+02:00",
@@ -36068,6 +36002,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b73d0cdfb3fea1693e64f1b09631959c646b144f",
+          "message": "paper: trim the JOSS draft to 1,900 words (#807)",
+          "timestamp": "2026-11-21T12:24:48+01:00",
+          "tree_id": "301031b1a9e83b20d0e7d4518962f066c2496352",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b73d0cdfb3fea1693e64f1b09631959c646b144f"
+        },
+        "date": 1795260353393,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9613237380981445,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.962132453918457,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.697468757629395,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69823360443115,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
           }
         ]
       }
