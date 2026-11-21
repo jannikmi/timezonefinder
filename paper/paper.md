@@ -74,7 +74,7 @@ The design follows from the four requirements, above all from never simplifying 
 
 **Memory mapping.** The polygon data is stored in the FlatBuffers format [@flatbuffers] and memory-mapped rather than read at start-up. Only the pages a lookup touches become resident, and the operating system can reclaim them under memory pressure, which keeps the package usable in memory-constrained containers and in many parallel worker processes. Users can instead read all data into memory, which is faster, or use a lighter variant that answers from the index alone where an approximate answer near borders is acceptable.
 
-**Accelerators that never decide correctness.** The point-in-polygon test exists as a C extension, as a Numba [@numba] compilation and as plain Python, and the package binds one of them at import time. All three return identical answers: an accelerator makes the package fast but never makes it correct, so without a compiler and without Numba the package still installs and answers correctly, only more slowly. The test suite runs against each configuration.
+**Accelerators that never decide correctness.** The point-in-polygon test exists as a C extension, as a Numba [@numba] compilation and as plain Python, and the package binds one of them at import time. All three return identical answers, so without a compiler and without Numba the package still installs and answers correctly, only more slowly. The test suite runs against each configuration.
 
 **Overlapping zones.** Some places are claimed by more than one zone. Rather than burden every lookup with a set for this rare case, ordinary lookups return the smaller, enclaved zone, a rule that depends only on the zones and so survives a rebuilt index; a separate lookup returns every zone.
 
