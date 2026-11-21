@@ -64,7 +64,7 @@ Researchers who need the time zone at a coordinate take one of four routes.
 
 # Software design
 
-The design follows from the four requirements above, above all from never simplifying the boundary polygons; most of it makes this full-resolution geometry affordable in time and memory. This section gives the trade-offs and the rejected alternatives, which are recorded with their measurements in the repository under [`contributing/improvements/decisions/`](https://github.com/jannikmi/timezonefinder/tree/master/contributing/improvements/decisions); the [architecture documentation](https://timezonefinder.readthedocs.io/en/latest/architecture.html) describes the implementation.
+The design follows from the four requirements, above all from never simplifying the polygons; most of it makes full-resolution geometry affordable in time and memory. The trade-offs and rejected alternatives are recorded with their measurements in [`contributing/improvements/decisions/`](https://github.com/jannikmi/timezonefinder/tree/master/contributing/improvements/decisions), and the [architecture documentation](https://timezonefinder.readthedocs.io/en/latest/architecture.html) describes the implementation.
 
 **No simplification.** The bound that an algorithm such as Douglas–Peucker [@douglas1973] guarantees is not a small error spread over all queries but a possibly wrong answer for every query within the tolerance of a border, the only queries in doubt at all. The size and speed simplification would buy are bought losslessly instead, as described below. The remaining price is accepted: a distribution about an order of magnitude larger, and slower single lookups near borders.
 
