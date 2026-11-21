@@ -50,7 +50,7 @@ Researchers who need the time zone at a coordinate take one of four routes.
 
 **Approximations**, one hour per 15 degrees of longitude or one zone per country, fail where zone borders leave the meridians and in countries that span several zones.
 
-**Online services** such as the Google Maps Time Zone API [@google_tz_api], TimeZoneDB [@timezonedb] or GeoNames [@geonames] need network access, accounts and quotas, and they neither state nor fix the boundary data behind an answer, so a result cannot be repeated later.
+**Online services** such as the Google Maps Time Zone API [@google_tz_api], TimeZoneDB [@timezonedb] or GeoNames [@geonames] need network access, accounts and quotas, and neither state nor fix their boundary data, so results cannot be repeated.
 
 **General-purpose GIS tools** such as GeoPandas [@geopandas] or PostGIS [@postgis] can join points against the published boundaries [@tzbb] exactly, but leave the researcher to obtain and version the data, to load and index hundreds of megabytes of geometry, and to resolve overlapping zones, where a spatial join returns every match or an arbitrary one. `timezonefinder` packages these steps.
 
