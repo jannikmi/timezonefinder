@@ -28,7 +28,7 @@ bibliography: paper.bib
 
 Each place belongs to a time zone, whose rules, its offset from Coordinated Universal Time (UTC) and its daylight saving time, are recorded in the IANA Time Zone Database [@iana_tzdb] under names such as `Europe/Berlin`. To convert a timestamp to local time, one first has to know which time zone contains the place.
 
-`timezonefinder` is a Python package that answers this question without an internet connection. Given a latitude and a longitude, it returns the name of the time zone that contains the point, using the boundaries of the timezone-boundary-builder project [@tzbb], derived from OpenStreetMap [@osm; @haklay2008osm], without simplifying them. Since its first release in April 2016 it has had 86 releases across nine major versions, at least two in every year.
+`timezonefinder` is a Python package that answers this question for a latitude and longitude without an internet connection, using the unsimplified boundaries of the timezone-boundary-builder project [@tzbb], derived from OpenStreetMap [@osm; @haklay2008osm]. Since its first release in April 2016 it has had 86 releases across nine major versions, at least two in every year.
 
 # Statement of need
 
