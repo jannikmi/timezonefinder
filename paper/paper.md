@@ -88,7 +88,7 @@ The publications span atmospheric science and fire weather [@guevara2019hermes; 
 
 Research software depends on `timezonefinder` too, so its users rely on the answers indirectly: among others HERMESv3 [@guevara2019hermes], ETHOS.TISED [@omoyele2026ethos], pynasonde [@chakraborty2026pynasonde] and the tooling of a NIST technical note [@sanders2026cbrs]. GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/dependents) listed about 5,000 repositories and 260 published packages that depend on `timezonefinder` on 18 November 2026, among them projects of CERN, Sandia National Laboratories, the US National Laboratory of the Rockies (formerly NREL), the US EPA, NOAA and NASA JPL ([list](https://github.com/jannikmi/timezonefinder#used-by)).
 
-These figures are a lower bound. Only three of the publications list the package in their references, so citation databases miss nearly all of them, and theses and paywalled full texts are only partly indexed. The project provides a Zenodo DOI [@tzf_zenodo] and a citation file, and this paper adds a peer-reviewed reference.
+These figures are a lower bound. Only three of the publications list the package in their references, so citation databases miss nearly all of them. The project provides a Zenodo DOI [@tzf_zenodo] and a citation file, and this paper adds a peer-reviewed reference.
 
 # AI usage disclosure
 
