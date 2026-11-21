@@ -83,7 +83,7 @@ import numpy as np
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION, tzfpy_version
 from scripts.border_sampling import BorderGeometry, Candidate, CandidatePair
 from scripts.utils import write_json
-from scripts.configs import DOC_ROOT, read_data_version
+from scripts.configs import DOC_ROOT, PROJECT_ROOT, read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -170,6 +170,10 @@ EXHAUSTIVE_EXAMPLE_LIMIT = 20
 # docs/border_accuracy_vs_tzfpy.rst is the only reader, and the Makefile passes
 # `--chart` with no argument rather than retyping the path.
 CHART_PATH = DOC_ROOT / "tzfpy_agreement_by_distance.svg"
+
+# The same run drawn for the JOSS paper, which `paper/paper.md` embeds. The
+# Makefile passes `--paper-chart` with no argument, as for `--chart`.
+PAPER_CHART_PATH = PROJECT_ROOT / "paper" / "tzfpy_agreement_by_distance.pdf"
 
 # The run itself, committed next to the chart it draws.
 #
@@ -795,6 +799,7 @@ CHART_MUTED = "#6b7a85"
 CHART_GRID = "#dde3e8"
 CHART_SERIES_ALL = "#1f6feb"
 CHART_SERIES_LAND = "#c2570f"
+CHART_TITLE = "Border locations affected by tzfpy simplification"
 
 
 class ChartSeries(NamedTuple):
@@ -889,8 +894,96 @@ def _percent_axis_label(percent: float) -> str:
     return f"{percent:.3g}%"
 
 
-def render_chart(measurement: Measurement) -> str:
-    """Render the sweep as deterministic, diffable matplotlib SVG markup.
+class ChartLayout(NamedTuple):
+    """Where one rendering of the chart puts its parts, in figure fractions."""
+
+    figure_size: tuple[float, float]
+    left: float
+    right: float
+    bottom: float
+    top: float
+    legend_top: float
+    #: Whether the half-decade distances (5 cm, 50 m, ...) get a printed label.
+    #: At paper width their labels run into the decade labels beside them.
+    label_half_decades: bool
+    #: The docs page shows the chart on its own, so it carries its title and run
+    #: details; the paper states both in the caption beneath it.
+    titled: bool
+
+
+DOCS_LAYOUT = ChartLayout(
+    figure_size=FIGURE_SIZE,
+    left=0.11,
+    right=0.965,
+    bottom=0.14,
+    top=0.70,
+    legend_top=0.84,
+    label_half_decades=True,
+    titled=True,
+)
+
+#: The JOSS PDF sets a figure across a text block about 6.3 in wide. Drawn at
+#: about that size, the 8.5 pt labels print at 8.5 pt rather than being scaled
+#: down from the docs chart's 11 in to a size nobody can read on paper.
+PAPER_LAYOUT = ChartLayout(
+    figure_size=(7.0, 4.2),
+    left=0.13,
+    right=0.975,
+    bottom=0.14,
+    top=0.87,
+    legend_top=0.995,
+    label_half_decades=False,
+    titled=False,
+)
+
+#: Room a value label printed below its marker needs: its 14 pt offset plus one
+#: line of 8.5 pt text and a little air. A marker closer than this to the bottom
+#: of the axis would push its label onto the distance labels beneath.
+LABEL_ROOM_BELOW_PT = 24.0
+
+
+def _labelled_below(series: ChartSeries) -> bool:
+    # Orange labels sit above their markers and the blue ones below, so the two
+    # curves, which run close together, never stack their labels on each other.
+    return series.colour != CHART_SERIES_LAND
+
+
+def _floor_with_room_for_labels(
+    floor_percent: float,
+    top_percent: float,
+    labelled_below: Sequence[float],
+    layout: ChartLayout,
+) -> float:
+    """Lower the axis floor until every label set below a marker fits above it.
+
+    Matplotlib only places the text; it does not move a label off the tick
+    labels it collides with, so the room is worked out here, from the axis
+    height the layout gives. The floor never goes below
+    ``CHART_Y_MIN_FLOOR_PERCENT``: where that is still too little, the label
+    moves above its marker instead (see ``_draw_chart``).
+    """
+    axis_height_pt = layout.figure_size[1] * 72.0 * (layout.top - layout.bottom)
+    while floor_percent > CHART_Y_MIN_FLOOR_PERCENT:
+        points_per_decade = axis_height_pt / (
+            np.log10(top_percent) - np.log10(floor_percent)
+        )
+        room = min(
+            (np.log10(percent) - np.log10(floor_percent)) * points_per_decade
+            for percent in labelled_below
+        )
+        if room >= LABEL_ROOM_BELOW_PT:
+            break
+        floor_percent = max(
+            CHART_Y_MIN_FLOOR_PERCENT,
+            axis_bound(floor_percent / 1.000001, upwards=False),
+        )
+    return floor_percent
+
+
+def _draw_chart(
+    measurement: Measurement, layout: ChartLayout, format: str, metadata: dict
+) -> bytes:
+    """Draw the sweep with ``layout`` and save it as ``format``.
 
     matplotlib's plotting stack lives in the ``benchmark`` dependency group rather
     than the ordinary test or measurement environments. Import it only when a chart
@@ -900,7 +993,7 @@ def render_chart(measurement: Measurement) -> str:
     import matplotlib
 
     # This must precede pyplot: CI has no display server, and backend auto-detection is
-    # environment-dependent even though this function only ever writes SVG.
+    # environment-dependent even though this function only ever writes files.
     matplotlib.use("Agg")
 
     import matplotlib.pyplot as plt
@@ -928,6 +1021,25 @@ def render_chart(measurement: Measurement) -> str:
             axis_bound(floor_percent / 1.000001, upwards=False),
         )
         top_percent = axis_bound(top_percent * 1.000001, upwards=True)
+    floor_percent = _floor_with_room_for_labels(
+        floor_percent,
+        top_percent,
+        [
+            point.percent
+            for series in CHART_SERIES
+            if _labelled_below(series)
+            for result, point in zip(
+                measurement.by_distance, plotted[series.label], strict=True
+            )
+            if is_decade(result.distance_m)
+        ]
+        or [top_percent],
+        layout,
+    )
+    axis_height_pt = layout.figure_size[1] * 72.0 * (layout.top - layout.bottom)
+    points_per_decade = axis_height_pt / (
+        np.log10(top_percent) - np.log10(floor_percent)
+    )
     any_upper_bound = any(
         point.is_upper_bound for points in plotted.values() for point in points
     )
@@ -939,6 +1051,9 @@ def render_chart(measurement: Measurement) -> str:
         # Helvetica/Arial would use different font metrics on macOS and Linux, moving
         # legend and label geometry even though the emitted SVG keeps text as text.
         "font.family": "DejaVu Sans",
+        # Embed the font as TrueType rather than matplotlib's default Type 3, so the
+        # paper's PDF keeps searchable, selectable text.
+        "pdf.fonttype": 42,
         "svg.fonttype": "none",
         "svg.hashsalt": SVG_HASH_SALT,
         "text.color": CHART_INK,
@@ -951,8 +1066,13 @@ def render_chart(measurement: Measurement) -> str:
         # which report happened to render before it, then apply only its local theme.
         matplotlib.rcdefaults()
         matplotlib.rcParams.update(rc)
-        figure, axis = plt.subplots(figsize=FIGURE_SIZE)
-        figure.subplots_adjust(left=0.11, right=0.965, bottom=0.14, top=0.70)
+        figure, axis = plt.subplots(figsize=layout.figure_size)
+        figure.subplots_adjust(
+            left=layout.left,
+            right=layout.right,
+            bottom=layout.bottom,
+            top=layout.top,
+        )
         figure.patch.set_facecolor("white")
         axis.set_facecolor("white")
         axis.set_axisbelow(True)
@@ -971,7 +1091,9 @@ def render_chart(measurement: Measurement) -> str:
         axis.set_ylim(floor_percent, top_percent)
         axis.xaxis.set_major_locator(FixedLocator(distances))
         distance_labels = {
-            distance: format_distance(distance) for distance in distances
+            distance: format_distance(distance)
+            for distance in distances
+            if layout.label_half_decades or is_decade(distance)
         }
         axis.xaxis.set_major_formatter(
             FuncFormatter(lambda value, _: distance_labels.get(value, ""))
@@ -1047,10 +1169,12 @@ def render_chart(measurement: Measurement) -> str:
                     )
                     else 0
                 )
-                # Keep the orange labels above their markers and the blue ones below,
-                # except at the axis floor where both must move up to stay in bounds.
-                y_offset = 8 if series.colour == CHART_SERIES_LAND else -14
-                if point.percent <= floor_percent * 1.05:
+                y_offset = -14 if _labelled_below(series) else 8
+                room_below = (
+                    np.log10(point.percent) - np.log10(floor_percent)
+                ) * points_per_decade
+                if y_offset < 0 and room_below < LABEL_ROOM_BELOW_PT:
+                    # The floor could not drop far enough: put it above instead.
                     y_offset = 11
                 axis.annotate(
                     point.label,
@@ -1079,48 +1203,68 @@ def render_chart(measurement: Measurement) -> str:
                 )
             )
 
-        figure.suptitle(
-            "Border locations affected by tzfpy simplification",
-            x=0.11,
-            y=0.965,
-            ha="left",
-            fontsize=13,
-            fontweight="bold",
-        )
-        figure.text(
-            0.11,
-            0.91,
-            f"boundary release {measurement.data_version} on both sides, "
-            f"{TZFPY_DISTRIBUTION} {measurement.tzfpy_version}, "
-            f"{measurement.by_distance[0].paired_all_borders.total} paired locations "
-            "per distance; both axes logarithmic",
-            color=CHART_MUTED,
-            fontsize=9,
-            ha="left",
-        )
+        if layout.titled:
+            figure.suptitle(
+                CHART_TITLE,
+                x=layout.left,
+                y=0.965,
+                ha="left",
+                fontsize=13,
+                fontweight="bold",
+            )
+            figure.text(
+                layout.left,
+                0.91,
+                f"boundary release {measurement.data_version} on both sides, "
+                f"{TZFPY_DISTRIBUTION} {measurement.tzfpy_version}, "
+                f"{measurement.by_distance[0].paired_all_borders.total} paired "
+                "locations per distance; both axes logarithmic",
+                color=CHART_MUTED,
+                fontsize=9,
+                ha="left",
+            )
         figure.legend(
             handles=legend_handles,
             loc="upper right",
-            bbox_to_anchor=(0.965, 0.84),
+            bbox_to_anchor=(layout.right, layout.legend_top),
             frameon=False,
             fontsize=8.5,
             ncol=len(legend_handles),
         )
 
-        output = io.StringIO()
-        # Suppress the current-time RDF field; with the fixed hash salt and real text
-        # nodes above, two renders of the same measurement are byte-identical.
-        figure.savefig(
-            output,
-            format="svg",
-            metadata={
-                "Date": None,
-                "Title": "Border locations affected by tzfpy simplification",
-            },
-        )
+        output = io.BytesIO()
+        figure.savefig(output, format=format, metadata=metadata)
         plt.close(figure)
 
-    return "\n".join(line.rstrip() for line in output.getvalue().splitlines()) + "\n"
+    return output.getvalue()
+
+
+def render_chart(measurement: Measurement) -> str:
+    """Render the sweep as deterministic, diffable SVG markup for the docs page."""
+    # Suppress the current-time RDF field; with the fixed hash salt and real text
+    # nodes, two renders of the same measurement are byte-identical.
+    svg = _draw_chart(
+        measurement,
+        DOCS_LAYOUT,
+        format="svg",
+        metadata={"Date": None, "Title": CHART_TITLE},
+    ).decode("utf-8")
+    return "\n".join(line.rstrip() for line in svg.splitlines()) + "\n"
+
+
+def render_paper_chart(measurement: Measurement) -> bytes:
+    """Render the sweep as the PDF figure ``paper/paper.md`` embeds.
+
+    PDF rather than the docs SVG: the JOSS build typesets the paper with LaTeX,
+    which includes a PDF as vector graphics but cannot read SVG. Without a
+    creation date the bytes depend only on the measurement and matplotlib.
+    """
+    return _draw_chart(
+        measurement,
+        PAPER_LAYOUT,
+        format="pdf",
+        metadata={"CreationDate": None, "Title": CHART_TITLE},
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1159,6 +1303,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=f"write the sweep as an SVG line chart (default: {CHART_PATH})",
     )
     parser.add_argument(
+        "--paper-chart",
+        nargs="?",
+        const=str(PAPER_CHART_PATH),
+        metavar="PATH",
+        help=f"write the sweep as the paper's PDF figure (default: {PAPER_CHART_PATH})",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="emit the counts as JSON instead of a table",
@@ -1178,7 +1329,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=(
             "re-report and re-draw a saved run instead of measuring again "
             f"(default: {MEASUREMENT_PATH}); every other option except "
-            "--chart and --json is then ignored"
+            "--chart, --paper-chart and --json is then ignored"
         ),
     )
     args = parser.parse_args(argv)
@@ -1203,6 +1354,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.chart:
         Path(args.chart).write_text(render_chart(measurement), encoding="utf-8")
         print(f"wrote {args.chart}", file=sys.stderr)
+    if args.paper_chart:
+        Path(args.paper_chart).write_bytes(render_paper_chart(measurement))
+        print(f"wrote {args.paper_chart}", file=sys.stderr)
     print(
         json.dumps(measurement.as_json(), indent=2)
         if args.json

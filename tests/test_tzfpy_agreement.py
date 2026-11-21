@@ -24,11 +24,15 @@ from timezonefinder import TimezoneFinder
 from timezonefinder.utils import coord2int
 
 from scripts.border_sampling import Candidate, CandidatePair
-from scripts.configs import DOC_ROOT, read_data_version
+from scripts.configs import DOC_ROOT, PROJECT_ROOT, read_data_version
 from scripts.measure_tzfpy_agreement import (
     AGREE,
     CHART_PATH,
+    DOCS_LAYOUT,
+    LABEL_ROOM_BELOW_PT,
     MEASUREMENT_PATH,
+    PAPER_CHART_PATH,
+    PAPER_LAYOUT,
     OVERLAP_POLICY,
     SUBSTANTIVE,
     AgreementCounts,
@@ -36,6 +40,7 @@ from scripts.measure_tzfpy_agreement import (
     DistanceResult,
     Measurement,
     PairedAgreementCounts,
+    _floor_with_room_for_labels,
     _require_matching_dataset,
     axis_bound,
     axis_ticks,
@@ -47,6 +52,7 @@ from scripts.measure_tzfpy_agreement import (
     format_distance,
     is_decade,
     render_chart,
+    render_paper_chart,
 )
 
 
@@ -584,3 +590,57 @@ def test_the_committed_run_is_already_formatted_as_the_hook_wants_it() -> None:
     raw = MEASUREMENT_PATH.read_text(encoding="utf-8")
     payload = json.loads(raw)
     assert raw == json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("layout", [DOCS_LAYOUT, PAPER_LAYOUT])
+def test_a_label_below_its_marker_gets_room_above_the_axis(layout) -> None:
+    # The committed run's 1 km bound (0.015 %) sat a sixth of a decade above a
+    # 0.01 % floor, and its label, set below the marker, ran into the "500 m"
+    # distance label. The floor drops until the label fits.
+    floor = _floor_with_room_for_labels(0.01, 100.0, [0.015, 71.8], layout)
+    assert floor < 0.01
+    axis_height_pt = layout.figure_size[1] * 72.0 * (layout.top - layout.bottom)
+    room = (
+        (np.log10(0.015) - np.log10(floor))
+        * axis_height_pt
+        / (np.log10(100.0) - np.log10(floor))
+    )
+    assert room >= LABEL_ROOM_BELOW_PT
+
+
+@pytest.mark.unit
+def test_a_floor_with_room_already_stays_where_it_is() -> None:
+    assert _floor_with_room_for_labels(0.1, 100.0, [5.0], DOCS_LAYOUT) == 0.1
+
+
+@pytest.mark.unit
+def test_the_paper_chart_is_a_deterministic_pdf() -> None:
+    # LaTeX, which typesets the JOSS paper, includes a PDF but not an SVG; and a
+    # committed figure that changes bytes on every render hides real changes
+    _require_matplotlib()
+    measurement = _measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0))
+    pdf = render_paper_chart(measurement)
+    assert pdf.startswith(b"%PDF-")
+    assert b"CreationDate" not in pdf
+    assert pdf == render_paper_chart(measurement)
+
+
+@pytest.mark.unit
+def test_the_committed_paper_chart_is_the_committed_run_drawn() -> None:
+    _require_matplotlib()
+    restored = Measurement.from_json(
+        json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
+    )
+    assert render_paper_chart(restored) == PAPER_CHART_PATH.read_bytes(), (
+        "the paper's figure is not what the committed run renders to - "
+        "re-run `make tzfpy-agreement`, or redraw with --from-json --paper-chart"
+    )
+
+
+@pytest.mark.unit
+def test_the_paper_embeds_the_committed_paper_chart() -> None:
+    # paper.md resolves the figure relative to itself, as the JOSS build does
+    paper = PROJECT_ROOT / "paper" / "paper.md"
+    assert PAPER_CHART_PATH.parent == paper.parent
+    assert f"]({PAPER_CHART_PATH.name})" in paper.read_text(encoding="utf-8")
