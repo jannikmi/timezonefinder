@@ -48,7 +48,7 @@ Research data often records *when* and *where* something happened as a UTC times
 
 Researchers who need the time zone at a coordinate take one of four routes.
 
-**Approximations** derive the offset from the longitude, one hour per 15 degrees, or take one zone per country. Both fail where it matters: zone borders do not follow meridians, many large countries span several zones, and an offset derived from the longitude has no daylight saving time and no history.
+**Approximations**, one hour per 15 degrees of longitude or one zone per country, fail where zone borders leave the meridians and in countries that span several zones.
 
 **Online services** such as the Google Maps Time Zone API [@google_tz_api], TimeZoneDB [@timezonedb] or GeoNames [@geonames] need network access, accounts and quotas, and they neither state nor fix the boundary data behind an answer, so a result cannot be repeated later.
 
