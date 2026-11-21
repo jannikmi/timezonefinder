@@ -94,8 +94,8 @@ Generative AI was used for the code, tests, documentation and paper text. The to
 
 # Acknowledgements
 
-We thank [Evan Siroky](https://github.com/evansiroky) and the contributors of timezone-boundary-builder [@tzbb] and OpenStreetMap [@osm; @haklay2008osm], whose boundary data `timezonefinder` is built on, and everyone [listed in the documentation](https://timezonefinder.readthedocs.io/en/latest/5_contributing.html) who contributed to `timezonefinder`.
+We thank [Evan Siroky](https://github.com/evansiroky) and the contributors of timezone-boundary-builder [@tzbb] and OpenStreetMap [@osm; @haklay2008osm], whose boundary data `timezonefinder` uses, and every `timezonefinder` contributor [listed in the documentation](https://timezonefinder.readthedocs.io/en/latest/5_contributing.html).
 
-The development of `timezonefinder` is supported by the first author's sponsors through GitHub Sponsors. Han Xiao, the author of `tzfpy`, which this paper compares against, has sponsored the project in the past, without influence on the software or on this paper beyond that of any other contributor. The authors declare no other competing interests.
+`timezonefinder` is supported by the first author's GitHub Sponsors. Han Xiao, the author of `tzfpy`, has sponsored the project in the past, without influence on the software or this paper beyond that of any other contributor. The authors declare no other competing interests.
 
 # References
