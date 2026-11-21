@@ -42,7 +42,7 @@ Research data often records *when* and *where* something happened as a UTC times
 
 **Coverage of the whole globe.** The boundary data includes the nautical zones over the oceans, so buoys, ships and aircraft receive a zone too, and researchers who need to tell land from sea can ask for land zones only.
 
-**Whole datasets at once.** Research datasets often contain millions of points. One call returns the zones of whole arrays of coordinates, which fits the column-oriented workflows of NumPy [@numpy] and pandas [@pandas].
+**Whole datasets at once.** One call returns the zones of whole arrays of coordinates, which fits the column-oriented workflows of NumPy [@numpy] and pandas [@pandas].
 
 # State of the field
 
