@@ -78,7 +78,7 @@ The design follows from the four requirements, above all from never simplifying 
 
 **Overlapping zones.** Some places are claimed by more than one zone. Rather than burden every lookup with a set for this rare case, ordinary lookups return the smaller, enclaved zone, a rule that depends only on the zones and so survives a rebuilt index; a separate lookup returns every zone.
 
-**A separately versioned data package.** The boundaries change several times a year, the code on its own schedule, so the data ships separately. Its version names the binary format generation and the upstream release; the code accepts any upstream release in the format generation it reads, so a data update needs no code release, and the package installer refuses data the installed code cannot read. A weekly workflow publishes each new upstream release once the test suite passes on it.
+**A separately versioned data package.** The boundaries change several times a year, the code on its own schedule, so the data ships separately. Its version names the binary format generation and the upstream release, so a data update needs no code release, and the package installer refuses data the installed code cannot read. A weekly workflow publishes each new upstream release once the test suite passes on it.
 
 # Research impact statement
 
