@@ -312,7 +312,7 @@ reports: check-data $(REPORT_TARGETS)
 # committed chart. Nothing here is timed, so the acceleration path does not matter and
 # carrying the plotting stack cannot contaminate the result.
 tzfpy-agreement:
-	uv run --group compare --group benchmark python -m scripts.measure_tzfpy_agreement --chart --json-out
+	uv run --group compare --group benchmark python -m scripts.measure_tzfpy_agreement --chart --paper-chart --json-out
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them
