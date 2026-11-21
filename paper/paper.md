@@ -78,7 +78,7 @@ The design follows from the four requirements above, above all from never simpli
 
 **Overlapping zones.** Some places are claimed by more than one zone. Rather than burden every lookup with a set for this rare case, ordinary lookups return the smaller, enclaved zone, a rule that depends only on the zones and so survives a rebuilt index; a separate lookup returns every zone.
 
-**A separately versioned data package.** The boundaries change several times a year with each timezone-boundary-builder release, while the code changes on its own schedule. Shipping both in one package would mean that pinning a dataset pins old code, so the data ships separately. Its version names both the binary format generation and the upstream release, and the code accepts any upstream release in the format generation it reads: a data update needs no code release, and data the installed code cannot read is refused by the package installer rather than failing at the first lookup. A weekly workflow builds each new upstream release and publishes it once the test suite passes on it.
+**A separately versioned data package.** The boundaries change several times a year, the code on its own schedule, so the data ships separately. Its version names the binary format generation and the upstream release; the code accepts any upstream release in the format generation it reads, so a data update needs no code release, and the package installer refuses data the installed code cannot read. A weekly workflow publishes each new upstream release once the test suite passes on it.
 
 # Research impact statement
 
