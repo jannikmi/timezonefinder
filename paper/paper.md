@@ -70,7 +70,7 @@ The design follows from the four requirements, above all from never simplifying 
 
 **Exact integer geometry.** Vertices and query points are stored as 32-bit integers in units of 10^-7^ degrees, about 1.1 cm and ten times finer than the published boundaries. This halves the storage against 64-bit floating point and makes the geometric test exact, free of floating-point rounding.
 
-**A precomputed spatial index.** A grid aligned with longitude and latitude, refined only where zones meet, maps every point to the few polygons that can contain it. Most points, in the oceans and the interiors of countries, are answered from the index without touching any geometry, and the rest are tested against a handful of candidate polygons out of the dataset's thousands. A cell is found with integer arithmetic alone, which vectorises over the arrays of a batch lookup.
+**A precomputed spatial index.** A grid aligned with longitude and latitude, refined only where zones meet, maps every point to the few polygons that can contain it. Most points, in the oceans and the interiors of countries, are answered from the index alone, the rest by testing a handful of candidate polygons. A cell is found with integer arithmetic alone, which vectorises over the arrays of a batch lookup.
 
 **Memory mapping.** The polygon data is stored in the FlatBuffers format [@flatbuffers] and memory-mapped rather than read at start-up. Only the pages a lookup touches become resident, and the operating system can reclaim them, which keeps the package usable in memory-constrained containers and many parallel processes. Users can instead load all data into memory for speed, or answer from the index alone where approximate answers near borders suffice.
 
