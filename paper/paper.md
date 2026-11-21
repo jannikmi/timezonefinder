@@ -40,7 +40,7 @@ Research data often records *when* and *where* something happened as a UTC times
 
 **Offline and reproducible lookups.** Compute nodes of research clusters often have no internet access, and one study chose `timezonefinder` over a web API because it is not exposed to external failures [@perezparedes2023athletics]. A lookup is a pure function of the coordinates and the installed boundary data, a separately versioned package that reports the timezone-boundary-builder release it comes from, so a study that pins and reports both versions can repeat its lookups exactly.
 
-**Coverage of the whole globe.** Buoys, ships, aircraft and remote stations need an answer too. The boundary data includes the nautical zones over the oceans, so every coordinate receives a zone, and researchers who need to tell land from sea can ask for land zones only.
+**Coverage of the whole globe.** The boundary data includes the nautical zones over the oceans, so buoys, ships and aircraft receive a zone too, and researchers who need to tell land from sea can ask for land zones only.
 
 **Whole datasets at once.** Research datasets often contain millions of points. One call returns the zones of whole arrays of coordinates, which fits the column-oriented workflows of NumPy [@numpy] and pandas [@pandas].
 
