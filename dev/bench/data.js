@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795255343461,
+  "lastUpdate": 1795260351433,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "a52225c2b8babd9674412b0c5c3c60c741e2be5b",
-          "message": "Name the packaged FlatBuffers binaries .bin, not .fbs (#528)\n\n* Move the packaged data and its licence into packages/timezonefinder-data\n\nTree-only: the binaries and DATA_LICENSE are renamed, not rewritten, and the\nnew distribution's pyproject/README/__init__ are added alongside them. Nothing\nimports the new package yet - the wiring follows separately, so that the 62 MB\nrename can be reviewed apart from it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Publish the boundary data as a separate distribution\n\n`timezonefinder-data` is now its own distribution, built from the same\nworkspace. `pip install timezonefinder` is unchanged - the dependency is hard -\nbut a dataset can be pinned without pinning old code, and a data update no\nlonger costs a `timezonefinder` release carrying ~65 MB across three platform\nwheels plus an sdist.\n\nThe version carries two facts, because two things drive a data release: the\ndata distribution's major *is* `DATA_FORMAT_VERSION`, and the root requires\n`timezonefinder-data>=1.2026.3,<2`. No ceiling on the data axis, so an ordinary\nupdate still needs no code release; a hard one on the format axis, so old code\npaired with a new format fails when resolving rather than at the first lookup.\nThe in-file identifier and layout_version markers stay: `bin_file_location`\ndirectories have no metadata to read, and only a per-file marker catches a\nmixed directory.\n\nThe two tag namespaces share a branch, so the separation is enforced rather\nthan conventional - build.yml excludes `data-v*` at its trigger and again on\nthe job creating the GitHub Release, since `release: types: [published]`\nconsults no tag filter, and each stream publishes with its own token.\nRetiring the pending-work guard follows from the split: a data tag now\npublishes a distribution containing no code, so unreleased code work has\nnothing to do with it.\n\nAlso: DATA_LICENSE moves with the database it covers, a compiled data\ndirectory carries a copy of the schemas its binaries were written by, and\ntest_package_contents.py asserts neither distribution carries the other's\npayload.\n\nRefs #446\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Point the improvement ledger at the data's new location\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Publish the data distribution by Trusted Publishing\n\nPyPI trusts the publish_data.yml workflow directly, gated on the `pypi-data`\ndeployment environment, so the job exchanges an OIDC identity for a\nshort-lived upload token instead of holding one. No long-lived credential\nexists that could upload `timezonefinder`, and the pending publisher covers\nthe very first upload - which a project-scoped token could not, since the\nproject does not exist yet.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Fix the tox bootstrap and drop issue references from code\n\ntox installs the package with bare pip, which resolved the new\n`timezonefinder-data` requirement from PyPI - where this checkout's version\nneed not exist, and does not at all before the first data release. Every tox\nenv now installs the workspace member from the source tree, which also keeps\nthem testing the data this checkout carries rather than a published one.\n\nSeparately: an issue number in a comment is an indirection to a tracker the\nreader may not be able to open, and one that gets retitled and re-scoped\nindependently of the code, so the reason stops being where the code is. The\nreasoning is now written out at each site. CLAUDE.md records the rule, with\nCHANGELOG.rst as the stated exception.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Name the packaged FlatBuffers binaries .bin, not .fbs\n\n`.fbs` is the FlatBuffers *schema* extension, and since the data directory\nstarted shipping actual schemas next to the buffers, one extension named two\nunrelated kinds of file - which is why the schema copies needed a subdirectory\nto avoid the collision. Each buffer already states what it is through the file\nidentifier in its first bytes, which a rename cannot forge; the name never\ncarried that meaning.\n\nThe bytes are unchanged, so this is a `git mv` of identical blobs and adds\nnothing to history. No layout version moves and DATA_FORMAT_VERSION stays 1:\nno `timezonefinder-data` has been published yet, and no released\n`timezonefinder` reads a data distribution at all, so there is no pairing to\nprotect against. That is only true while this lands before the first `data-v`\ntag - afterwards it would be a format bump and an ordered two-distribution\nrelease.\n\nCustom `bin_file_location` directories must be regenerated, which this release\ncycle already required for the coordinate layout, the hole storage and the\nshortcut container; the changelog states the file names alongside those rather\nthan as a second obligation.\n\nAlso drops the pointer to a gitignored plans/ file from CLAUDE.md - the\nreasoning it pointed at is now stated where it can actually refuse the next\nproposal - and records the rule against citing anything outside the repository\nas a reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
-          "timestamp": "2026-08-19T02:15:12+02:00",
-          "tree_id": "9b3104e62db704f6982605a83f4f3f54701fe8a1",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/a52225c2b8babd9674412b0c5c3c60c741e2be5b"
-        },
-        "date": 1787098585145,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 184101.07531972142,
-            "range": "± 2795",
-            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 582729.9359095973,
-            "range": "± 6713",
-            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 63455.41969946772,
-            "range": "± 481",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19524,6 +19479,93 @@ window.BENCHMARK_DATA = {
             "range": "± 11379",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.8886 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b73d0cdfb3fea1693e64f1b09631959c646b144f",
+          "message": "paper: trim the JOSS draft to 1,900 words (#807)",
+          "timestamp": "2026-11-21T12:24:48+01:00",
+          "tree_id": "301031b1a9e83b20d0e7d4518962f066c2496352",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b73d0cdfb3fea1693e64f1b09631959c646b144f"
+        },
+        "date": 1795260348829,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1295910.21104068,
+            "range": "± 12603",
+            "unit": "lookups/sec",
+            "extra": "min of 408 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1575164.3211301477,
+            "range": "± 25428",
+            "unit": "lookups/sec",
+            "extra": "min of 542 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 267979.26483679656,
+            "range": "± 4206",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 7435099.020815388,
+            "range": "± 263779",
+            "unit": "lookups/sec",
+            "extra": "min of 1321 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 60694343.30140253,
+            "range": "± 4215044",
+            "unit": "lookups/sec",
+            "extra": "min of 8925 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 347813.069675118,
+            "range": "± 5175",
+            "unit": "lookups/sec",
+            "extra": "min of 104 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 7090408.379406307,
+            "range": "± 248605",
+            "unit": "lookups/sec",
+            "extra": "min of 1437 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 43845034.1143457,
+            "range": "± 2736224",
+            "unit": "lookups/sec",
+            "extra": "min of 7044 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 344533.9957189884,
+            "range": "± 5833",
+            "unit": "lookups/sec",
+            "extra": "min of 103 round(s) on Intel(R) Xeon(R) 6975P-C @ 3.8504 GHz"
           }
         ]
       }
