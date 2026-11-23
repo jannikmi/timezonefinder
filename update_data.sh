@@ -312,6 +312,14 @@ if ! make reports; then
     exit 1
 fi
 
+# docs/architecture.rst embeds a figure of the shortcut index drawn from the binaries
+# just replaced, and tests/test_shortcut_index_figure.py fails while it is stale.
+echo "REDRAWING THE SHORTCUT INDEX FIGURE..."
+if ! make shortcut-index-figure; then
+    echo "make shortcut-index-figure failed!"
+    exit 1
+fi
+
 # A data update releases the *data* distribution and nothing else: no version of
 # `timezonefinder` changes, and the root CHANGELOG.rst is not touched.
 # The version follows from the release just parsed rather than from a bump - it states

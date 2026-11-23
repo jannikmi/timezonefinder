@@ -41,6 +41,7 @@
 #                + render docs/benchmark_results_*.rst + the data report; REPORTS=
 #                suite,memory,acceleration,break-even,data limits it to those groups
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
+#   shortcut-index-figure - redraw the shortcut index figure in docs/architecture.rst
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -314,6 +315,12 @@ reports: check-data $(REPORT_TARGETS)
 tzfpy-agreement:
 	uv run --group compare --group benchmark python -m scripts.measure_tzfpy_agreement --chart --paper-chart --json-out
 
+# The shortcut index figure docs/architecture.rst embeds, drawn from the packaged data.
+# --group benchmark supplies matplotlib. Redraw it after a data update: the cells and the
+# vertex counts it states come from the data.
+shortcut-index-figure: check-data
+	uv run --group benchmark python -m scripts.shortcut_index_figure
+
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them
 # (`make -s print-ci-benchmark-json`) instead of repeating the literals.
@@ -577,6 +584,6 @@ docs:
 	print-benchmark-acceleration-path print-benchmark-interpreted-path latency \
 	shortcut-calibration shortcut-calibration-record \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
-	changelog changelog-assemble acceleration-paths batch-break-even
+	changelog changelog-assemble acceleration-paths batch-break-even shortcut-index-figure
 
 .PHONY: release release-recover

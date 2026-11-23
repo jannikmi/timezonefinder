@@ -39,6 +39,23 @@ A single ``timezone_at()`` call runs this sequence:
    them first is cheaper and can reject the polygon outright. Only then is the outer ring
    ray-cast.
 
+.. figure:: shortcut_index_rhine.svg
+   :alt: A map of the French-German border along the Rhine around Strasbourg, overlaid with the
+         shortcut index. Root cells entirely in France or in Germany store their zone directly;
+         those the border crosses split into 4 x 4 finer cells, and only the finer cells the border
+         passes through store a list of candidate polygons. Three lookups are marked: Colmar,
+         answered from the table alone; a point in Lorraine, where the first candidate polygon
+         contains it; and Kehl, where that test rules France out and Germany is answered without
+         a test.
+   :width: 100%
+
+   The index where France and Germany meet on the Rhine, drawn from the packaged data by
+   ``make shortcut-index-figure``. Point 1 never touches geometry. Points 2 and 3 sit in cells
+   the border crosses and each costs one polygon test: inside the first candidate, or outside it,
+   which leaves only one zone.
+   Rivers: Made with `Natural Earth <https://www.naturalearthdata.com>`__ (public domain; see
+   :ref:`the data sources <natural_earth_attribution>`).
+
 Two consequences worth knowing:
 
 - Because the dataset includes **ocean zones** (``Etc/GMT±XX``), every coordinate on earth matches

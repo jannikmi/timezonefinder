@@ -94,6 +94,7 @@ SCRIPT_GATES: dict[str, str | None] = {
     "normalize_benchmark_json": NOT_A_GATE,
     "render_benchmark_reports": NOT_A_GATE,
     "reporting": NOT_A_GATE,
+    "shortcut_index_figure": NOT_A_GATE,
     "shortcuts": NOT_A_GATE,
     "tune_block_size": NOT_A_GATE,
     "upstream_release": NOT_A_GATE,

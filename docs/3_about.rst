@@ -39,6 +39,13 @@ License
 
 The data ships in the separate ``timezonefinder-data`` distribution and is licensed under the `ODbL license <https://github.com/jannikmi/timezonefinder/blob/master/packages/timezonefinder-data/DATA_LICENSE>`__, following the base dataset from `evansiroky/timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__.
 
+.. _natural_earth_attribution:
+
+The rivers in the shortcut index figure on the :doc:`architecture` page are an excerpt of the 1:10m `rivers and lake centerlines <https://github.com/nvkelso/natural-earth-vector/blob/v5.1.2/geojson/ne_10m_rivers_lake_centerlines.geojson>`__ of `Natural Earth <https://www.naturalearthdata.com>`__, version 5.1.2, committed as `docs/shortcut_index_rivers.json <https://github.com/jannikmi/timezonefinder/blob/master/docs/shortcut_index_rivers.json>`__.
+Natural Earth is in the public domain (`terms of use <https://www.naturalearthdata.com/about/terms-of-use/>`__).
+Made with Natural Earth.
+They are drawn for orientation only; the lookup never reads them.
+
 Used by
 -------
 
