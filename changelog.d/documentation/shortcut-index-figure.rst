@@ -1,0 +1,1 @@
+The `Architecture <https://timezonefinder.readthedocs.io/en/latest/architecture.html>`__ page shows the shortcut index as a figure: the cells around Strasbourg where France and Germany meet on the Rhine, and three lookups through them, one answered from the table alone and two settled by a single polygon test. It is drawn from the packaged data by ``make shortcut-index-figure``.
