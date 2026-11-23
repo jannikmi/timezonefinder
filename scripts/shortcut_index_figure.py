@@ -490,7 +490,7 @@ LEGEND = (
     ("child", "0.1875° cell inside a refined root cell"),
     ("hatch", "cell several zones can own:\nstores a list of candidate polygons"),
     ("border", "zone border (Europe/Paris | Europe/Berlin)"),
-    ("river", "rivers, Natural Earth 1:10m (orientation only)"),
+    ("river", "rivers, for orientation only.\nMade with Natural Earth."),
 )
 
 

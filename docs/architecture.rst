@@ -53,6 +53,7 @@ A single ``timezone_at()`` call runs this sequence:
    ``make shortcut-index-figure``. Point 1 never touches geometry. Points 2 and 3 sit in cells
    the border crosses and each costs one polygon test: inside the first candidate, or outside it,
    which leaves only one zone.
+   Rivers: Made with `Natural Earth <https://www.naturalearthdata.com>`__.
 
 Two consequences worth knowing:
 

@@ -2808,31 +2808,31 @@ z
    </g>
   </g>
   <g id="patch_77">
-   <path d="M 471.6 297.771605
-L 487.44 297.771605
+   <path d="M 471.6 288.037205
 L 487.44 288.037205
-L 471.6 288.037205
+L 487.44 278.302805
+L 471.6 278.302805
 z
 " style="fill: url(#h5760f42235); opacity: 0.75"/>
   </g>
   <g id="line2d_28">
-   <path d="M 471.6 253.218005
-L 487.44 253.218005
+   <path d="M 471.6 243.483605
+L 487.44 243.483605
 " style="fill: none; stroke: #262a2e; stroke-width: 1.2; stroke-linecap: square"/>
   </g>
   <g id="line2d_29">
-   <path d="M 471.6 273.061205
-L 487.44 273.061205
+   <path d="M 471.6 263.326805
+L 487.44 263.326805
 " style="fill: none; stroke: #a3abb3; stroke-width: 0.6; stroke-linecap: square"/>
   </g>
   <g id="line2d_30">
-   <path d="M 471.6 312.747605
-L 487.44 312.747605
+   <path d="M 471.6 303.013205
+L 487.44 303.013205
 " style="fill: none; stroke: #7b5a2e; stroke-width: 1.5; stroke-linecap: square"/>
   </g>
   <g id="line2d_31">
-   <path d="M 471.6 327.723605
-L 487.44 327.723605
+   <path d="M 471.6 322.856405
+L 487.44 322.856405
 " style="fill: none; stroke: #3a7cc0; stroke-width: 2; stroke-linecap: square"/>
   </g>
   <g id="text_21">
@@ -2911,21 +2911,22 @@ z
    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #262a2e" transform="translate(494.64 216.766574)">1 of 1,356 polygons tested.</text>
   </g>
   <g id="text_30">
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 250.642442)">0.75° root cell: stores one zone, or a</text>
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 260.208567)">block of 4 × 4 finer cells where zones meet</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 240.908042)">0.75° root cell: stores one zone, or a</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 250.474167)">block of 4 × 4 finer cells where zones meet</text>
   </g>
   <g id="text_31">
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626a72" x="494.64" y="275.268705" transform="rotate(-0 494.64 275.268705)">0.1875° cell inside a refined root cell</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626a72" x="494.64" y="265.534305" transform="rotate(-0 494.64 265.534305)">0.1875° cell inside a refined root cell</text>
   </g>
   <g id="text_32">
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 290.328842)">cell several zones can own:</text>
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 299.894967)">stores a list of candidate polygons</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 280.594442)">cell several zones can own:</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 290.160567)">stores a list of candidate polygons</text>
   </g>
   <g id="text_33">
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626a72" x="494.64" y="314.861355" transform="rotate(-0 494.64 314.861355)">zone border (Europe/Paris | Europe/Berlin)</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626a72" x="494.64" y="305.126955" transform="rotate(-0 494.64 305.126955)">zone border (Europe/Paris | Europe/Berlin)</text>
   </g>
   <g id="text_34">
-   <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626a72" x="494.64" y="329.931105" transform="rotate(-0 494.64 329.931105)">rivers, Natural Earth 1:10m (orientation only)</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 320.280842)">rivers, for orientation only.</text>
+   <text style="font-size: 8px; font-family: 'DejaVu Sans'; fill: #626a72" transform="translate(494.64 329.846967)">Made with Natural Earth.</text>
   </g>
  </g>
  <defs>
