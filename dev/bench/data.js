@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795441594033,
+  "lastUpdate": 1795441596553,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19626,72 +19626,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "42696172134b385922d487b33773321cb7f2d99d",
-          "message": "Refuse to publish the code before the data it requires exists (#529)\n\n* Refuse to publish the code before the data it requires exists\n\nThe two distributions release independently, and on a data format change the\norder is fixed: the data first, then the code requiring it. Backwards, the\nwheel is uninstallable for everyone until the data lands - and PyPI never\naccepts a version number twice, so the fix is a whole new release rather than\na re-upload. Until now that ordering was a checklist item with nothing\nenforcing it.\n\nThe guard runs in the publishing job, ahead of the upload, and reads the\nrequirement out of the wheel about to be published rather than out of\npyproject.toml: the wheel is what a user's resolver will read. It then asks\nthe index the same question that resolver will ask, instead of reimplementing\nthe answer - so a release whose files are all yanked does not count as one\nthat satisfies the bound.\n\n\"Nothing satisfies it\" and \"the check could not run\" exit differently. A\nrelease blocked because PyPI was unreachable is a retry; one blocked because\nthe data is genuinely missing needs the data published first, and collapsing\nthe two loses the only thing the operator needs to know. A wheel declaring no\ndata dependency at all is the second kind, not a pass - that would be the\nguard succeeding for the wrong reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Guard release on data dependency: require data published before code\n\nEnsure code releases cannot be published until the separate timezonefinder-data distribution is published. Update CI workflows, release scripts, documentation and tests to check and enforce the data dependency.\\n\\nFiles changed include workflow YAMLs, release helper scripts, docs, and tests to make the data dependency explicit and to prevent accidental code-only releases.\\n\\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>\n\n* Finish the release guard and assert what each distribution ships\n\nCompletes three items left open on this branch.\n\nThe data-dependency check ran twice: the move ahead of the GitHub Release\nlanded, but the copy next to the PyPI upload survived the merge. Drop it -\n`publish-pypi` needs `release`, so one placement covers both - and widen its\ntest from \"before the upload\" to \"before any publishing step\", satisfied\nin-job or through a dependency. The old test passed with the guard sitting\nafter the GitHub Release, which is the earlier irreversible step.\n\nAssert each distribution's build contents. setuptools copies package data\ninto build/lib and never prunes it, so the .fbs -> .bin rename left a 63 MB\ncoordinates.fbs shipping next to its replacement in every wheel built from a\ndeveloper checkout - 99 MiB instead of 50. Nothing caught it: the\nunwanted-file scan only knows .gitignore patterns, which cannot match a path\ninside an archive, and the essential-file checks only ask whether expected\nfiles are present. Compare the wheel's payload to the committed dataset as a\nset, and clear build/ before building so a local build matches CI's fresh\ncheckout.\n\nRestore the code sdist's assertions for the test fixtures it grafts. Dropping\n*.npy/*.json when the dataset moved out also dropped the only checks that\ntests/fixtures/benchmarks/ and tests/test_input.json still ship.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Let cut-release decide the bump level, reviewed on the release PR\n\nThe skill stopped twice: once to put patch/minor/major to the maintainer,\nonce before pushing the tag. The first stop asked them to answer, from §4's\ntable and with no diff attached, a question the release PR then asked again\nwith both attached. Drop it: §4 derives the level from the table, and §7's\n\"Why this level\" is the review surface instead.\n\nThat only works if the justification is checkable, so it now has a required\nshape - the one bullet that drove the level, quoted, the table row it matches,\nand the level ruled out with the reason. \"minor, not major: no exported\nsignature changed\" can be checked in seconds; \"minor\" cannot.\n\nThe tag stop stays and is different in kind: nothing reviews it afterwards,\nbuild.yml publishes on the push, and PyPI will not take a version twice. The\nmaintenance section records both directions so the next pass neither re-adds\nthe bump gate nor removes the tag one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T07:35:03+02:00",
-          "tree_id": "728a8d1bd275eef1eb7a0f6165c853acec39fb4d",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/42696172134b385922d487b33773321cb7f2d99d"
-        },
-        "date": 1787117779853,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466585159301758,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466748237609863,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.5325469970703125,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.541166305541992,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69967937469482,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.70830726623535,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "6671aadf82bbb91dc1b3f0a62cb9415dbe5e2f7e",
           "message": "Release 8.3.0 (#532)\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-19T07:58:10+02:00",
@@ -36110,6 +36044,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6975P-C @ 3.8402 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e7959fdba0d176c614f4e762db22f04a74b67d0",
+          "message": "docs: draw the shortcut index as a figure on the architecture page (#808)\n\n* docs: draw the shortcut index as a figure on the architecture page\n\nThe architecture page described the grid-tree shortcut in prose only. It now\nembeds docs/shortcut_index_rhine.svg: the 4 x 2 root cells around Strasbourg\nwhere Europe/Paris and Europe/Berlin meet on the Rhine, with three lookups\nthrough them - Colmar, answered from the table alone; a point in Lorraine,\nwhose first candidate polygon contains it; and Kehl, where that test rules\nFrance out and Germany is answered without one.\n\nscripts/shortcut_index_figure.py draws it from the packaged data and from\nreplaying the real lookup, so the cells, outlines and every number in the text\nfollow the index. The rivers are an excerpt of Natural Earth's public-domain\n1:10m centre lines, committed as docs/shortcut_index_rivers.json so a redraw\nneeds no download. The window is checked to sit on root-cell edges; an earlier\ndraft that started at 47.75 N drew grid lines where the index has none.\n\n`make shortcut-index-figure` redraws it, update_data.sh does so after a data\nupdate, and tests/test_shortcut_index_figure.py (added to the charts tox env)\nholds the committed SVG to a fresh render and asserts that each point still\nshows the case it is drawn for.\n\nThe region, the three points and the layout were chosen with the maintainer\nover several drafts in conversation.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV77wuxXv4KAY9nREo2R\n\n* docs: credit Natural Earth for the rivers in the shortcut index figure\n\nNatural Earth's terms make crediting optional; the figure's legend and the\narchitecture page's caption now carry the suggested \"Made with Natural Earth\"\nline anyway, as the maintainer asked.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV77wuxXv4KAY9nREo2R\n\n* docs: attribute the Natural Earth river data on the About page\n\nThe About page's License section now names the source of the rivers in the\nshortcut index figure - Natural Earth's 1:10m rivers and lake centerlines,\nversion 5.1.2, with links to the exact upstream file, Natural Earth and its\nterms of use, and the committed excerpt - states that it is public domain and\ncarries the \"Made with Natural Earth\" credit. The figure caption links there,\nand the changelog fragment mentions it. Requested by the maintainer.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV77wuxXv4KAY9nREo2R\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-23T13:45:41Z",
+          "tree_id": "f602ee32bdb6e00bf359326e41bf56a141d7ce66",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2e7959fdba0d176c614f4e762db22f04a74b67d0"
+        },
+        "date": 1795441596144,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9614448547363281,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9621267318725586,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.697237968444824,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.698004722595215,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
           }
         ]
       }
