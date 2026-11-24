@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795517574442,
+  "lastUpdate": 1795517576430,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19668,72 +19668,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "6671aadf82bbb91dc1b3f0a62cb9415dbe5e2f7e",
-          "message": "Release 8.3.0 (#532)\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T07:58:10+02:00",
-          "tree_id": "84b372e777e2f128ca5ef259b6c278c1e11338fb",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/6671aadf82bbb91dc1b3f0a62cb9415dbe5e2f7e"
-        },
-        "date": 1787119164474,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.4665937423706055,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466756820678711,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.532416343688965,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.5411787033081055,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69963073730469,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.70843505859375,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8726 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "f2cffeede3d1a9d666667b9c8b3ea328fdb99049",
           "message": "Run the tox matrix once per release, not twice (#534)\n\nThe matrix is the whole critical path of build.yml - four jobs of 6-10\nminutes each, against under a minute for every other job combined - and\nit ran for the push to master and again for the tag naming that same\ncommit. Skip it on tag refs, and gate the release job to tag refs only:\nmaster tests, the tag releases. That also removes the race the release\nprocedure worked around, since the release action is handed the tag name\nand so a master push created the tag on its own.\n\nThe skip is backed by a check, not an assumption. The pre-existing\nancestry step proves the commit is on master, not that it was ever\ngreen, so the release job now asks the API for a successful build run on\nmaster for that exact SHA and refuses to publish if none exists.\n\nIts `if` needs !cancelled() because a skipped `needs` job skips its\ndependents - and naming any status function drops the implicit\nsuccess(), so every dependency that does still run is checked by hand.\ntests/test_release_workflows.py evaluates those conditions rather than\nreading them, since the failure mode surfaces only during a release.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-19T08:24:41+02:00",
@@ -36152,6 +36086,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7168 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6e8964b55ae76ea47e813fb6f1d7ce68e8e7c827",
+          "message": "build(deps): bump https://github.com/astral-sh/ruff-pre-commit (#809)",
+          "timestamp": "2026-11-24T11:52:08+01:00",
+          "tree_id": "f55eeea8554105b86cadf960e4f4e1c3e3df9444",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6e8964b55ae76ea47e813fb6f1d7ce68e8e7c827"
+        },
+        "date": 1795517576006,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9612922668457031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.9621009826660156,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69725704193115,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69797897338867,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
           }
         ]
       }
