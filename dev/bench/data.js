@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795784566330,
+  "lastUpdate": 1795784568717,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19710,72 +19710,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "f2cffeede3d1a9d666667b9c8b3ea328fdb99049",
-          "message": "Run the tox matrix once per release, not twice (#534)\n\nThe matrix is the whole critical path of build.yml - four jobs of 6-10\nminutes each, against under a minute for every other job combined - and\nit ran for the push to master and again for the tag naming that same\ncommit. Skip it on tag refs, and gate the release job to tag refs only:\nmaster tests, the tag releases. That also removes the race the release\nprocedure worked around, since the release action is handed the tag name\nand so a master push created the tag on its own.\n\nThe skip is backed by a check, not an assumption. The pre-existing\nancestry step proves the commit is on master, not that it was ever\ngreen, so the release job now asks the API for a successful build run on\nmaster for that exact SHA and refuses to publish if none exists.\n\nIts `if` needs !cancelled() because a skipped `needs` job skips its\ndependents - and naming any status function drops the implicit\nsuccess(), so every dependency that does still run is checked by hand.\ntests/test_release_workflows.py evaluates those conditions rather than\nreading them, since the failure mode surfaces only during a release.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T08:24:41+02:00",
-          "tree_id": "2af6f3c18f6345f2a685d0b15a740d22be44ec8a",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/f2cffeede3d1a9d666667b9c8b3ea328fdb99049"
-        },
-        "date": 1787121041005,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.4665985107421875,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466748237609863,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.532293319702148,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.54117488861084,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69959163665771,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.7084379196167,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "b0642ad3bdc488421ced2ae69af55bc64d0c05a7",
           "message": "Collapse the artifact-staging steps into one composite action (#535)\n\n`build.yml` wrote the same \"unzip every artifact, flatten into dist/\" block\nthree times, in `end-to-end-test`, `release` and `publish-pypi`. The copies had\ndrifted - two matched `artifact-*.zip`, one `artifact-*`, which unzips a\ndirectory and fails without anyone noticing, since `find -exec` does not\npropagate its command's exit status - and that accidental drift sat next to the\none difference that is deliberate: `publish-pypi` excludes the data wheel,\nbecause it uploads whatever is in dist/ as `timezonefinder` while the data\ndistribution publishes from publish_data.yml under its own tag and publisher.\nNothing told a reader which of the two was load-bearing.\n\nThe block is now `.github/actions/stage-artifacts`, taking that exclusion as a\nnamed input. Only the prologue moved: the data-dependency check and both\npublishing steps stay inline, so the ordering test that walks each job's steps\nstill sees them.\n\n`publish-pypi` also drops four steps nothing consumed. `Fetch version` set an\noutput only `release` reads; with it gone no step ran uv or pip, so setting up\nPython, upgrading pip and installing uv had no consumer either. Its checkout\nstays, now for one reason: `uses: ./...` resolves from the workspace.\n`end-to-end-test` gains a sparse, non-cone checkout for the same reason - a\nfull one would put this repository's pyproject.toml in the workspace root,\nwhere the job builds a throwaway project with `uv init`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-19T10:20:16+02:00",
@@ -36194,6 +36128,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6931 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "897712748e04048095635bbd6403214fe24fe811",
+          "message": "docs: draw the README banner from the Ponta Porã border, and show what simplification costs there (#810)\n\n* Add raw OSM download for the README banner (temporary)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* docs: draw the README banner from the Haparanda-Tornio border\n\nThe banner now shows the Europe/Stockholm | Europe/Helsinki border through\nHaparanda and Tornio with every stored vertex, beside the same border\nsimplified to 110 m, and magnifies a point that the simplified border puts in\nthe wrong zone. scripts/hero_banner_figure.py draws it from the packaged data\nover a committed OpenStreetMap excerpt (docs/hero_banner_map.json, built with\n--osm from an Overpass response), as an SVG for the docs and a PNG for the\nREADME; make hero-banner and update_data.sh redraw it, and\ntests/test_hero_banner_figure.py holds the claims and the SVG to the data.\n\nThe raw Overpass download added in the previous commit is removed again.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n* test: classify the banner script as not gating a release\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n* Add raw OSM download for Ponta Porã / Pedro Juan Caballero (temporary)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* docs: move the banner to Ponta Porã and show the cost of simplification there\n\nThe README banner now draws the Brazil | Paraguay border along Avenida\nInternacional between Ponta Porã and Pedro Juan Caballero, every stored vertex\nkept, with one lookup on each side of the street: 12:00 in Brazil, 13:00 in\nParaguay. It no longer draws a comparison line.\n\nThe comparison moves to docs/why_no_simplification.rst as a figure of its own:\nthe same stretch beside the border tzfpy ships, with the buildings it answers in\nthe other zone (71 of the 1,937 within 150 m of the border, tzfpy 2.1.2, both on\nboundary data 2026f). tzfpy's answers are a committed measurement\n(docs/border_town_simplified.json), rewritten with --measure; the figure is drawn\nfrom it, and the tests hold it, the README and the page to the data.\n\nThe OpenStreetMap excerpt now covers the twin towns, with building outlines kept\nwithin 150 m of the border. The raw Overpass download is removed again.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-27T13:01:51Z",
+          "tree_id": "9405784fbc0642d877b7d15910605c74880b09a1",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/897712748e04048095635bbd6403214fe24fe811"
+        },
+        "date": 1795784568419,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.6948947906494141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9607515335083008,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.961517333984375,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69709014892578,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.69785213470459,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
           }
         ]
       }
