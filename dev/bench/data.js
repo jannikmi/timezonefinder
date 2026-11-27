@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795785082921,
+  "lastUpdate": 1795785085630,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19752,72 +19752,6 @@ window.BENCHMARK_DATA = {
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "b0642ad3bdc488421ced2ae69af55bc64d0c05a7",
-          "message": "Collapse the artifact-staging steps into one composite action (#535)\n\n`build.yml` wrote the same \"unzip every artifact, flatten into dist/\" block\nthree times, in `end-to-end-test`, `release` and `publish-pypi`. The copies had\ndrifted - two matched `artifact-*.zip`, one `artifact-*`, which unzips a\ndirectory and fails without anyone noticing, since `find -exec` does not\npropagate its command's exit status - and that accidental drift sat next to the\none difference that is deliberate: `publish-pypi` excludes the data wheel,\nbecause it uploads whatever is in dist/ as `timezonefinder` while the data\ndistribution publishes from publish_data.yml under its own tag and publisher.\nNothing told a reader which of the two was load-bearing.\n\nThe block is now `.github/actions/stage-artifacts`, taking that exclusion as a\nnamed input. Only the prologue moved: the data-dependency check and both\npublishing steps stay inline, so the ordering test that walks each job's steps\nstill sees them.\n\n`publish-pypi` also drops four steps nothing consumed. `Fetch version` set an\noutput only `release` reads; with it gone no step ran uv or pip, so setting up\nPython, upgrading pip and installing uv had no consumer either. Its checkout\nstays, now for one reason: `uses: ./...` resolves from the workspace.\n`end-to-end-test` gains a sparse, non-cone checkout for the same reason - a\nfull one would put this repository's pyproject.toml in the workspace root,\nwhere the job builds a throwaway project with `uv init`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T10:20:16+02:00",
-          "tree_id": "9bf23e0d369ce8e2ef21f2d87ef07d20bc19da44",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/b0642ad3bdc488421ced2ae69af55bc64d0c05a7"
-        },
-        "date": 1787127703548,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "memory::TimezoneFinderL::init_heap",
-            "value": 4.466585159301758,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinderL::steady_heap",
-            "value": 4.466748237609863,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::init_heap",
-            "value": 4.532464981079102,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[file_based]::steady_heap",
-            "value": 4.541266441345215,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::init_heap",
-            "value": 65.69916248321533,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
-            "value": 65.70796012878418,
-            "range": "± 0",
-            "unit": "MiB",
-            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
           "id": "64da9e1a30df7565d2742ab22b9ee755f03b9476",
           "message": "Type-check tests/, and close two surfaces nothing was checking (#539)\n\n* SURF-1: drop the three schema filenames from the schemas package __all__\n\nThey are .fbs data files next to the module, not submodules of it, so\n`from timezonefinder.flatbuf.schemas import *` raised AttributeError on a\nsurface declaration nothing checked. tests/test_documented_contracts.py now\nresolves every __all__ entry in the package against its module.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TOOL-5: type-check tests/ with the mypy hook instead of excluding it\n\nClears the eight real disagreements the exclusion had been hiding - an\nundeclared attribute the base test class's fixture assigns, two subclasses\ncontradicting types inferred from the base's own values, a promised list[Path]\nbacked by an attribute only ever inferred as None, a dict literal annotated\nset[str, str], and an unmeasured metric reaching a float comparison as None -\nthen drops tests/ from the hook's exclude and extends the guard that keeps\nscripts/ out of it to cover tests/ too.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PATH-1: import PROJECT_ROOT in the test helpers instead of re-deriving it\n\ntests/auxiliaries.py anchored the checkout root on the installed timezonefinder\npackage (PACKAGE_DIR.parent), which is site-packages for anything but an\neditable install. scripts.configs already declares it against the repository.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DUP-2: create the converter's output directories once, in the caller\n\nwrite_numpy_binaries and write_flatbuffer_files each recomputed holes_dir and\nboundaries_dir and mkdir'd them, which reads as though either could run alone;\nthey cannot, since the reference vector one writes addresses the coordinate\nfile the other writes. The zone ids now go through store_per_polygon_vector\nlike every other vector. Verified byte-identical over tests/test_input.json.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* REND-1: choose the memory report's metric paragraph with an if, not a ternary\n\nThe conditional sat at the foot of twelve lines of implicitly concatenated\nprose, so a reader editing the long branch had no reason to look for it. Only\nthat branch interpolates the workload size. The rendered text is unchanged -\nthe diff moves no character of either paragraph.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TEST-11: assert the metadata the build produces, not just the files it copies\n\ntest_essential_files_in_distribution is driven by paths that exist in the\nsource tree, so it structurally cannot notice PKG-INFO or the .dist-info\ndirectory going missing - a failure that would otherwise surface at upload.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* ledger: re-verify every entry against the data-package split, record pass 10\n\nDeletes the four entries this pass shipped (DUP-2, TEST-11, REND-1, TOOL-5),\ncorrects TOOL-1's B905 claim - the load-path zip it named cannot truncate, both\nlists being local accumulators appended in one loop - and narrows DEAD-5 to the\ndeletion decision now that its annotation half is fixed. Adds TOOL-7 for the\nrelease guard's silent single-wheel pick, a scope note for the thin data\ndistribution, and the pass 10 coverage row.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
           "timestamp": "2026-08-20T00:20:37+02:00",
@@ -36236,6 +36170,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2656 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f272452d059b458abacb652d38367aee6c135d7d",
+          "message": "paper: give the tzfpy comparison a measured border-town example (#811)\n\nThe State of the field paragraph ended on an abstract claim that analyses near\nborders get different answers. It now gives the measured case from the\ndocumentation: in Ponta Porã and Pedro Juan Caballero, whose border is a street\nand whose clocks are an hour apart, tzfpy places 71 of the 1,937 buildings\nwithin 150 m of that street in the other zone, linked to the figure on the\nno-simplification page. The banner test holds the paper's count to the record,\nas it does the README's and the page's. The review notes record the length\n(1,926 words) and what the count rests on.\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-27T13:10:19Z",
+          "tree_id": "a900681106040313d199ccc44ed839dd35c7c561",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f272452d059b458abacb652d38367aee6c135d7d"
+        },
+        "date": 1795785085182,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 0.6947727203369141,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 0.694951057434082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.9613361358642578,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.962080955505371,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.69712734222412,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.697893142700195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6965 GHz"
           }
         ]
       }
