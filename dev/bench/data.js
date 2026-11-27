@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795785085630,
+  "lastUpdate": 1795819760846,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "64da9e1a30df7565d2742ab22b9ee755f03b9476",
-          "message": "Type-check tests/, and close two surfaces nothing was checking (#539)\n\n* SURF-1: drop the three schema filenames from the schemas package __all__\n\nThey are .fbs data files next to the module, not submodules of it, so\n`from timezonefinder.flatbuf.schemas import *` raised AttributeError on a\nsurface declaration nothing checked. tests/test_documented_contracts.py now\nresolves every __all__ entry in the package against its module.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TOOL-5: type-check tests/ with the mypy hook instead of excluding it\n\nClears the eight real disagreements the exclusion had been hiding - an\nundeclared attribute the base test class's fixture assigns, two subclasses\ncontradicting types inferred from the base's own values, a promised list[Path]\nbacked by an attribute only ever inferred as None, a dict literal annotated\nset[str, str], and an unmeasured metric reaching a float comparison as None -\nthen drops tests/ from the hook's exclude and extends the guard that keeps\nscripts/ out of it to cover tests/ too.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PATH-1: import PROJECT_ROOT in the test helpers instead of re-deriving it\n\ntests/auxiliaries.py anchored the checkout root on the installed timezonefinder\npackage (PACKAGE_DIR.parent), which is site-packages for anything but an\neditable install. scripts.configs already declares it against the repository.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DUP-2: create the converter's output directories once, in the caller\n\nwrite_numpy_binaries and write_flatbuffer_files each recomputed holes_dir and\nboundaries_dir and mkdir'd them, which reads as though either could run alone;\nthey cannot, since the reference vector one writes addresses the coordinate\nfile the other writes. The zone ids now go through store_per_polygon_vector\nlike every other vector. Verified byte-identical over tests/test_input.json.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* REND-1: choose the memory report's metric paragraph with an if, not a ternary\n\nThe conditional sat at the foot of twelve lines of implicitly concatenated\nprose, so a reader editing the long branch had no reason to look for it. Only\nthat branch interpolates the workload size. The rendered text is unchanged -\nthe diff moves no character of either paragraph.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TEST-11: assert the metadata the build produces, not just the files it copies\n\ntest_essential_files_in_distribution is driven by paths that exist in the\nsource tree, so it structurally cannot notice PKG-INFO or the .dist-info\ndirectory going missing - a failure that would otherwise surface at upload.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* ledger: re-verify every entry against the data-package split, record pass 10\n\nDeletes the four entries this pass shipped (DUP-2, TEST-11, REND-1, TOOL-5),\ncorrects TOOL-1's B905 claim - the load-path zip it named cannot truncate, both\nlists being local accumulators appended in one loop - and narrows DEAD-5 to the\ndeletion decision now that its annotation half is fixed. Adds TOOL-7 for the\nrelease guard's silent single-wheel pick, a scope note for the thin data\ndistribution, and the pass 10 coverage row.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-20T00:20:37+02:00",
-          "tree_id": "e50a9152f1d951ecc7396043dabd687391b1bf78",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/64da9e1a30df7565d2742ab22b9ee755f03b9476"
-        },
-        "date": 1787178125695,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 177528.68845848492,
-            "range": "± 3580",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 579815.6881890318,
-            "range": "± 11401",
-            "extra": "min of 195 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 62163.45482600285,
-            "range": "± 3639",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19734,6 +19689,93 @@ window.BENCHMARK_DATA = {
             "range": "± 7565",
             "unit": "lookups/sec",
             "extra": "min of 93 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ed1febdcf2d2852a31d3d4653adc91969cfefe9",
+          "message": "docs: take the Ponta Porã example and the call for maintainers out of the README (#812)\n\nThe README no longer carries the line under the banner with the Ponta Porã\nbuilding count, nor the \"Looking for maintainers\" call in Contributing. The\nbanner stays, and the count stays in docs/why_no_simplification.rst and the\npaper; the banner test, the regeneration notes and the paper's review notes now\nname only those two.\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-27T23:48:16+01:00",
+          "tree_id": "46a570e878a5a17b3b20636291b55d8c114be63d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4ed1febdcf2d2852a31d3d4653adc91969cfefe9"
+        },
+        "date": 1795819757556,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 912210.0038790642,
+            "range": "± 27343",
+            "unit": "lookups/sec",
+            "extra": "min of 276 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1090026.6053717092,
+            "range": "± 19376",
+            "unit": "lookups/sec",
+            "extra": "min of 311 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 174777.23941731825,
+            "range": "± 2693",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4975213.4864217555,
+            "range": "± 474732",
+            "unit": "lookups/sec",
+            "extra": "min of 1066 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 39445864.49549543,
+            "range": "± 2069104",
+            "unit": "lookups/sec",
+            "extra": "min of 6020 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 245613.8523855343,
+            "range": "± 5053",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4707353.262365275,
+            "range": "± 172155",
+            "unit": "lookups/sec",
+            "extra": "min of 1119 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 28091465.813095234,
+            "range": "± 1686138",
+            "unit": "lookups/sec",
+            "extra": "min of 4952 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 238714.50900095762,
+            "range": "± 15623",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 3.6080 GHz"
           }
         ]
       }
