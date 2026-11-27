@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795784568717,
+  "lastUpdate": 1795785082921,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "b0642ad3bdc488421ced2ae69af55bc64d0c05a7",
-          "message": "Collapse the artifact-staging steps into one composite action (#535)\n\n`build.yml` wrote the same \"unzip every artifact, flatten into dist/\" block\nthree times, in `end-to-end-test`, `release` and `publish-pypi`. The copies had\ndrifted - two matched `artifact-*.zip`, one `artifact-*`, which unzips a\ndirectory and fails without anyone noticing, since `find -exec` does not\npropagate its command's exit status - and that accidental drift sat next to the\none difference that is deliberate: `publish-pypi` excludes the data wheel,\nbecause it uploads whatever is in dist/ as `timezonefinder` while the data\ndistribution publishes from publish_data.yml under its own tag and publisher.\nNothing told a reader which of the two was load-bearing.\n\nThe block is now `.github/actions/stage-artifacts`, taking that exclusion as a\nnamed input. Only the prologue moved: the data-dependency check and both\npublishing steps stay inline, so the ordering test that walks each job's steps\nstill sees them.\n\n`publish-pypi` also drops four steps nothing consumed. `Fetch version` set an\noutput only `release` reads; with it gone no step ran uv or pip, so setting up\nPython, upgrading pip and installing uv had no consumer either. Its checkout\nstays, now for one reason: `uses: ./...` resolves from the workspace.\n`end-to-end-test` gains a sparse, non-cone checkout for the same reason - a\nfull one would put this repository's pyproject.toml in the workspace root,\nwhere the job builds a throwaway project with `uv init`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T10:20:16+02:00",
-          "tree_id": "9bf23e0d369ce8e2ef21f2d87ef07d20bc19da44",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/b0642ad3bdc488421ced2ae69af55bc64d0c05a7"
-        },
-        "date": 1787127700285,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 179525.09150390307,
-            "range": "± 29441",
-            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 577655.4996618317,
-            "range": "± 17735",
-            "extra": "min of 195 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61635.02484741901,
-            "range": "± 633",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19692,6 +19647,93 @@ window.BENCHMARK_DATA = {
             "range": "± 10113",
             "unit": "lookups/sec",
             "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f272452d059b458abacb652d38367aee6c135d7d",
+          "message": "paper: give the tzfpy comparison a measured border-town example (#811)\n\nThe State of the field paragraph ended on an abstract claim that analyses near\nborders get different answers. It now gives the measured case from the\ndocumentation: in Ponta Porã and Pedro Juan Caballero, whose border is a street\nand whose clocks are an hour apart, tzfpy places 71 of the 1,937 buildings\nwithin 150 m of that street in the other zone, linked to the figure on the\nno-simplification page. The banner test holds the paper's count to the record,\nas it does the README's and the page's. The review notes record the length\n(1,926 words) and what the count rests on.\n\n\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-11-27T13:10:19Z",
+          "tree_id": "a900681106040313d199ccc44ed839dd35c7c561",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f272452d059b458abacb652d38367aee6c135d7d"
+        },
+        "date": 1795785080238,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 1063962.4429799337,
+            "range": "± 39102",
+            "unit": "lookups/sec",
+            "extra": "min of 336 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1302410.9710949564,
+            "range": "± 21491",
+            "unit": "lookups/sec",
+            "extra": "min of 451 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 223559.4855127274,
+            "range": "± 7688",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 6266072.47590946,
+            "range": "± 875278",
+            "unit": "lookups/sec",
+            "extra": "min of 1114 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 48386784.60707733,
+            "range": "± 8831068",
+            "unit": "lookups/sec",
+            "extra": "min of 7412 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 311190.31665359024,
+            "range": "± 17149",
+            "unit": "lookups/sec",
+            "extra": "min of 91 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 5937156.386993594,
+            "range": "± 301127",
+            "unit": "lookups/sec",
+            "extra": "min of 1198 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 33448843.339523833,
+            "range": "± 2136078",
+            "unit": "lookups/sec",
+            "extra": "min of 6377 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 308209.6066962779,
+            "range": "± 7565",
+            "unit": "lookups/sec",
+            "extra": "min of 93 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6925 GHz"
           }
         ]
       }
