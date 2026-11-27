@@ -320,6 +320,14 @@ if ! make shortcut-index-figure; then
     exit 1
 fi
 
+# The README banner draws the Haparanda-Tornio border from the same binaries, and
+# tests/test_hero_banner_figure.py fails while it is stale.
+echo "REDRAWING THE README BANNER..."
+if ! make hero-banner; then
+    echo "make hero-banner failed!"
+    exit 1
+fi
+
 # A data update releases the *data* distribution and nothing else: no version of
 # `timezonefinder` changes, and the root CHANGELOG.rst is not touched.
 # The version follows from the release just parsed rather than from a bump - it states

@@ -1,0 +1,1 @@
+The README and documentation banner draws the timezone border between Haparanda and Tornio from the packaged data, every stored vertex kept, beside the same border simplified to 110 m, and magnifies a point that the simplified border places in the wrong zone. It is drawn by ``make hero-banner`` from the data and a committed OpenStreetMap excerpt.

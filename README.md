@@ -1,7 +1,7 @@
 # timezonefinder
 
 <p align="center">
-  <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg" alt="Coordinate to IANA timezone lookup"></a>
+  <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.png" alt="The timezone border between Haparanda (Europe/Stockholm) and Tornio (Europe/Helsinki), drawn from every stored vertex, with the same border simplified to 110 m as a dashed line; a magnified point between the two lines is Europe/Stockholm, which the simplified border answers as Europe/Helsinki"></a>
 </p>
 
 **Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**

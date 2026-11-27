@@ -5,8 +5,8 @@ timezonefinder
 .. include:: ./badges.rst
 
 
-.. image:: hero_banner.jpeg
-   :alt: Coordinate to IANA timezone lookup
+.. image:: hero_banner.svg
+   :alt: The timezone border between Haparanda (Europe/Stockholm) and Tornio (Europe/Helsinki), drawn from every stored vertex, with the same border simplified to 110 m as a dashed line; a magnified point between the two lines is Europe/Stockholm, which the simplified border answers as Europe/Helsinki
    :align: center
 
 This is a Python package providing offline timezone lookups for WGS84 coordinates.

@@ -46,6 +46,11 @@ Natural Earth is in the public domain (`terms of use <https://www.naturalearthda
 Made with Natural Earth.
 They are drawn for orientation only; the lookup never reads them.
 
+.. _openstreetmap_attribution:
+
+The map under the banner on the start page and in the README - coastline, water, built-up areas, roads, railways and town names around Haparanda and Tornio - is an excerpt of `OpenStreetMap <https://www.openstreetmap.org/copyright>`__ data, © OpenStreetMap contributors, committed as `docs/hero_banner_map.json <https://github.com/jannikmi/timezonefinder/blob/master/docs/hero_banner_map.json>`__ and available under the `Open Database License <https://opendatacommons.org/licenses/odbl/>`__.
+It is drawn for orientation only; the lookup never reads it.
+
 Used by
 -------
 
