@@ -1,53 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1795517576430,
+  "lastUpdate": 1795784566330,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
-      {
-        "commit": {
-          "author": {
-            "email": "github@michelfe.it",
-            "name": "Jannik Kissinger",
-            "username": "jannikmi"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "f2cffeede3d1a9d666667b9c8b3ea328fdb99049",
-          "message": "Run the tox matrix once per release, not twice (#534)\n\nThe matrix is the whole critical path of build.yml - four jobs of 6-10\nminutes each, against under a minute for every other job combined - and\nit ran for the push to master and again for the tag naming that same\ncommit. Skip it on tag refs, and gate the release job to tag refs only:\nmaster tests, the tag releases. That also removes the race the release\nprocedure worked around, since the release action is handed the tag name\nand so a master push created the tag on its own.\n\nThe skip is backed by a check, not an assumption. The pre-existing\nancestry step proves the commit is on master, not that it was ever\ngreen, so the release job now asks the API for a successful build run on\nmaster for that exact SHA and refuses to publish if none exists.\n\nIts `if` needs !cancelled() because a skipped `needs` job skips its\ndependents - and naming any status function drops the implicit\nsuccess(), so every dependency that does still run is checked by hand.\ntests/test_release_workflows.py evaluates those conditions rather than\nreading them, since the failure mode surfaces only during a release.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
-          "timestamp": "2026-08-19T08:24:41+02:00",
-          "tree_id": "2af6f3c18f6345f2a685d0b15a740d22be44ec8a",
-          "url": "https://github.com/jannikmi/timezonefinder/commit/f2cffeede3d1a9d666667b9c8b3ea328fdb99049"
-        },
-        "date": 1787121038018,
-        "tool": "pytest",
-        "benches": [
-          {
-            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
-            "unit": "lookups/sec",
-            "value": 171619.36116272994,
-            "range": "± 4635",
-            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 572035.5174542462,
-            "range": "± 11631",
-            "extra": "min of 183 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
-          },
-          {
-            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
-            "unit": "lookups/sec",
-            "value": 61083.16081412695,
-            "range": "± 339",
-            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -19650,6 +19605,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3722",
             "unit": "lookups/sec",
             "extra": "min of 101 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6940 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "897712748e04048095635bbd6403214fe24fe811",
+          "message": "docs: draw the README banner from the Ponta Porã border, and show what simplification costs there (#810)\n\n* Add raw OSM download for the README banner (temporary)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* docs: draw the README banner from the Haparanda-Tornio border\n\nThe banner now shows the Europe/Stockholm | Europe/Helsinki border through\nHaparanda and Tornio with every stored vertex, beside the same border\nsimplified to 110 m, and magnifies a point that the simplified border puts in\nthe wrong zone. scripts/hero_banner_figure.py draws it from the packaged data\nover a committed OpenStreetMap excerpt (docs/hero_banner_map.json, built with\n--osm from an Overpass response), as an SVG for the docs and a PNG for the\nREADME; make hero-banner and update_data.sh redraw it, and\ntests/test_hero_banner_figure.py holds the claims and the SVG to the data.\n\nThe raw Overpass download added in the previous commit is removed again.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n* test: classify the banner script as not gating a release\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n* Add raw OSM download for Ponta Porã / Pedro Juan Caballero (temporary)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n* docs: move the banner to Ponta Porã and show the cost of simplification there\n\nThe README banner now draws the Brazil | Paraguay border along Avenida\nInternacional between Ponta Porã and Pedro Juan Caballero, every stored vertex\nkept, with one lookup on each side of the street: 12:00 in Brazil, 13:00 in\nParaguay. It no longer draws a comparison line.\n\nThe comparison moves to docs/why_no_simplification.rst as a figure of its own:\nthe same stretch beside the border tzfpy ships, with the buildings it answers in\nthe other zone (71 of the 1,937 within 150 m of the border, tzfpy 2.1.2, both on\nboundary data 2026f). tzfpy's answers are a committed measurement\n(docs/border_town_simplified.json), rewritten with --measure; the figure is drawn\nfrom it, and the tests hold it, the README and the page to the data.\n\nThe OpenStreetMap excerpt now covers the twin towns, with building outlines kept\nwithin 150 m of the border. The raw Overpass download is removed again.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XJqV75uDRvfBjj575J4Boq\n\n---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-27T13:01:51Z",
+          "tree_id": "9405784fbc0642d877b7d15910605c74880b09a1",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/897712748e04048095635bbd6403214fe24fe811"
+        },
+        "date": 1795784563458,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 796919.1742254723,
+            "range": "± 25974",
+            "unit": "lookups/sec",
+            "extra": "min of 260 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 995915.5511428621,
+            "range": "± 28145",
+            "unit": "lookups/sec",
+            "extra": "min of 364 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 169667.10499596313,
+            "range": "± 9531",
+            "unit": "lookups/sec",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 4449800.0259449305,
+            "range": "± 193745",
+            "unit": "lookups/sec",
+            "extra": "min of 987 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 33421119.47522616,
+            "range": "± 2595962",
+            "unit": "lookups/sec",
+            "extra": "min of 6515 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 241953.45086604153,
+            "range": "± 4425",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 4270197.607669252,
+            "range": "± 115208",
+            "unit": "lookups/sec",
+            "extra": "min of 1044 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 24037537.017655157,
+            "range": "± 1735465",
+            "unit": "lookups/sec",
+            "extra": "min of 5303 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 242352.72927454632,
+            "range": "± 10113",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2936 GHz"
           }
         ]
       }
