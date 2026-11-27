@@ -71,6 +71,24 @@ border locations. About half are still affected at ten metres. Disagreement stop
 metres, which matches the maximum displacement ``tzfpy``'s maintainer states for its
 simplification. :doc:`border_accuracy_vs_tzfpy` has the current table, the chart and every individual case.
 
+.. figure:: border_town_simplified.svg
+   :alt: A stretch of Avenida Internacional between Ponta Porã (Brazil) and Pedro Juan Caballero
+         (Paraguay). The published border runs along the avenue; the border tzfpy ships runs up to
+         a block further north, and the buildings between the two lines are marked: tzfpy answers
+         them with Paraguay's zone, an hour off.
+   :align: center
+
+   The border between Brazil (``America/Campo_Grande``, UTC-4) and Paraguay
+   (``America/Asuncion``, UTC-3) along Avenida Internacional. Building outlines are an excerpt of
+   OpenStreetMap; ``scripts/hero_banner_figure.py`` draws the figure and records the measurement.
+
+A hundred metres is a block of houses. Ponta Porã (Brazil) and Pedro Juan Caballero (Paraguay)
+are one town with a street for a border, and their clocks are an hour apart all year. Looking up
+the centre of every building within 150 m of that border, ``tzfpy`` 2.1.2 places 71 of the 1,937 buildings
+in the other country's zone: 62 in Brazil as Paraguay and 9 in Paraguay as Brazil. Both
+packages read the same timezone-boundary-builder release (2026f), so the difference is the
+simplification alone.
+
 The *ε* that makes simplification worthwhile is orders of magnitude larger than the error that
 remains without it. The source publishes coordinates on a ~11 cm grid, and queries are resolved on
 a ~1.1 cm grid. Adding a tolerance measured in tens of metres trades a centimetre-scale ceiling for

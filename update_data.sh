@@ -320,8 +320,9 @@ if ! make shortcut-index-figure; then
     exit 1
 fi
 
-# The README banner draws the Haparanda-Tornio border from the same binaries, and
-# tests/test_hero_banner_figure.py fails while it is stale.
+# The README banner and the border-town figure draw the Ponta Porã border from the same
+# binaries, and tests/test_hero_banner_figure.py fails while they are stale - or while
+# the tzfpy measurement predates the data, which `--measure` records again.
 echo "REDRAWING THE README BANNER..."
 if ! make hero-banner; then
     echo "make hero-banner failed!"

@@ -1,41 +1,49 @@
 #!/usr/bin/env python3
 
-"""Draw the README banner: one timezone border at street-level zoom, every vertex kept.
+"""Draw the README banner and the border-town figure of the no-simplification page.
 
-The banner shows the border between Europe/Stockholm and Europe/Helsinki where it runs
-through the twin towns of Haparanda (Sweden) and Tornio (Finland). Three lookups are
-drawn on it: one on each side, and one that lies between the real border and the same
-border simplified by :data:`SIMPLIFICATION_METRES` - a point this package answers
-correctly and a simplified dataset answers an hour wrong. The border, its vertex count
-and every answer come from the packaged data and from ``timezone_at``, so the banner
-follows the data rather than a drawing of it.
+Both show the border between Brazil (America/Campo_Grande, UTC-4) and Paraguay
+(America/Asuncion, UTC-3) where it runs along Avenida Internacional, between the twin
+towns of Ponta Porã and Pedro Juan Caballero: one street, two countries, two clocks.
 
-The map underneath - coastline, lakes and rivers, built-up areas, main roads, railways
-and town names - is the one input that is not the package's: an excerpt of
-OpenStreetMap, committed beside the banner so a redraw needs no download. It orients
-the reader and nothing else; the lookup never reads it. The timezone boundaries are
-built from OpenStreetMap too, so the river and the border line up at this zoom, which
-the coarser Natural Earth data used for the shortcut index figure does not. To rebuild
-the excerpt, pass the JSON that :data:`OVERPASS_QUERY` returns with ``--osm``.
+**The banner** draws the border at street-level zoom with every vertex the package
+stores, and magnifies one stretch of the avenue with a lookup on each side of it. The
+border, its vertex count, both answers and both clock times come from the packaged data
+and from ``timezone_at``, so the banner follows the data rather than a drawing of it.
 
-The excerpt's lines are thinned to below a pixel at the banner's scale to keep the
-committed file small. That applies to the background map only: the border is drawn from
-every vertex the package stores.
+**The border-town figure** draws the same border beside the one ``tzfpy`` ships, which is
+simplified, and marks the buildings near the border that ``tzfpy`` places in the other
+zone. Those answers are a measurement of another package, so they are not recomputed on
+every redraw: ``--measure`` records them in :data:`MEASUREMENT_PATH` with both packages'
+versions, and the figure is drawn from that record. It needs the ``compare`` dependency
+group; drawing does not.
 
-The drawing is deterministic, so a redraw only changes the files when the data or the
-layout changed. ``make hero-banner`` redraws the SVG the docs embed and the PNG the
+The map underneath - built-up areas, water, streets, building outlines and town names -
+is the one input that is neither the package's nor a measurement: an excerpt of
+OpenStreetMap, committed as :data:`MAP_PATH` so a redraw needs no download. It orients
+the reader and gives the measurement its buildings; the lookup never reads it. The
+timezone boundaries are built from OpenStreetMap too, so the avenue and the border line
+up at this zoom. To rebuild the excerpt, pass the JSON that :data:`OVERPASS_QUERY`
+returns with ``--osm``. Only buildings within :data:`BAND_METRES` of the border are
+kept: that band is where a simplified border can be wrong, and the whole town would not
+fit the repository's file size limit. The excerpt's lines are thinned to about a pixel;
+the border is drawn from every vertex the package stores.
+
+The drawing is deterministic, so a redraw only changes the files when the data, the
+record or the layout changed. ``make hero-banner`` redraws both SVGs and the PNG the
 README embeds - PyPI and GitHub's raw file host do not serve SVG as an image.
 """
 
 import argparse
 import json
 import math
-from io import BytesIO
-from itertools import pairwise
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from io import StringIO
+from datetime import UTC, datetime
+from io import BytesIO, StringIO
+from itertools import pairwise
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import matplotlib
 
@@ -43,6 +51,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib import patheffects  # noqa: E402
 from matplotlib.axes import Axes  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 from matplotlib.patches import (  # noqa: E402
@@ -62,90 +71,90 @@ from timezonefinder import TimezoneFinder  # noqa: E402
 FIGURE_PATH = DOC_ROOT / "hero_banner.svg"
 PNG_PATH = DOC_ROOT / "hero_banner.png"
 MAP_PATH = DOC_ROOT / "hero_banner_map.json"
+COMPARISON_PATH = DOC_ROOT / "border_town_simplified.svg"
+MEASUREMENT_PATH = DOC_ROOT / "border_town_simplified.json"
 MAP_SOURCE = "OpenStreetMap, via the Overpass API (© OpenStreetMap contributors, ODbL)"
 
 #: Element ids are otherwise salted from ``uuid4()``, so every render would differ.
 SVG_HASH_SALT = "timezonefinder-hero-banner"
 
-#: The query whose response ``--osm`` reads. Its box holds :data:`WINDOW` with a margin,
-#: so coastline and rivers enter and leave the window rather than end inside it.
+#: The query whose response ``--osm`` reads. Building outlines are asked for in a smaller
+#: box than the rest: they are only kept near the border, and the whole town is large.
 OVERPASS_QUERY = """\
-[out:json][timeout:120][bbox:65.75,23.70,65.95,24.40];
+[out:json][timeout:180][bbox:-22.62,-55.80,-22.48,-55.62];
 (
-  way["natural"="coastline"];
   way["natural"="water"]; relation["natural"="water"];
-  way["waterway"="riverbank"]; relation["waterway"="riverbank"];
-  way["waterway"="river"];
-  way["highway"~"^(motorway|trunk|primary|secondary)$"];
-  way["railway"="rail"];
-  way["landuse"="residential"];
-  node["place"~"^(city|town|village|suburb)$"];
+  way["waterway"~"^(river|stream)$"];
+  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential)$"];
+  way["landuse"~"^(residential|commercial|retail|industrial)$"];
+  node["place"~"^(city|town|suburb|neighbourhood)$"];
+  way["building"](-22.585,-55.745,-22.525,-55.675);
 );
 out geom;
 """
 
+#: The box the building outlines were fetched in: the measurement's claims hold inside it.
+BUILDING_BOX: Box = (-55.745, -22.585, -55.675, -22.525)
+
+BRAZIL, PARAGUAY = "America/Campo_Grande", "America/Asuncion"
+ZONES = (BRAZIL, PARAGUAY)
+COUNTRY = {BRAZIL: "Brazil", PARAGUAY: "Paraguay"}
+TOWN = {BRAZIL: "Ponta Porã", PARAGUAY: "Pedro Juan Caballero"}
+TOWNS = frozenset(TOWN.values())
+
+#: The instant whose local times the banner shows: noon on the Brazilian side.
+SHOWN_INSTANT = datetime(2026, 1, 15, 16, 0, tzinfo=UTC)
+
+#: Buildings further than this from the border are left out of the excerpt.
+BAND_METRES = 150.0
+
 WIDTH_PX, HEIGHT_PX, DPI = 1600, 800, 100
 
-#: Where the map is centred and how far it reaches north to south, in degrees.
-CENTRE = (24.105, 65.845)
-LAT_SPAN = 0.064
+#: Where the banner's map is centred and how far it reaches north to south, in degrees.
+CENTRE = (-55.7322, -22.5523)
+LAT_SPAN = 0.030
 
-WEST_TO_EAST = ("Europe/Stockholm", "Europe/Helsinki")
-COUNTRY = {"Europe/Stockholm": "SWEDEN", "Europe/Helsinki": "FINLAND"}
-UTC_OFFSET = {"Europe/Stockholm": "UTC+1", "Europe/Helsinki": "UTC+2"}
+#: The stretch of Avenida Internacional the magnifier shows, and the two lookups in it:
+#: this far from the border on either side, perpendicular to it.
+AVENUE = (-55.7276, -22.5452)
+PIN_METRES = 45.0
 
-#: The tolerance the dashed comparison line is simplified with: the ~110 m maximum
-#: displacement the maintainer of a simplifying alternative states for its data (see
-#: ``docs/border_accuracy_vs_tzfpy.rst``), not an exaggeration picked to show a gap.
-SIMPLIFICATION_METRES = 110.0
-
-#: Vertices of the background map closer together than this, in degrees (Manhattan),
-#: are dropped: about a pixel at this zoom.
-MAP_TOLERANCE = 0.00012
-
-#: Map polygons smaller than this many square degrees (about 60 square pixels at this
-#: zoom) are left out of the excerpt.
-MIN_AREA = 1e-6
-
-
-@dataclass(frozen=True)
-class QueryPoint:
-    title: str
-    lng: float
-    lat: float
-    #: where the label card's top left corner sits, in pixels from the top left
-    card: tuple[float, float]
-
-
-#: One point per story the banner tells; ``tests/test_hero_banner_figure.py`` asserts
-#: that each still lands in the zone and on the side of the simplified border it is
-#: drawn for.
-WEST_POINT = QueryPoint("Haparanda", 24.1180, 65.8335, (470, 600))
-EAST_POINT = QueryPoint("Tornio", 24.1600, 65.8570, (1180, 120))
-GAP_POINT = QueryPoint("between the lines", 24.1375, 65.8455, (1150, 600))
-
-#: The magnifier: the map around :data:`GAP_POINT`, ``LOUPE_ZOOM`` times closer, in a
-#: circle of ``LOUPE_RADIUS_PX`` centred at ``LOUPE_CENTRE_PX`` (pixels from top left).
+#: The magnifier: ``LOUPE_ZOOM`` times closer, in a circle of ``LOUPE_RADIUS_PX`` centred
+#: at ``LOUPE_CENTRE_PX`` (pixels from the top left).
 LOUPE_ZOOM = 5.0
 LOUPE_RADIUS_PX = 150
-LOUPE_CENTRE_PX = (1300, 400)
-QUERIES = (WEST_POINT, EAST_POINT, GAP_POINT)
+LOUPE_CENTRE_PX = (1290, 345)
 
-TOWNS = {"Haparanda", "Tornio"}
+#: Where each lookup's card sits: its top left corner, in pixels from the top left.
+CARD_AT = {BRAZIL: (1165, 40), PARAGUAY: (940, 560)}
+CARD_WIDTH = 400
 
-#: How far each town's name is moved from its OpenStreetMap node, in degrees, to keep it
-#: clear of the border and the magnifier's marker.
-LABEL_OFFSET = {"Haparanda": (0.0, 0.0), "Tornio": (0.012, 0.0045)}
+#: Where each town's name is written on the banner, in pixels from the top left; the
+#: test asserts that each lies in its own town's zone.
+TOWN_LABEL_PX = {BRAZIL: (1520, 570), PARAGUAY: (1010, 700)}
+
+#: The border-town figure's map: the stretch of the avenue where ``tzfpy`` answers the
+#: most buildings in the other zone, ``COMPARISON_HALF`` degrees of latitude each way.
+COMPARISON_CENTRE = (-55.7128, -22.5568)
+COMPARISON_HALF = 0.0028
+
+#: Vertices of the background map closer together than this, in degrees (Manhattan),
+#: are dropped: about a pixel in the magnifier.
+MAP_TOLERANCE = 0.00004
+
+#: Map polygons smaller than this many square degrees are left out of the excerpt,
+#: except buildings, which are small by nature.
+MIN_AREA = 1e-7
 
 PAPER = "#f8fafc"
-ZONE_FILL = {"Europe/Stockholm": "#dbe7fb", "Europe/Helsinki": "#e9e3fb"}
-ZONE_INK = {"Europe/Stockholm": "#1d4ed8", "Europe/Helsinki": "#6d28d9"}
-SEA = "#a9cdee"
-WATER_LINE = "#7fb2e3"
-BUILT_UP = "#cfd3da"
-ROAD = "#ffffff"
-ROAD_CASING = "#b8bec8"
-RAIL = "#8a919c"
+ZONE_FILL = {BRAZIL: "#dcfce7", PARAGUAY: "#e0e7ff"}
+ZONE_INK = {BRAZIL: "#15803d", PARAGUAY: "#4338ca"}
+BUILT_UP = "#e5e7eb"
+BUILDING = "#c4c9d1"
+WATER = "#a9cdee"
+STREET = "#ffffff"
+MAJOR = "#fef3c7"
+MAJOR_CASING = "#e2c27a"
 INK = "#0f172a"
 MUTED = "#475569"
 WRONG = "#dc2626"
@@ -154,8 +163,8 @@ WRONG = "#dc2626"
 # --- geometry -------------------------------------------------------------------------
 
 
-def window() -> Box:
-    """``(west, south, east, north)`` of the map, at the banner's aspect ratio."""
+def banner_view() -> Box:
+    """``(west, south, east, north)`` of the banner's map, at its aspect ratio."""
     lng, lat = CENTRE
     lng_span = LAT_SPAN * WIDTH_PX / HEIGHT_PX / math.cos(math.radians(lat))
     return (
@@ -166,6 +175,31 @@ def window() -> Box:
     )
 
 
+def comparison_view() -> Box:
+    lng, lat = COMPARISON_CENTRE
+    half_lng = COMPARISON_HALF / math.cos(math.radians(lat))
+    return (
+        lng - half_lng,
+        lat - COMPARISON_HALF,
+        lng + half_lng,
+        lat + COMPARISON_HALF,
+    )
+
+
+def pixel_to_lnglat(x: float, y: float) -> tuple[float, float]:
+    """A banner pixel (from the top left) to where it is on the banner's map."""
+    west, south, east, north = banner_view()
+    return west + (east - west) * x / WIDTH_PX, north - (north - south) * y / HEIGHT_PX
+
+
+def margin_box(box: Box, margin: float) -> Box:
+    return (box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin)
+
+
+#: Everything drawn or measured lies in here; the zones are clipped to it.
+WORLD: Box = margin_box(BUILDING_BOX, 0.03)
+
+
 def metres_xy(lng: float, lat: float) -> tuple[float, float]:
     """A local equirectangular projection around :data:`CENTRE`, in metres."""
     radius = 6_371_008.8
@@ -173,53 +207,34 @@ def metres_xy(lng: float, lat: float) -> tuple[float, float]:
     return x, math.radians(lat - CENTRE[1]) * radius
 
 
-def simplify(line: Ring, tolerance_m: float) -> Ring:
-    """Douglas-Peucker in metres, keeping both ends - the comparison line only."""
-    if len(line) < 3:
-        return list(line)
-    xy = [metres_xy(*p) for p in line]
-    (x1, y1), (x2, y2) = xy[0], xy[-1]
-    length = math.hypot(x2 - x1, y2 - y1)
-
-    def offset(i: int) -> float:
-        x, y = xy[i]
-        if length == 0:
-            return math.hypot(x - x1, y - y1)
-        return abs((y2 - y1) * (x - x1) - (x2 - x1) * (y - y1)) / length
-
-    far = max(range(1, len(line) - 1), key=offset)
-    if offset(far) <= tolerance_m:
-        return [line[0], line[-1]]
-    return simplify(line[: far + 1], tolerance_m)[:-1] + simplify(
-        line[far:], tolerance_m
-    )
+def from_metres(x: float, y: float) -> tuple[float, float]:
+    radius = 6_371_008.8
+    lat = CENTRE[1] + math.degrees(y / radius)
+    return CENTRE[0] + math.degrees(
+        x / (radius * math.cos(math.radians(CENTRE[1])))
+    ), lat
 
 
 def on_edge(point: tuple[float, float], box: Box) -> bool:
     return point[0] in (box[0], box[2]) or point[1] in (box[1], box[3])
 
 
-def split_ring(ring: Ring, box: Box) -> list[tuple[bool, Ring]]:
-    """A clipped ring as consecutive ``(is_border, run)`` pieces, in ring order.
-
-    The pieces that are not border run along the clipping box. Consecutive pieces share
-    their end points, and the last one ends where the first one starts.
-    """
+def border_runs(ring: Ring, box: Box) -> list[Ring]:
+    """The parts of a ring clipped to ``box`` that are border rather than the box."""
     start = next((i for i, p in enumerate(ring) if on_edge(p, box)), None)
     if start is None:
-        return [(True, ring + ring[:1])]
+        return [ring + ring[:1]]
     rotated = ring[start:] + ring[:start] + [ring[start]]
-    pieces: list[tuple[bool, Ring]] = []
+    runs: list[Ring] = []
     for a, b in pairwise(rotated):
         # an edge between two box points runs along the box
-        is_border = not (
-            on_edge(a, box) and on_edge(b, box) and (a[0] == b[0] or a[1] == b[1])
-        )
-        if pieces and pieces[-1][0] == is_border:
-            pieces[-1][1].append(b)
+        if on_edge(a, box) and on_edge(b, box) and (a[0] == b[0] or a[1] == b[1]):
+            continue
+        if runs and runs[-1][-1] == a:
+            runs[-1].append(b)
         else:
-            pieces.append((is_border, [a, b]))
-    return pieces
+            runs.append([a, b])
+    return runs
 
 
 def zone_rings(tf: TimezoneFinder, zone: str, box: Box) -> list[Ring]:
@@ -237,62 +252,113 @@ def zone_rings(tf: TimezoneFinder, zone: str, box: Box) -> list[Ring]:
     return rings
 
 
-def margin_box(box: Box, margin: float) -> Box:
-    return (box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin)
+def border(tf: TimezoneFinder) -> list[Ring]:
+    """The border between the two zones in :data:`WORLD`, as the package stores it."""
+    return [
+        run
+        for ring in zone_rings(tf, PARAGUAY, WORLD)
+        for run in border_runs(ring, WORLD)
+    ]
+
+
+def in_box(point: tuple[float, float], box: Box) -> bool:
+    return box[0] <= point[0] <= box[2] and box[1] <= point[1] <= box[3]
+
+
+def vertices_in(runs: Sequence[Ring], box: Box) -> int:
+    return len({p for run in runs for p in run if in_box(p, box)})
+
+
+def distance_m(point: tuple[float, float], runs: Sequence[Ring]) -> float:
+    """The distance from a point to the nearest border segment, in metres."""
+    x, y = metres_xy(*point)
+    best = math.inf
+    for run in runs:
+        xy = [metres_xy(*p) for p in run]
+        for (x1, y1), (x2, y2) in pairwise(xy):
+            dx, dy = x2 - x1, y2 - y1
+            length2 = dx * dx + dy * dy
+            t = (
+                0.0
+                if length2 == 0
+                else max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / length2))
+            )
+            best = min(best, math.hypot(x - x1 - t * dx, y - y1 - t * dy))
+    return best
 
 
 @dataclass(frozen=True)
-class Border:
-    """The border in the window: drawn as the package stores it, and simplified."""
-
-    runs: list[Ring]
-    simplified_ring: Ring  # the eastern zone, with its border runs simplified
-    vertices_in_view: int
-    simplified_in_view: int
+class Lookup:
+    zone: str
+    lng: float
+    lat: float
 
 
-def border(tf: TimezoneFinder) -> Border:
-    view = window()
-    # clipped just beyond the view, so the clipping box itself is never on screen
-    box = margin_box(view, 0.01)
-    (ring,) = zone_rings(tf, WEST_TO_EAST[1], box)
-    pieces = split_ring(ring, box)
-    runs = [run for is_border, run in pieces if is_border]
-    simplified_runs = [simplify(run, SIMPLIFICATION_METRES) for run in runs]
-
-    def in_view(p):
-        return view[0] <= p[0] <= view[2] and view[1] <= p[1] <= view[3]
-
-    # the same ring with each border run replaced by its simplified version
-    simplified_ring: Ring = []
-    simple = iter(simplified_runs)
-    for is_border, run in pieces:
-        simplified_ring.extend((next(simple) if is_border else run)[:-1])
-    return Border(
-        runs=runs,
-        simplified_ring=simplified_ring,
-        vertices_in_view=sum(in_view(p) for run in runs for p in run[:-1]),
-        simplified_in_view=sum(in_view(p) for run in simplified_runs for p in run[:-1]),
-    )
-
-
-def inside(point: tuple[float, float], ring: Ring) -> bool:
-    """Even-odd point in polygon, for the simplified ring the package never stores."""
-    x, y = point
-    result = False
-    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1], strict=True):
-        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
-            result = not result
-    return result
+def avenue_lookups(tf: TimezoneFinder, runs: Sequence[Ring]) -> list[Lookup]:
+    """A point :data:`PIN_METRES` from the border on each side of it at :data:`AVENUE`."""
+    x, y = metres_xy(*AVENUE)
+    best = None
+    for run in runs:
+        for a, b in pairwise(metres_xy(*p) for p in run):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            length = math.hypot(dx, dy)
+            if length == 0:
+                continue
+            t = max(0.0, min(1.0, ((x - a[0]) * dx + (y - a[1]) * dy) / length**2))
+            foot = (a[0] + t * dx, a[1] + t * dy)
+            d = math.hypot(x - foot[0], y - foot[1])
+            if best is None or d < best[0]:
+                best = (d, foot, (-dy / length, dx / length))
+    assert best is not None
+    _, (fx, fy), (nx, ny) = best
+    lookups = []
+    for side in (1, -1):
+        lng, lat = from_metres(fx + side * PIN_METRES * nx, fy + side * PIN_METRES * ny)
+        zone = tf.timezone_at(lng=lng, lat=lat)
+        if zone not in ZONES:
+            raise ValueError(
+                f"{zone} at {lng}, {lat}: the avenue is not where the figure expects"
+            )
+        lookups.append(Lookup(zone, round(lng, 5), round(lat, 5)))
+    return sorted(lookups, key=lambda lookup: ZONES.index(lookup.zone))
 
 
-def simplified_answer(shape: Border, point: QueryPoint) -> str:
-    """The zone a lookup on the simplified border would return."""
-    east = inside((point.lng, point.lat), shape.simplified_ring)
-    return WEST_TO_EAST[1] if east else WEST_TO_EAST[0]
+def local_time(zone: str) -> str:
+    return SHOWN_INSTANT.astimezone(ZoneInfo(zone)).strftime("%H:%M")
+
+
+def utc_offset(zone: str) -> str:
+    offset = SHOWN_INSTANT.astimezone(ZoneInfo(zone)).utcoffset()
+    assert offset is not None
+    hours = offset.total_seconds() / 3600
+    return f"UTC{'+' if hours >= 0 else '−'}{abs(hours):g}"
 
 
 # --- the map excerpt ------------------------------------------------------------------
+
+
+def encode(line: Iterable[tuple[float, float]]) -> str:
+    """A line as ``"lng,lat dlng,dlat ..."`` in steps of 1e-5 degrees, about a metre.
+
+    The first point is absolute and each later one an offset from the one before, as
+    integers. One string per line rather than nested arrays, which the repository's JSON
+    formatter would spread over one line per number - several times the file size.
+    """
+    steps = [(round(x * 1e5), round(y * 1e5)) for x, y in line]
+    first = [f"{steps[0][0]},{steps[0][1]}"]
+    return " ".join(
+        first + [f"{x - px},{y - py}" for (px, py), (x, y) in pairwise(steps)]
+    )
+
+
+def decode(line: str) -> Ring:
+    points: Ring = []
+    x = y = 0
+    for pair in line.split():
+        dx, dy = pair.split(",")
+        x, y = x + int(dx), y + int(dy)
+        points.append((x / 1e5, y / 1e5))
+    return points
 
 
 def thin(line: Ring) -> Ring:
@@ -305,23 +371,6 @@ def thin(line: Ring) -> Ring:
     return kept
 
 
-def encode(line: Iterable[tuple[float, float]]) -> str:
-    """A line as ``"lng,lat lng,lat ..."`` to 1e-5 degrees, about a metre.
-
-    One string per line rather than nested arrays, which the repository's JSON
-    formatter would spread over one line per number - several times the file size.
-    """
-    return " ".join(f"{x:.5f},{y:.5f}" for x, y in line)
-
-
-def decode(line: str) -> Ring:
-    points = []
-    for pair in line.split():
-        lng, lat = pair.split(",")
-        points.append((float(lng), float(lat)))
-    return points
-
-
 def area(ring: Ring) -> float:
     return abs(
         sum(
@@ -332,12 +381,13 @@ def area(ring: Ring) -> float:
     )
 
 
-def join(lines: Iterable[Ring]) -> list[Ring]:
-    """Join lines that share end points into the longest chains, keeping direction.
+def centre_of(ring: Ring) -> tuple[float, float]:
+    """The mean of a ring's vertices: where a building is looked up."""
+    return sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring)
 
-    Coastline ways are directed (land on the left), and a multipolygon's member ways
-    are listed in no particular order, so both arrive in pieces.
-    """
+
+def join(lines: Iterable[Ring]) -> list[Ring]:
+    """Join lines that share end points: a multipolygon's member ways arrive in pieces."""
     chains = [list(line) for line in lines if len(line) > 1]
     joined = True
     while joined:
@@ -348,7 +398,7 @@ def join(lines: Iterable[Ring]) -> list[Ring]:
                     continue
                 if a[-1] == b[0]:
                     chains[i] = a + b[1:]
-                elif a[-1] == b[-1] and not a[0] == a[-1]:
+                elif a[-1] == b[-1] and a[0] != a[-1]:
                     chains[i] = a + b[::-1][1:]
                 else:
                     continue
@@ -406,63 +456,6 @@ def clip_line(line: Ring, box: Box) -> list[Ring]:
     return runs
 
 
-def perimeter_position(point: tuple[float, float], box: Box) -> float:
-    """Where a point on the box edge lies, counter-clockwise from the south-west corner."""
-    x0, y0, x1, y1 = box
-    x, y = point
-    if y == y0:
-        return (x - x0) / (x1 - x0)
-    if x == x1:
-        return 1 + (y - y0) / (y1 - y0)
-    if y == y1:
-        return 2 + (x1 - x) / (x1 - x0)
-    return 3 + (y1 - y) / (y1 - y0)
-
-
-def land(coastline: list[Ring], box: Box) -> list[Ring]:
-    """Land polygons inside ``box`` from directed coastline (land on the left).
-
-    Each run that crosses the box is closed by walking the box edge counter-clockwise
-    from where it leaves to where the next run enters; closed rings are islands.
-    """
-    corners = [(box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])]
-    islands, runs = [], []
-    for chain in coastline:
-        if chain[0] == chain[-1]:
-            ring = chain[:-1]
-            if all(box[0] < x < box[2] and box[1] < y < box[3] for x, y in ring):
-                islands.append(ring)
-                continue
-        runs.extend(clip_line(chain, box))
-    runs = [run for run in runs if on_edge(run[0], box) and on_edge(run[-1], box)]
-    polygons = []
-    unused = list(range(len(runs)))
-    while unused:
-        first = unused.pop(0)
-        ring = list(runs[first])
-        while True:
-            exit_at = perimeter_position(ring[-1], box)
-
-            def ahead(i, exit_at=exit_at):
-                return (perimeter_position(runs[i][0], box) - exit_at) % 4
-
-            candidates = unused + [first]
-            nxt = min(candidates, key=ahead)
-            # the box corners between leaving and entering again
-            distance = ahead(nxt)
-            for k in range(1, 5):
-                corner = math.floor(exit_at) + k
-                if corner - exit_at >= distance:
-                    break
-                ring.append(corners[corner % 4])
-            if nxt == first:
-                break
-            unused.remove(nxt)
-            ring.extend(runs[nxt])
-        polygons.append(ring)
-    return polygons + islands
-
-
 def element_lines(element: dict) -> list[tuple[str, Ring]]:
     """``(role, line)`` for every way of an Overpass element with ``out geom``."""
     if element["type"] == "way":
@@ -488,18 +481,22 @@ def polygons_of(element: dict) -> list[tuple[str, Ring]]:
     return rings
 
 
-def extract_osm(overpass_json: Path) -> dict:
-    """The background map of an Overpass response near the window, as the committed excerpt."""
-    box = margin_box(window(), 0.005)
+def extract_osm(overpass_json: Path, tf: TimezoneFinder) -> dict:
+    """The background map of an Overpass response, as the committed excerpt.
+
+    Clipped to the banner's view, which holds the border-town figure's: the response
+    reaches further, so that streets run off the edge rather than end inside it.
+    """
+    box = margin_box(banner_view(), 0.002)
+    runs = border(tf)
     elements = json.loads(overpass_json.read_text(encoding="utf-8"))["elements"]
-    tags_of = [(e, e.get("tags", {})) for e in elements]
     layers: dict[str, list] = {
+        "buildings": [],
         "built_up": [],
-        "land": [],
+        "major_roads": [],
         "places": [],
-        "railways": [],
-        "roads": [],
         "streams": [],
+        "streets": [],
         "water": [],
     }
 
@@ -516,130 +513,164 @@ def extract_osm(overpass_json: Path) -> dict:
             for run in clip_line(line, box):
                 layers[layer].append(encode(thin(run)))
 
-    coastline: list[Ring] = []
-    for element, tags in tags_of:
+    for element in elements:
+        tags = element.get("tags", {})
         if element["type"] == "node":
-            if tags.get("name") in TOWNS and tags.get("place") == "town":
+            if tags.get("name") in TOWNS and tags.get("place") in ("city", "town"):
                 layers["places"].append(
                     {"lat": element["lat"], "lng": element["lon"], "name": tags["name"]}
                 )
-        elif tags.get("natural") == "coastline":
-            coastline.extend(line for _, line in element_lines(element))
-        elif tags.get("natural") == "water" or tags.get("waterway") == "riverbank":
+        elif "building" in tags:
+            ring = [(p["lon"], p["lat"]) for p in element.get("geometry", []) if p][:-1]
+            if len(ring) >= 3 and distance_m(centre_of(ring), runs) <= BAND_METRES:
+                layers["buildings"].append({"id": element["id"], "ring": encode(ring)})
+        elif tags.get("natural") == "water":
             add_polygons("water", element)
-        elif tags.get("landuse") == "residential":
+        elif "landuse" in tags:
             add_polygons("built_up", element)
-        elif tags.get("waterway") == "river":
+        elif "waterway" in tags:
             add_lines("streams", element)
+        elif tags.get("highway") in ("motorway", "trunk", "primary", "secondary"):
+            add_lines("major_roads", element)
         elif "highway" in tags:
-            add_lines("roads", element)
-        elif tags.get("railway") == "rail":
-            add_lines("railways", element)
-    layers["land"] = [
-        encode(thin(ring))
-        for ring in land(join(coastline), box)
-        if area(ring) >= MIN_AREA
-    ]
+            add_lines("streets", element)
     for layer in layers.values():
         layer.sort(key=json.dumps)
-    return {"box": list(box), "layers": layers, "source": MAP_SOURCE}
-
-
-def overlaps(line: Ring, view: Box) -> bool:
-    return not (
-        max(p[0] for p in line) < view[0]
-        or min(p[0] for p in line) > view[2]
-        or max(p[1] for p in line) < view[1]
-        or min(p[1] for p in line) > view[3]
-    )
+    return {
+        "box": list(box),
+        "layers": layers,
+        "query": OVERPASS_QUERY,
+        "source": MAP_SOURCE,
+    }
 
 
 def read_map(view: Box | None = None) -> dict:
-    """The committed excerpt with its lines decoded; polygons as ``{"hole", "ring"}``.
-
-    With ``view``, only what reaches into it: the magnifier would otherwise write the
-    whole map into the SVG a second time, clipped away but still there.
-    """
+    """The committed excerpt, decoded; with ``view``, only what reaches into it."""
     layers = json.loads(MAP_PATH.read_text(encoding="utf-8"))["layers"]
-    decoded = {
-        name: [
-            {"hole": item["hole"], "ring": decode(item["ring"])}
-            if isinstance(item, dict) and "ring" in item
-            else decode(item)
-            if isinstance(item, str)
-            else item
-            for item in items
-        ]
+
+    def decoded(item):
+        if isinstance(item, str):
+            return decode(item)
+        if "ring" in item:
+            return {**item, "ring": decode(item["ring"])}
+        return item
+
+    def reaches(item) -> bool:
+        if view is None or "name" in item:
+            return True
+        line = item["ring"] if isinstance(item, dict) else item
+        return not (
+            max(p[0] for p in line) < view[0]
+            or min(p[0] for p in line) > view[2]
+            or max(p[1] for p in line) < view[1]
+            or min(p[1] for p in line) > view[3]
+        )
+
+    return {
+        name: [item for item in map(decoded, items) if reaches(item)]
         for name, items in layers.items()
     }
-    if view is None:
-        return decoded
+
+
+# --- the measurement ------------------------------------------------------------------
+
+
+def measure(tf: TimezoneFinder) -> dict:
+    """Look every building in the excerpt up with both packages, and keep tzfpy's border."""
+    import importlib.metadata
+
+    import tzfpy
+
+    buildings = read_map()["buildings"]
+    wrong = []
+    for building in buildings:
+        lng, lat = centre_of(building["ring"])
+        ours = tf.timezone_at(lng=lng, lat=lat)
+        theirs = tzfpy.get_tz(lng, lat)
+        if ours != theirs:
+            wrong.append(
+                {"id": building["id"], "theirs": theirs, "timezonefinder": ours}
+            )
+    simplified: list[str] = []
+    geometry = json.loads(tzfpy.get_tz_polygon_geojson(PARAGUAY))["features"][0][
+        "geometry"
+    ]
+    for polygon in geometry["coordinates"]:
+        ring = [(p[0], p[1]) for p in polygon[0]]
+        clipped = clip_ring([p[0] for p in ring], [p[1] for p in ring], WORLD)
+        if len(clipped) >= 3:
+            simplified.extend(encode(run) for run in border_runs(clipped, WORLD))
     return {
-        name: [
-            item
-            for item in items
-            if "name" in item
-            or overlaps(item["ring"] if isinstance(item, dict) else item, view)
-        ]
-        for name, items in decoded.items()
+        "band_metres": BAND_METRES,
+        "building_box": list(BUILDING_BOX),
+        "buildings": len(buildings),
+        "simplified_border": sorted(simplified),
+        "timezonefinder_data": tf.data_version,
+        "tzfpy": importlib.metadata.version("tzfpy"),
+        "tzfpy_data": tzfpy.data_version(),
+        "wrong": sorted(wrong, key=lambda w: w["id"]),
     }
+
+
+def read_measurement() -> dict:
+    return json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
 
 
 # --- drawing --------------------------------------------------------------------------
 
 
+def px(x: float, y: float) -> tuple[float, float]:
+    """Pixels from the top left to figure fractions."""
+    return x / WIDTH_PX, 1 - y / HEIGHT_PX
+
+
 def to_pixels(ax: Axes, lng: float, lat: float) -> tuple[float, float]:
-    """Data coordinates to pixels from the figure's top left, as the cards are placed."""
     x, y = ax.transData.transform((lng, lat))
     return x, HEIGHT_PX - y
 
 
-def fill_rings(ax: Axes, rings: Sequence[dict], colour: str, zorder: float) -> None:
-    """One compound path per layer, so holes cut through the fill (even-odd)."""
-    vertices, codes = [], []
-    for item in rings:
-        ring = item["ring"] if isinstance(item, dict) else item
-        vertices.extend(ring + ring[:1])
-        codes.extend(
-            [MplPath.MOVETO] + [MplPath.LINETO] * (len(ring) - 1) + [MplPath.CLOSEPOLY]
-        )
-    if vertices:
-        ax.add_patch(
-            PathPatch(
-                MplPath(vertices, codes),
-                facecolor=colour,
-                edgecolor="none",
-                zorder=zorder,
-            )
-        )
+def halo(width: float = 3.5) -> list:
+    return [patheffects.withStroke(linewidth=width, foreground="white", alpha=0.9)]
 
 
-def draw_lines(
-    ax: Axes,
-    lines: Sequence[Ring],
-    color: str,
-    linewidth: float,
-    zorder: float,
-    linestyle="solid",
-) -> None:
-    """A layer of lines as one compound path: one SVG element, not one per line."""
-    vertices, codes = [], []
+def compound(lines: Iterable[Ring], closed: bool) -> MplPath:
+    """Many lines or rings as one path: one SVG element, not one per line."""
+    vertices: list[tuple[float, float]] = []
+    codes: list[int] = []
     for line in lines:
-        vertices.extend(line)
-        codes.extend([MplPath.MOVETO] + [MplPath.LINETO] * (len(line) - 1))
-    if vertices:
-        ax.add_patch(
-            PathPatch(
-                MplPath(vertices, codes),
-                fill=False,
-                edgecolor=color,
-                linewidth=linewidth,
-                linestyle=linestyle,
-                capstyle="round",
-                joinstyle="round",
-                zorder=zorder,
-            )
+        points = list(line) + ([line[0]] if closed else [])
+        vertices.extend(points)
+        codes.extend([MplPath.MOVETO] + [MplPath.LINETO] * (len(points) - 1))
+    return MplPath(vertices or [(0.0, 0.0)], codes or [MplPath.MOVETO])
+
+
+def fill(ax: Axes, rings: Iterable[Ring], colour: str, zorder: float, **style) -> None:
+    ax.add_patch(
+        PathPatch(
+            compound(rings, True),
+            facecolor=colour,
+            edgecolor="none",
+            zorder=zorder,
+            **style,
         )
+    )
+
+
+def stroke(
+    ax: Axes, lines: Iterable[Ring], colour: str, width: float, zorder: float, **style
+) -> None:
+    style.setdefault("capstyle", "round")
+    style.setdefault("joinstyle", "round")
+    ax.add_patch(
+        PathPatch(
+            compound(lines, False),
+            fill=False,
+            edgecolor=colour,
+            linewidth=width,
+            zorder=zorder,
+            **style,
+        )
+    )
 
 
 def set_view(ax: Axes, view: Box) -> None:
@@ -650,133 +681,98 @@ def set_view(ax: Axes, view: Box) -> None:
 
 
 def draw_map(
-    ax: Axes, tf: TimezoneFinder, shape: Border, view: Box, zoom: float = 1.0
+    ax: Axes,
+    tf: TimezoneFinder,
+    runs: Sequence[Ring],
+    view: Box,
+    scale: float = 1.0,
+    buildings: bool = True,
+    wrong: frozenset[int] = frozenset(),
 ) -> None:
-    """The map layers and the border in ``view``; ``zoom`` scales the border's marks."""
+    """The map layers and the border in ``view``; ``scale`` widens lines when zoomed in."""
     set_view(ax, view)
-    layers = read_map(view)
-
-    # sea under everything, land over it, then the zones tint land and sea alike: the
-    # zones reach into territorial waters, and a lookup at sea is answered there too
+    layers = read_map(margin_box(view, 0.002))
     ax.add_patch(
         Rectangle(
-            (view[0], view[1]),
-            view[2] - view[0],
-            view[3] - view[1],
-            facecolor=SEA,
-            zorder=0,
+            view[:2], view[2] - view[0], view[3] - view[1], facecolor=PAPER, zorder=0
         )
     )
-    fill_rings(ax, layers["land"], PAPER, 0.1)
-    fill_rings(ax, [i for i in layers["water"] if not i["hole"]], SEA, 0.2)
-    fill_rings(ax, [i for i in layers["water"] if i["hole"]], PAPER, 0.25)
-    box = margin_box(window(), 0.01)
-    for zone in WEST_TO_EAST:
-        for ring in zone_rings(tf, zone, box):
-            ax.fill(
-                [p[0] for p in ring],
-                [p[1] for p in ring],
-                facecolor=ZONE_FILL[zone],
-                edgecolor="none",
-                alpha=0.55,
-                zorder=0.3,
-            )
-    fill_rings(ax, [i for i in layers["built_up"] if not i["hole"]], BUILT_UP, 0.5)
-    road = 1 + (zoom > 1)
-    draw_lines(
+    for zone in ZONES:
+        fill(ax, zone_rings(tf, zone, WORLD), ZONE_FILL[zone], 0.1)
+    fill(
         ax,
-        layers["streams"],
-        color=WATER_LINE,
-        linewidth=1.1 * road,
-        zorder=0.6,
+        [i["ring"] for i in layers["built_up"] if not i["hole"]],
+        BUILT_UP,
+        0.2,
+        alpha=0.6,
     )
-    draw_lines(
-        ax,
-        layers["railways"],
-        color=RAIL,
-        linewidth=0.8 * road,
-        zorder=0.7,
-        linestyle=(0, (4, 2)),
-    )
-    draw_lines(
-        ax,
-        layers["roads"],
-        color=ROAD_CASING,
-        linewidth=2.6 * road,
-        zorder=0.8,
-    )
-    draw_lines(
-        ax,
-        layers["roads"],
-        color=ROAD,
-        linewidth=1.6 * road,
-        zorder=0.81,
+    fill(ax, [i["ring"] for i in layers["water"] if not i["hole"]], WATER, 0.3)
+    stroke(ax, layers["streams"], WATER, 1.0 * scale, 0.4)
+    stroke(ax, layers["streets"], STREET, 1.0 * scale, 0.5)
+    stroke(ax, layers["major_roads"], MAJOR_CASING, 2.6 * scale, 0.6)
+    stroke(ax, layers["major_roads"], MAJOR, 1.8 * scale, 0.61)
+    if buildings:
+        fill(
+            ax,
+            [b["ring"] for b in layers["buildings"] if b["id"] not in wrong],
+            BUILDING,
+            0.7,
+        )
+        fill(
+            ax,
+            [b["ring"] for b in layers["buildings"] if b["id"] in wrong],
+            WRONG,
+            0.71,
+        )
+    mark = 1.0 if scale == 1 else 1.5
+    stroke(ax, runs, INK, 2.4 * mark, 3)
+    near = [p for run in runs for p in run[:-1] if in_box(p, margin_box(view, 0.001))]
+    ax.plot(
+        *zip(*near, strict=True),
+        "o",
+        color=INK,
+        markersize=2.6 * mark,
+        zorder=3.1,
+        linestyle="none",
     )
 
-    mark = 1 + (zoom > 1) * 0.6
-    for run in shape.runs:
-        simple = simplify(run, SIMPLIFICATION_METRES)
-        ax.plot(
-            [p[0] for p in simple],
-            [p[1] for p in simple],
-            color=WRONG,
-            linewidth=2.0 * mark,
-            linestyle=(0, (5, 4)),
-            zorder=2,
-        )
-        ax.plot(
-            [p[0] for p in run],
-            [p[1] for p in run],
-            color=INK,
-            linewidth=2.4 * mark,
-            solid_joinstyle="round",
-            zorder=3,
-        )
-        ax.plot(
-            [p[0] for p in run[:-1]],
-            [p[1] for p in run[:-1]],
-            "o",
-            markersize=2.6 * mark * 1.4 ** (zoom > 1),
-            color=INK,
-            zorder=3.1,
-        )
 
-
-def draw_labels(ax: Axes) -> None:
-    for place in read_map()["places"]:
-        dx, dy = LABEL_OFFSET[place["name"]]
-        ax.text(
-            place["lng"] + dx,
-            place["lat"] + dy,
-            place["name"],
+def draw_towns(fig: Figure) -> None:
+    for zone, (x, y) in TOWN_LABEL_PX.items():
+        fig.text(
+            *px(x, y),
+            f"{TOWN[zone]}\n{COUNTRY[zone].upper()}",
             fontsize=13,
-            color=INK,
-            fontweight="bold",
-            ha="center",
-            va="center",
-            zorder=2.5,
-            path_effects=_halo(),
-        )
-    # the country names sit where the land is, the zone colour says which side is which
-    for zone, (lng, lat) in zip(
-        WEST_TO_EAST, ((24.112, 65.871), (24.232, 65.8735)), strict=True
-    ):
-        ax.text(
-            lng,
-            lat,
-            COUNTRY[zone],
-            fontsize=30,
-            fontweight="bold",
             color=ZONE_INK[zone],
-            alpha=0.22,
+            fontweight="bold",
             ha="center",
             va="center",
-            zorder=1.5,
+            linespacing=1.3,
+            zorder=12,
+            path_effects=halo(),
         )
 
 
-def loupe(fig: Figure, main: Axes, tf: TimezoneFinder, shape: Border) -> Axes:
-    """The map around :data:`GAP_POINT` magnified in a circle, tied to where it is."""
+def fade(fig: Figure) -> None:
+    """A white wash behind the title that clears before the border."""
+    solid, clear = 0.30, 0.50  # fractions of the width
+    columns = 256
+    alpha = [
+        0.94 * (min(1.0, (clear - x) / (clear - solid)) ** 1.4)
+        for x in (clear * (i + 0.5) / columns for i in range(columns))
+    ]
+    wash = fig.add_axes((0, 0, clear, 1), zorder=10)
+    wash.set_axis_off()
+    wash.imshow(
+        [[(1.0, 1.0, 1.0, a) for a in alpha]],
+        aspect="auto",
+        interpolation="bilinear",
+        extent=(0, 1, 0, 1),
+    )
+
+
+def loupe(fig: Figure, main: Axes, tf: TimezoneFinder, runs: Sequence[Ring]) -> Axes:
+    """The avenue magnified in a circle, tied to where it is on the map."""
     cx, cy = LOUPE_CENTRE_PX
     r = LOUPE_RADIUS_PX
     ax = fig.add_axes(
@@ -785,30 +781,29 @@ def loupe(fig: Figure, main: Axes, tf: TimezoneFinder, shape: Border) -> Axes:
     lat_half = r / HEIGHT_PX * LAT_SPAN / LOUPE_ZOOM
     lng_half = lat_half / math.cos(math.radians(CENTRE[1]))
     view = (
-        GAP_POINT.lng - lng_half,
-        GAP_POINT.lat - lat_half,
-        GAP_POINT.lng + lng_half,
-        GAP_POINT.lat + lat_half,
+        AVENUE[0] - lng_half,
+        AVENUE[1] - lat_half,
+        AVENUE[0] + lng_half,
+        AVENUE[1] + lat_half,
     )
-    draw_map(ax, tf, shape, view, zoom=LOUPE_ZOOM)
+    draw_map(ax, tf, runs, view, scale=2.0)
     disc = Circle((0.5, 0.5), 0.5, transform=ax.transAxes)
     for artist in ax.get_children():
         artist.set_clip_path(disc)
     ax.text(
         0.5,
-        0.9,
-        f"× {LOUPE_ZOOM:g}",
+        0.86,
+        f"Avenida Internacional  × {LOUPE_ZOOM:g}",
         transform=ax.transAxes,
-        fontsize=11,
+        fontsize=9.5,
         color=MUTED,
         ha="center",
         va="center",
         zorder=5,
-        path_effects=_halo(),
+        path_effects=halo(),
     )
 
-    # the patch of the main map the loupe shows, and the two lines tying them together
-    sx, sy = to_pixels(main, GAP_POINT.lng, GAP_POINT.lat)
+    sx, sy = to_pixels(main, *AVENUE)
     small = r / LOUPE_ZOOM
     fig.patches.append(
         Ellipse(
@@ -849,44 +844,10 @@ def loupe(fig: Figure, main: Axes, tf: TimezoneFinder, shape: Border) -> Axes:
     return ax
 
 
-def _halo():
-    from matplotlib import patheffects
-
-    return [patheffects.withStroke(linewidth=3.5, foreground="white", alpha=0.85)]
-
-
-def fade(fig: Figure) -> None:
-    """A white wash behind the title that clears before the border."""
-    solid, clear = 0.30, 0.52  # fractions of the width
-    columns = 256
-    alpha = [
-        0.94 * (min(1.0, (clear - x) / (clear - solid)) ** 1.4)
-        for x in (clear * (i + 0.5) / columns for i in range(columns))
-    ]
-    wash = fig.add_axes((0, 0, clear, 1), zorder=10)
-    wash.set_axis_off()
-    wash.imshow(
-        [[(1.0, 1.0, 1.0, a) for a in alpha]],
-        aspect="auto",
-        interpolation="bilinear",
-        extent=(0, 1, 0, 1),
-    )
-
-
-def px(x: float, y: float) -> tuple[float, float]:
-    """Pixels from the top left to figure fractions."""
-    return x / WIDTH_PX, 1 - y / HEIGHT_PX
-
-
-def card(
-    fig: Figure,
-    ax: Axes,
-    point: QueryPoint,
-    lines: Sequence[tuple[str, str, dict]],
-    accent: str,
-) -> None:
-    x, y = point.card
-    width, height = 340, 26 + 30 * len(lines)
+def card(fig: Figure, ax: Axes, lookup: Lookup) -> None:
+    x, y = CARD_AT[lookup.zone]
+    width, height = CARD_WIDTH, 104
+    accent = ZONE_INK[lookup.zone]
     fig.patches.append(
         FancyBboxPatch(
             px(x, y + height),
@@ -912,30 +873,57 @@ def card(
         )
     )
     fig.text(
-        *px(x + 20, y + 22),
-        f"{point.lat:.4f}, {point.lng:.4f}",
-        fontsize=11,
+        *px(x + 20, y + 24),
+        f"{TOWN[lookup.zone]}, {COUNTRY[lookup.zone]}",
+        fontsize=12,
+        fontweight="bold",
+        color=INK,
+        va="center",
+        zorder=22,
+    )
+    fig.text(
+        *px(x + 20, y + 50),
+        f"{lookup.lat:.5f}, {lookup.lng:.5f}",
+        fontsize=10,
         color=MUTED,
         family="DejaVu Sans Mono",
         va="center",
         zorder=22,
     )
-    for i, (text, colour, style) in enumerate(lines):
-        fig.text(
-            *px(x + 20, y + 52 + 30 * i),
-            text,
-            color=colour,
-            va="center",
-            zorder=22,
-            family="DejaVu Sans Mono",
-            **style,
-        )
-    # the leader runs from the pin to the nearest side of the card
-    pin = to_pixels(ax, point.lng, point.lat)
-    if pin[1] < y:
-        target = (min(max(pin[0], x + 40), x + width - 40), y)
-    else:
-        target = (x if pin[0] < x else x + width, y + height / 2)
+    fig.text(
+        *px(x + 20, y + 80),
+        lookup.zone,
+        fontsize=14,
+        fontweight="bold",
+        color=accent,
+        family="DejaVu Sans Mono",
+        va="center",
+        zorder=22,
+    )
+    fig.text(
+        *px(x + width - 18, y + 70),
+        local_time(lookup.zone),
+        fontsize=26,
+        fontweight="bold",
+        color=accent,
+        ha="right",
+        va="center",
+        zorder=22,
+    )
+    fig.text(
+        *px(x + width - 18, y + 92),
+        utc_offset(lookup.zone),
+        fontsize=9,
+        color=MUTED,
+        ha="right",
+        va="center",
+        zorder=22,
+    )
+    pin = to_pixels(ax, lookup.lng, lookup.lat)
+    target = (
+        min(max(pin[0], x + 30), x + width - 30),
+        y + height if pin[1] > y + height else y,
+    )
     fig.lines.append(
         plt.Line2D(
             *zip(px(*pin), px(*target), strict=True),
@@ -960,7 +948,7 @@ def card(
     )
 
 
-def draw_text(fig: Figure, shape: Border) -> None:
+def draw_text(fig: Figure, runs: Sequence[Ring]) -> None:
     fig.text(
         *px(80, 150),
         "Coordinates",
@@ -974,22 +962,22 @@ def draw_text(fig: Figure, shape: Border) -> None:
         "→ IANA timezone",
         fontsize=44,
         fontweight="bold",
-        color=ZONE_INK["Europe/Stockholm"],
+        color="#1d4ed8",
         zorder=30,
     )
     fig.text(
         *px(82, 290),
-        "Every boundary vertex kept. No simplification.\nCorrect right up to the border line.",
+        "One street, two countries, two clocks.\nEvery boundary vertex kept - no simplification.",
         fontsize=16,
         color="#334155",
         linespacing=1.5,
         va="top",
         zorder=30,
     )
-    legend_y = 420
+    y = 430
     fig.lines.append(
         plt.Line2D(
-            *zip(px(82, legend_y), px(124, legend_y), strict=True),
+            *zip(px(82, y), px(124, y), strict=True),
             transform=fig.transFigure,
             color=INK,
             linewidth=2.4,
@@ -998,8 +986,8 @@ def draw_text(fig: Figure, shape: Border) -> None:
     )
     fig.lines.append(
         plt.Line2D(
-            [px(103, legend_y)[0]],
-            [px(103, legend_y)[1]],
+            [px(103, y)[0]],
+            [px(103, y)[1]],
             transform=fig.transFigure,
             marker="o",
             markersize=4,
@@ -1008,34 +996,37 @@ def draw_text(fig: Figure, shape: Border) -> None:
         )
     )
     fig.text(
-        *px(140, legend_y),
-        f"timezonefinder: all {shape.vertices_in_view} border vertices in view",
+        *px(140, y),
+        f"the border as published: all {vertices_in(runs, banner_view())} vertices in view",
         fontsize=13,
         color=INK,
         va="center",
         zorder=30,
     )
-    fig.lines.append(
-        plt.Line2D(
-            *zip(px(82, legend_y + 34), px(124, legend_y + 34), strict=True),
-            transform=fig.transFigure,
-            color=WRONG,
-            linewidth=2.0,
-            linestyle=(0, (5, 4)),
+    for i, zone in enumerate(ZONES):
+        fig.patches.append(
+            Rectangle(
+                px(86, y + 44 + 30 * i),
+                34 / WIDTH_PX,
+                16 / HEIGHT_PX,
+                transform=fig.transFigure,
+                facecolor=ZONE_FILL[zone],
+                edgecolor=ZONE_INK[zone],
+                zorder=30,
+            )
+        )
+        fig.text(
+            *px(140, y + 36 + 30 * i),
+            f"{COUNTRY[zone]}  {zone}  {utc_offset(zone)}",
+            fontsize=12,
+            color=ZONE_INK[zone],
+            family="DejaVu Sans Mono",
+            va="center",
             zorder=30,
         )
-    )
     fig.text(
-        *px(140, legend_y + 34),
-        f"simplified to within {SIMPLIFICATION_METRES:.0f} m: {shape.simplified_in_view} vertices",
-        fontsize=13,
-        color=MUTED,
-        va="center",
-        zorder=30,
-    )
-    fig.text(
-        *px(82, 740),
-        "Haparanda (SE) and Tornio (FI), 65.84° N 24.14° E",
+        *px(82, 745),
+        "Ponta Porã (BR) and Pedro Juan Caballero (PY), 22.55° S 55.73° W",
         fontsize=11,
         color=MUTED,
         family="DejaVu Sans Mono",
@@ -1052,51 +1043,126 @@ def draw_text(fig: Figure, shape: Border) -> None:
     )
 
 
-def build(tf: TimezoneFinder) -> Figure:
-    shape = border(tf)
+def build_banner(tf: TimezoneFinder) -> Figure:
+    runs = border(tf)
     fig = plt.figure(figsize=(WIDTH_PX / DPI, HEIGHT_PX / DPI), dpi=DPI)
     fig.patch.set_facecolor(PAPER)
     ax = fig.add_axes((0, 0, 1, 1))
-    draw_map(ax, tf, shape, window())
-    draw_labels(ax)
+    draw_map(ax, tf, runs, banner_view(), buildings=False)
     fade(fig)
-    magnified = loupe(fig, ax, tf, shape)
-    draw_text(fig, shape)
+    draw_towns(fig)
+    magnified = loupe(fig, ax, tf, runs)
+    draw_text(fig, runs)
+    for lookup in avenue_lookups(tf, runs):
+        card(fig, magnified, lookup)
+    return fig
 
-    def zone_at(point: QueryPoint) -> str:
-        zone = tf.timezone_at(lng=point.lng, lat=point.lat)
-        if zone is None:
-            raise ValueError(
-                f"no zone at {point}: the packaged data covers every point"
-            )
-        return zone
 
-    for point in (WEST_POINT, EAST_POINT):
-        zone = zone_at(point)
-        style = dict(fontsize=15, fontweight="bold")
-        card(
-            fig,
-            ax,
-            point,
-            [(f"{zone}  {UTC_OFFSET[zone]}", ZONE_INK[zone], style)],
-            ZONE_INK[zone],
+def comparison_counts(record: dict) -> dict[str, int]:
+    """How many buildings each way round tzfpy answers in the other zone."""
+    counts = {
+        f"{COUNTRY[a]} as {COUNTRY[b]}": 0 for a in ZONES for b in ZONES if a != b
+    }
+    for w in record["wrong"]:
+        counts[f"{COUNTRY[w['timezonefinder']]} as {COUNTRY[w['theirs']]}"] += 1
+    return counts
+
+
+def build_comparison(tf: TimezoneFinder) -> Figure:
+    """The border-town figure for ``docs/why_no_simplification.rst``."""
+    record = read_measurement()
+    runs = border(tf)
+    simplified = [decode(line) for line in record["simplified_border"]]
+    wrong = frozenset(w["id"] for w in record["wrong"])
+    fig = plt.figure(figsize=(10.0, 5.6))
+    ax = fig.add_axes((0.01, 0.02, 0.56, 0.96))
+    draw_map(ax, tf, runs, comparison_view(), scale=1.6, wrong=wrong)
+    stroke(ax, simplified, WRONG, 2.6, 2.9, linestyle=(0, (5, 4)), capstyle="butt")
+    for zone, (x, y) in zip(ZONES, ((0.78, 0.92), (0.22, 0.08)), strict=True):
+        ax.text(
+            x,
+            y,
+            f"{COUNTRY[zone].upper()}\n{zone}",
+            transform=ax.transAxes,
+            fontsize=10,
+            fontweight="bold",
+            color=ZONE_INK[zone],
+            ha="center",
+            va="center",
+            zorder=5,
+            path_effects=halo(),
         )
-    zone = zone_at(GAP_POINT)
-    wrong = simplified_answer(shape, GAP_POINT)
-    card(
-        fig,
-        magnified,
-        GAP_POINT,
-        [
-            (
-                f"✓ {zone}  {UTC_OFFSET[zone]}",
-                ZONE_INK[zone],
-                dict(fontsize=15, fontweight="bold"),
-            ),
-            (f"✗ {wrong}  simplified", WRONG, dict(fontsize=13)),
-        ],
-        WRONG,
+    ax.text(
+        0.99,
+        0.01,
+        "Map data © OpenStreetMap contributors",
+        transform=ax.transAxes,
+        fontsize=7,
+        color=MUTED,
+        ha="right",
+        va="bottom",
+        zorder=5,
+        # a box rather than a halo: a path effect turns the text into outlines, and the
+        # attribution has to stay text
+        bbox=dict(boxstyle="square,pad=0.2", fc="white", ec="none", alpha=0.8),
     )
+
+    left, y = 0.60, 0.93
+    counts = comparison_counts(record)
+    fig.text(
+        left,
+        y,
+        f"{len(wrong)} of {record['buildings']:,} buildings",
+        fontsize=18,
+        fontweight="bold",
+        color=WRONG,
+        va="top",
+    )
+    body = (
+        f"within {record['band_metres']:g} m of the border get a zone one hour\n"
+        f"off from tzfpy {record['tzfpy']}, which simplifies its polygons:\n"
+        + "\n".join(f"{n} in {pair}" for pair, n in counts.items())
+        + ".\n\nBoth packages use timezone-boundary-builder\n"
+        f"{record['tzfpy_data']}; timezonefinder answers every\n"
+        "building as the published border does."
+    )
+    fig.text(left, y - 0.09, body, fontsize=10, color=INK, va="top", linespacing=1.45)
+    legend = (
+        ("line", INK, "the border as published (timezonefinder)"),
+        ("dash", WRONG, f"the border tzfpy {record['tzfpy']} ships"),
+        ("box", WRONG, "building tzfpy puts in the other zone"),
+        (
+            "box",
+            BUILDING,
+            f"other building within {record['band_metres']:g} m of the border",
+        ),
+    )
+    y = 0.36
+    for kind, colour, text in legend:
+        if kind == "box":
+            fig.patches.append(
+                Rectangle(
+                    (left, y - 0.014),
+                    0.024,
+                    0.028,
+                    transform=fig.transFigure,
+                    facecolor=colour,
+                    edgecolor="none",
+                )
+            )
+        else:
+            fig.lines.append(
+                plt.Line2D(
+                    [left, left + 0.024],
+                    [y, y],
+                    transform=fig.transFigure,
+                    color=colour,
+                    linewidth=2.2,
+                    linestyle="-" if kind == "line" else (0, (3, 2)),
+                )
+            )
+        fig.text(left + 0.036, y, text, fontsize=9.5, color=MUTED, va="center")
+        y -= 0.06
     return fig
 
 
@@ -1108,17 +1174,25 @@ STYLE = {
 }
 
 
+def to_svg(fig: Figure) -> str:
+    try:
+        buffer = StringIO()
+        fig.savefig(buffer, format="svg", metadata={"Date": None})
+    finally:
+        plt.close(fig)
+    return "\n".join(line.rstrip() for line in buffer.getvalue().splitlines()) + "\n"
+
+
 def render(tf: TimezoneFinder) -> str:
     """The banner as SVG markup: deterministic, and already pre-commit-clean."""
     with plt.style.context("default"), matplotlib.rc_context(STYLE):
-        fig = build(tf)
-        try:
-            buffer = StringIO()
-            fig.savefig(buffer, format="svg", metadata={"Date": None})
-        finally:
-            plt.close(fig)
-    svg = buffer.getvalue()
-    return "\n".join(line.rstrip() for line in svg.splitlines()) + "\n"
+        return to_svg(build_banner(tf))
+
+
+def render_comparison(tf: TimezoneFinder) -> str:
+    """The border-town figure as SVG markup, drawn from the committed measurement."""
+    with plt.style.context("default"), matplotlib.rc_context(STYLE):
+        return to_svg(build_comparison(tf))
 
 
 def render_png(tf: TimezoneFinder, path: Path) -> None:
@@ -1131,7 +1205,7 @@ def render_png(tf: TimezoneFinder, path: Path) -> None:
     from PIL import Image
 
     with plt.style.context("default"), matplotlib.rc_context(STYLE):
-        fig = build(tf)
+        fig = build_banner(tf)
         try:
             buffer = BytesIO()
             fig.savefig(
@@ -1148,29 +1222,27 @@ def render_png(tf: TimezoneFinder, path: Path) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--out",
-        type=Path,
-        default=FIGURE_PATH,
-        help=f"where to write the SVG (default: {FIGURE_PATH})",
-    )
-    parser.add_argument(
-        "--png",
-        type=Path,
-        default=PNG_PATH,
-        help=f"where to write the PNG (default: {PNG_PATH})",
-    )
-    parser.add_argument(
         "--osm",
         type=Path,
-        help="rebuild the committed map excerpt from this Overpass JSON response to OVERPASS_QUERY before drawing",
+        help="rebuild the committed map excerpt from this Overpass JSON response to "
+        "OVERPASS_QUERY before drawing",
+    )
+    parser.add_argument(
+        "--measure",
+        action="store_true",
+        help="look the excerpt's buildings up with tzfpy and timezonefinder again and "
+        "record the result before drawing (needs the `compare` dependency group)",
     )
     args = parser.parse_args(argv)
-    if args.osm is not None:
-        write_json(extract_osm(args.osm), MAP_PATH)
     tf = TimezoneFinder()
-    args.out.write_text(render(tf), encoding="utf-8")
-    render_png(tf, args.png)
-    print(f"wrote {args.out} and {args.png}")
+    if args.osm is not None:
+        write_json(extract_osm(args.osm, tf), MAP_PATH)
+    if args.measure:
+        write_json(measure(tf), MEASUREMENT_PATH)
+    FIGURE_PATH.write_text(render(tf), encoding="utf-8")
+    COMPARISON_PATH.write_text(render_comparison(tf), encoding="utf-8")
+    render_png(tf, PNG_PATH)
+    print(f"wrote {FIGURE_PATH}, {COMPARISON_PATH} and {PNG_PATH}")
     return 0
 
 
