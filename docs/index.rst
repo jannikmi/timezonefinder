@@ -5,8 +5,8 @@ timezonefinder
 .. include:: ./badges.rst
 
 
-.. image:: hero_banner.jpeg
-   :alt: Coordinate to IANA timezone lookup
+.. image:: hero_banner.svg
+   :alt: The timezone border between Ponta Porã (Brazil, America/Campo_Grande) and Pedro Juan Caballero (Paraguay, America/Asuncion) along Avenida Internacional, drawn from every stored vertex, with one lookup on each side of the street: 12:00 in Brazil, 13:00 in Paraguay
    :align: center
 
 This is a Python package providing offline timezone lookups for WGS84 coordinates.

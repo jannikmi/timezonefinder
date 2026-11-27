@@ -46,6 +46,11 @@ Natural Earth is in the public domain (`terms of use <https://www.naturalearthda
 Made with Natural Earth.
 They are drawn for orientation only; the lookup never reads them.
 
+.. _openstreetmap_attribution:
+
+The map under the banner on the start page and in the README, and in the border-town figure on the :doc:`why_no_simplification` page - built-up areas, water, streets, building outlines and town names around Ponta Porã and Pedro Juan Caballero - is an excerpt of `OpenStreetMap <https://www.openstreetmap.org/copyright>`__ data, © OpenStreetMap contributors, committed as `docs/hero_banner_map.json <https://github.com/jannikmi/timezonefinder/blob/master/docs/hero_banner_map.json>`__ and available under the `Open Database License <https://opendatacommons.org/licenses/odbl/>`__.
+It orients the reader and gives the border-town figure its buildings; the lookup never reads it.
+
 Used by
 -------
 

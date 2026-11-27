@@ -1,0 +1,373 @@
+{
+  "band_metres": 150.0,
+  "building_box": [
+    -55.745,
+    -22.585,
+    -55.675,
+    -22.525
+  ],
+  "buildings": 1937,
+  "simplified_border": [
+    "-5564500,-2261167 -421,120 -1756,1160 -301,478 -1322,518 -605,822 -574,312 2,640 -365,789 -2513,1145 -1271,2226 -446,1402 -639,990 21,1065"
+  ],
+  "timezonefinder_data": "2026f",
+  "tzfpy": "2.1.2",
+  "tzfpy_data": "2026f",
+  "wrong": [
+    {
+      "id": 669561637,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 669561642,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 671992458,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 671992459,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042853,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042854,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042855,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042858,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042859,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042860,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042868,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042869,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042876,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042877,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042879,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 672042885,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 681421092,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 697883224,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 697883229,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 697883230,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 707061935,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 707061936,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 707894459,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 909968085,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110561728,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110561730,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110561731,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110561737,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110561739,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672818,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672821,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672835,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672846,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672852,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672853,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672854,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672855,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1110672856,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145402,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145404,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145410,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145412,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145413,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145414,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145416,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113145419,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1113165487,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1115555925,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1115555929,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1115555933,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1115555935,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1155636154,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1196985833,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985836,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985838,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985841,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985842,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985843,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1196985844,
+      "theirs": "America/Campo_Grande",
+      "timezonefinder": "America/Asuncion"
+    },
+    {
+      "id": 1212669046,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1212669047,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1243304297,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1256112455,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1261868251,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1261868253,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1261868254,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1313384926,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1313384927,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1313384928,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1329851684,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    },
+    {
+      "id": 1329851691,
+      "theirs": "America/Asuncion",
+      "timezonefinder": "America/Campo_Grande"
+    }
+  ]
+}

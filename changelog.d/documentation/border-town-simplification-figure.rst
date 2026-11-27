@@ -1,0 +1,1 @@
+The page on why the package does not simplify polygons shows the same border beside the simplified one ``tzfpy`` ships, and marks the buildings it answers with the other country's zone, an hour off: 71 of the 1,937 within 150 m of the border. The measurement is recorded with both packages' versions in ``docs/border_town_simplified.json``.

@@ -1,0 +1,1 @@
+The README and documentation banner draws the timezone border along Avenida Internacional between Ponta Porã (Brazil) and Pedro Juan Caballero (Paraguay) from the packaged data, every stored vertex kept, with one lookup on each side of the street an hour apart. It is drawn by ``make hero-banner`` from the data and a committed OpenStreetMap excerpt.

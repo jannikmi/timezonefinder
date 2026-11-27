@@ -1,10 +1,12 @@
 # timezonefinder
 
 <p align="center">
-  <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg" alt="Coordinate to IANA timezone lookup"></a>
+  <a href="https://timezonefinder.readthedocs.io/en/latest/"><img src="https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.png" alt="The timezone border between Ponta Porã (Brazil, America/Campo_Grande) and Pedro Juan Caballero (Paraguay, America/Asuncion) along Avenida Internacional, drawn from every stored vertex, with one lookup on each side of the street: 12:00 in Brazil, 13:00 in Paraguay"></a>
 </p>
 
 **Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
+
+Ponta Porã (Brazil) and Pedro Juan Caballero (Paraguay) share a street as their border and are an hour apart. Simplified boundary data puts 71 of the 1,937 buildings within 150 m of that street in the wrong timezone - [why timezonefinder doesn't simplify](https://timezonefinder.readthedocs.io/en/latest/why_no_simplification.html).
 
 <!-- The badges are duplicated in docs/badges.rst, which the docs include and which stays reStructuredText: an include does not render on PyPI, so sync the two by hand. -->
 

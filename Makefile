@@ -42,6 +42,7 @@
 #                suite,memory,acceleration,break-even,data limits it to those groups
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
 #   shortcut-index-figure - redraw the shortcut index figure in docs/architecture.rst
+#   hero-banner         - redraw the README banner and the border-town figure
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -321,6 +322,14 @@ tzfpy-agreement:
 shortcut-index-figure: check-data
 	uv run --group benchmark python -m scripts.shortcut_index_figure
 
+# The banner README.md and docs/index.rst show, and the border-town figure of
+# docs/why_no_simplification.rst, drawn from the packaged data over the committed
+# OpenStreetMap excerpt. Redraw after a data update: the border, its vertex count and the
+# answers come from the data. The tzfpy counts are a committed measurement; rewrite it
+# with `uv run --group compare --group benchmark python -m scripts.hero_banner_figure --measure`.
+hero-banner: check-data
+	uv run --group benchmark python -m scripts.hero_banner_figure
+
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them
 # (`make -s print-ci-benchmark-json`) instead of repeating the literals.
@@ -584,6 +593,6 @@ docs:
 	print-benchmark-acceleration-path print-benchmark-interpreted-path latency \
 	shortcut-calibration shortcut-calibration-record \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
-	changelog changelog-assemble acceleration-paths batch-break-even shortcut-index-figure
+	changelog changelog-assemble acceleration-paths batch-break-even shortcut-index-figure hero-banner
 
 .PHONY: release release-recover
