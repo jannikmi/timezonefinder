@@ -111,9 +111,8 @@ def test_the_prose_quotes_the_record() -> None:
     record = read_measurement()
     total = len(record["wrong"])
     page = (DOC_ROOT / "why_no_simplification.rst").read_text(encoding="utf-8")
-    readme = (DOC_ROOT.parent / "README.md").read_text(encoding="utf-8")
     paper = (DOC_ROOT.parent / "paper" / "paper.md").read_text(encoding="utf-8")
-    for text in (page, readme, paper):
+    for text in (page, paper):
         assert f"{total} of the {record['buildings']:,} buildings" in text
     assert f"``tzfpy`` {record['tzfpy']}" in page
     for pair, n in comparison_counts(record).items():

@@ -6,8 +6,6 @@
 
 **Python package for offline timezone lookup of WGS84 coordinates, with no polygon simplification - so the answer stays correct at timezone borders.**
 
-Ponta Porã (Brazil) and Pedro Juan Caballero (Paraguay) share a street as their border and are an hour apart. Simplified boundary data puts 71 of the 1,937 buildings within 150 m of that street in the wrong timezone - [why timezonefinder doesn't simplify](https://timezonefinder.readthedocs.io/en/latest/why_no_simplification.html).
-
 <!-- The badges are duplicated in docs/badges.rst, which the docs include and which stays reStructuredText: an include does not render on PyPI, so sync the two by hand. -->
 
 [![build status](https://github.com/jannikmi/timezonefinder/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jannikmi/timezonefinder/actions?query=branch%3Amaster)
@@ -110,8 +108,6 @@ GitHub's [dependency graph](https://github.com/jannikmi/timezonefinder/network/d
 
 
 ## Contributing
-
-**Looking for maintainers. Reach out if you want to contribute!**
 
 [CONTRIBUTING.md](https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md) is the entrypoint for human and AI coding-agent contributors alike.
 Its routing table sends each task to the few files under `contributing/` it needs: coding and testing rules, the development and CI workflow, the benchmarking gates, step-by-step workflows for releases, reviews and improvement passes, and the recorded design decisions.
